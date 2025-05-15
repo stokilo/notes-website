@@ -3,8 +3,8 @@ import React, { useState, useRef, useEffect } from "react";
 const ImageToggleButton = ({
                              firstImage,
                              secondImage,
-                             buttonTextLeft = "Show Left",
-                             buttonTextRight = "Show Right",
+                             buttonTextLeft = "Before",
+                             buttonTextRight = "After",
                            }) => {
   const [showFirst, setShowFirst] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
@@ -15,17 +15,21 @@ const ImageToggleButton = ({
   const containerRef = useRef(null);
   const [touchStart, setTouchStart] = useState({ x: null, y: null });
   const [rectangleTop, setRectangleTop] = useState(0);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [fullScreenImage, setFullScreenImage] = useState(null);
 
-  const zoomFactor = 5; // Set your desired zoom factor here
-  const previewPercentage = 0.3; // Set your desired preview percentage here
-
+  const zoomFactor = 5;
+  const previewPercentage = 0.3;
 
   const toggleImage = () => {
     setShowFirst(!showFirst);
+    if (isFullScreen) {
+      setFullScreenImage(showFirst ? secondImage.imageUrl : firstImage.imageUrl); // Update image on fullscreen
+    }
     setIsDragging(false);
     setZoomPosition({ x: 0, y: 0 });
     setZoomRectSize({ width: 0, height: 0 });
-    setRectangleTop(0); // Reset top position when toggling
+    setRectangleTop(0);
   };
 
   const handleMouseDown = (e) => {
@@ -75,7 +79,7 @@ const ImageToggleButton = ({
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
-    if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+    if (x >= 0 && x <= rect.width && y >= 0 && y >= 0) {
       setMousePosition({ x: clientX, y: clientY });
       setZoomPosition({ x, y });
     }
@@ -87,9 +91,9 @@ const ImageToggleButton = ({
     if (imageRef.current) {
       const imageWidth = imageRef.current.width;
       const imageHeight = imageRef.current.height;
-      const newZoomRectWidth = document.documentElement.clientWidth * previewPercentage;
+      const newZoomRectWidth =
+        document.documentElement.clientWidth * previewPercentage;
       const newZoomRectHeight = newZoomRectWidth;
-
 
       setZoomRectSize({ width: newZoomRectWidth, height: newZoomRectHeight });
 
@@ -131,110 +135,179 @@ const ImageToggleButton = ({
     },
   };
 
+  const enterFullScreen = () => {
+    setIsFullScreen(true);
+    setFullScreenImage(currentImage); // Set initial image on fullscreen
+  };
+
+  const exitFullScreen = () => {
+    setIsFullScreen(false);
+    setFullScreenImage(null);
+  };
+
   return (
-    <div
-      style={{
-        textAlign: "center",
-        margin: "20px 0",
-        position: "relative",
-        fontFamily: "Arial, sans-serif",
-      }}
-      ref={containerRef}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
-      onMouseMove={handleMouseMove}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
-      <img
-        src={currentImage}
-        alt="Comparison"
-        style={{
-          maxWidth: "100%",
-          height: "auto",
-          display: "block",
-          margin: "0 auto",
-          cursor: "move",
-          userSelect: "none",
-          touchAction: "none",
-          borderRadius: "8px",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-        }}
-        ref={imageRef}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-        draggable="false"
-        onLoad={() => {
-          if (imageRef.current) {
-            const rect = imageRef.current.getBoundingClientRect();
-            setRectangleTop(rect.bottom + 10);
-          }
-        }}
-      />
-
-      <div style={{ marginTop: "10px" }}>
-        <button
-          onClick={toggleImage}
-          disabled={showFirst}
-          style={{
-            ...buttonStyle,
-            ...(showFirst ? buttonStyle["&:disabled"] : buttonStyle),
-          }}
-        >
-          {buttonTextLeft}
-        </button>
-        <button
-          onClick={toggleImage}
-          disabled={!showFirst}
-          style={{
-            ...buttonStyle,
-            ...(!showFirst ? buttonStyle["&:disabled"] : buttonStyle),
-          }}
-        >
-          {buttonTextRight}
-        </button>
-      </div>
-
-      {isDragging && zoomRectSize.width > 0 && rectangleTop > 0 && (
+    <>
+      {!isFullScreen ? (
         <div
           style={{
-            position: "fixed",
-            top: `${rectangleTop}px`,
-            left: 0,
-            width: "100%",
-            height: `calc(100vh - ${rectangleTop}px)`,
-            borderTop: "2px solid red",
-            pointerEvents: "none",
-            zIndex: 10,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            overflow: "hidden",
+            textAlign: "center",
+            margin: "20px 0",
+            position: "relative",
+            fontFamily: "Arial, sans-serif",
           }}
+          ref={containerRef}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          onMouseMove={handleMouseMove}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
         >
           <img
             src={currentImage}
-            alt="Zoomed"
+            alt="Comparison"
             style={{
-              position: "absolute",
-              left: -zoomPosition.x * zoomFactor + zoomRectSize.width/2,
-              top: -zoomPosition.y * zoomFactor + zoomRectSize.height/2,
-              width: imageRef.current
-                ? imageRef.current.width * zoomFactor
-                : "auto",
-              height: imageRef.current
-                ? imageRef.current.height * zoomFactor
-                : "auto",
-              pointerEvents: "none",
-              maxWidth: "none",
+              maxWidth: "100%",
+              height: "auto",
+              display: "block",
+              margin: "0 auto",
+              cursor: "move",
+              userSelect: "none",
+              touchAction: "none",
+              borderRadius: "8px",
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            }}
+            ref={imageRef}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            draggable="false"
+            onLoad={() => {
+              if (imageRef.current) {
+                const rect = imageRef.current.getBoundingClientRect();
+                setRectangleTop(rect.bottom + 10);
+              }
             }}
           />
+
+          <div style={{ marginTop: "10px" }}>
+            <button
+              onClick={toggleImage}
+              disabled={showFirst}
+              style={{
+                ...buttonStyle,
+                ...(showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+              }}
+            >
+              {buttonTextLeft}
+            </button>
+            <button
+              onClick={toggleImage}
+              disabled={!showFirst}
+              style={{
+                ...buttonStyle,
+                ...(!showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+              }}
+            >
+              {buttonTextRight}
+            </button>
+            <button onClick={enterFullScreen} style={buttonStyle}>
+              Zoom
+            </button>
+          </div>
+
+          {isDragging && zoomRectSize.width > 0 && rectangleTop > 0 && (
+            <div
+              style={{
+                position: "fixed",
+                top: `${rectangleTop}px`,
+                left: 0,
+                width: "100%",
+                height: `calc(100vh - ${rectangleTop}px)`,
+                borderTop: "2px solid red",
+                pointerEvents: "none",
+                zIndex: 10,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                overflow: "hidden",
+              }}
+            >
+              <img
+                src={currentImage}
+                alt="Zoomed"
+                style={{
+                  position: "absolute",
+                  left: -zoomPosition.x * zoomFactor + zoomRectSize.width / 2,
+                  top: -zoomPosition.y * zoomFactor + zoomRectSize.height / 2,
+                  width: imageRef.current
+                    ? imageRef.current.width * zoomFactor
+                    : "auto",
+                  height: imageRef.current
+                    ? imageRef.current.height * zoomFactor
+                    : "auto",
+                  pointerEvents: "none",
+                  maxWidth: "none",
+                }}
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100vh",
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
+            zIndex: 100,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <img
+            src={fullScreenImage}
+            alt="Full Screen"
+            style={{
+              maxHeight: "80vh",
+              maxWidth: "90%",
+              objectFit: "contain",
+              overflow: "auto",
+            }}
+          />
+          <div style={{ marginTop: "10px" }}>
+            <button
+              onClick={toggleImage}
+              disabled={showFirst}
+              style={{
+                ...buttonStyle,
+                ...(showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+              }}
+            >
+              {buttonTextLeft}
+            </button>
+            <button
+              onClick={toggleImage}
+              disabled={!showFirst}
+              style={{
+                ...buttonStyle,
+                ...(!showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+              }}
+            >
+              {buttonTextRight}
+            </button>
+            <button onClick={exitFullScreen} style={buttonStyle}>
+              Exit Zoom
+            </button>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
