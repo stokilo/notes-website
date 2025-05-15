@@ -7,7 +7,7 @@ export const Highlight = ({ children, color, className, ...props }) => {
     borderRadius: '20px',
     color: '#fff',
     padding: '8px 16px', // Slightly adjusted padding for balance
-    cursor: 'pointer',
+    cursor: 'default',
     display: 'inline-block', // Allows for more flexible layout
     fontSize: '0.9rem',       // Slightly smaller font for better pill appearance
     lineHeight: 1.2,        // Improve vertical rhythm
@@ -28,11 +28,9 @@ export const Highlight = ({ children, color, className, ...props }) => {
     return `#${r}${g}${b}`;
   }
 
-  const [isHovered, setIsHovered] = React.useState(false);
 
   const combinedStyle = {
     ...baseStyle,
-    ...(isHovered ? hoverStyle : {}),
     ...props.style, // Allow users to override styles
   };
 
@@ -40,8 +38,6 @@ export const Highlight = ({ children, color, className, ...props }) => {
     <span
       style={combinedStyle}
       className={className} // Allow users to add custom classes
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       {...props} // Pass other props to the span
     >
       {children}
