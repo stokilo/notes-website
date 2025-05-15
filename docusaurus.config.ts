@@ -5,12 +5,12 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Keycloack tutorial',
-  tagline: 'Keycloack',
+  title: 'Keycloak tutorial',
+  tagline: 'Keycloak',
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
-  url: 'https://keycloack.slawomirstec.com/',
+  url: 'https://keycloak.slawomirstec.com',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
@@ -37,7 +37,7 @@ const config: Config = {
       toExtensions: ['exe', 'zip'],
       redirects: [
         {
-          to: '/docs/keycloack-resource-server',
+          to: '/docs/keycloak-resource-server',
           from: ['/'],
         },
       ],
@@ -68,9 +68,9 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
     navbar: {
-      title: 'Keycloack',
+      title: 'Keycloak',
       logo: {
-        alt: 'Keycloack Log',
+        alt: 'Keycloak Log',
         src: 'img/logo.svg',
       },
       items: [

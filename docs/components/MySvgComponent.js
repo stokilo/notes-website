@@ -6,7 +6,7 @@ const MySvgComponent = () => {
 
   const drawLine = useCallback((draw) => {
     var text = draw.text(function(add) {
-      add.tspan( "KeyCloack -- >" )
+      add.tspan( "KeyCloak -- >" )
     })
 
     var textPath = text.path('M10 80 C 40 10, 65 10, 95 80 S 150 150, 180 80')
