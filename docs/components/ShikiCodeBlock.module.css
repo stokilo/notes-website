@@ -3,17 +3,40 @@
     word-break: break-word;
     white-space: pre-wrap;
     max-width: 100%;
-    font-size: 14px; /* Default font size */
+    font-size: 0.75rem;
 }
 
-@media (max-width: 767px) {
+/* Extra small devices (portrait phones, less than 576px) */
+@media (max-width: 575px) {
     .codeBlockContainer {
-        font-size: 10px;
+        font-size: 0.350rem; /* Smaller for extra small screens */
     }
 }
 
+/* Small devices (landscape phones, 576px and up) */
+@media (min-width: 576px) and (max-width: 767px) {
+    .codeBlockContainer {
+        font-size: 0.450rem; /* Small screens */
+    }
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) and (max-width: 991px) {
+    .codeBlockContainer {
+        font-size: 0.550rem; /* Medium screens */
+    }
+}
+
+/* Large devices (desktops, 992px and up) */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .codeBlockContainer {
+        font-size: 0.650rem; /* Large screens */
+    }
+}
+
+/* Extra large devices (large desktops, 1200px and up) */
 @media (min-width: 1200px) {
     .codeBlockContainer {
-        font-size: 12px;
+        font-size: 0.750rem; /* Extra large screens */
     }
 }
