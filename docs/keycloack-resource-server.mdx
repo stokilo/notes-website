@@ -11,10 +11,27 @@ sidebar_position: 3
 import BeforeAfterSlider from 'react-before-after-slider-component'
 import 'react-before-after-slider-component/dist/build.css'
 
-<BeforeAfterSlider
-    firstImage={{imageUrl: '/img/2.png'}}
-    secondImage={{imageUrl: '/img/1.png'}}
-    delimiterColor={'red'}
+[//]: # ()
+[//]: # (<BeforeAfterSlider)
+
+[//]: # (    firstImage={{imageUrl: '/img/2.png'}})
+
+[//]: # (    secondImage={{imageUrl: '/img/1.png'}})
+
+[//]: # (    delimiterColor={'red'})
+
+[//]: # (/>)
+
+{/* Import your new component */}
+
+import ImageToggleButton from './components/ImageToggleButton';
+
+{/* Replace the old component usage */}
+<ImageToggleButton
+  firstImage={{imageUrl: '/img/2.png'}}
+  secondImage={{imageUrl: '/img/1.png'}}
+  buttonTextLeft="Show After"
+  buttonTextRight="Show Before"
 />
 
 **java code with shiki**
