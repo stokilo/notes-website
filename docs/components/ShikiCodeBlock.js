@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createHighlighter } from 'shiki'; // Import needed things from shiki
+import styles from './ShikiCodeBlock.module.css'; // Import a CSS module
 
 const ShikiCodeBlock = ({ code, language, theme, source }) => {
   const [highlightedCode, setHighlightedCode] = useState('');
@@ -59,7 +60,7 @@ const ShikiCodeBlock = ({ code, language, theme, source }) => {
   }
 
   return (
-    <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+    <div className={styles.codeBlockContainer} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
   );
 };
 
