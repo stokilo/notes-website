@@ -30,22 +30,6 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
-  plugins: [[
-    '@docusaurus/plugin-client-redirects',
-    {
-      fromExtensions: ['html', 'htm'],
-      toExtensions: ['exe', 'zip'],
-      redirects: [
-        {
-          to: '/docs/keycloak-resource-server',
-          from: ['/'],
-        },
-      ],
-    }
-  ]],
-
-
-
   presets: [
     [
       'classic',
