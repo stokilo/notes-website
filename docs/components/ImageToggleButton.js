@@ -25,7 +25,7 @@ const ImageToggleButton = ({
 
   const handleMouseDown = (e) => {
     setIsDragging(true);
-    updateZoom(e.clientX, e.clientY); // Use clientX and clientY for mouse events
+    updateZoom(e.clientX, e.clientY);
     e.preventDefault();
   };
 
@@ -35,7 +35,7 @@ const ImageToggleButton = ({
 
   const handleMouseMove = (e) => {
     if (isDragging) {
-      updateZoom(e.clientX, e.clientY); // Use clientX and clientY for mouse events
+      updateZoom(e.clientX, e.clientY);
     } else {
       setMousePosition({ x: e.clientX, y: e.clientY });
     }
@@ -114,7 +114,7 @@ const ImageToggleButton = ({
         textAlign: "center",
         margin: "20px 0",
         position: "relative",
-        fontFamily: "Arial, sans-serif", // Added a basic font
+        fontFamily: "Arial, sans-serif",
       }}
       ref={containerRef}
       onMouseUp={handleMouseUp}
@@ -136,8 +136,8 @@ const ImageToggleButton = ({
           cursor: "move",
           userSelect: "none",
           touchAction: "none",
-          borderRadius: "8px", // Slightly rounded corners for the image
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)", // Subtle shadow
+          borderRadius: "8px",
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
         }}
         ref={imageRef}
         onMouseDown={handleMouseDown}
@@ -145,43 +145,6 @@ const ImageToggleButton = ({
         onMouseLeave={handleMouseUp}
         draggable="false"
       />
-
-      {isDragging && zoomRectSize.width > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            left: zoomPosition.x - zoomRectSize.width / 2,
-            top: zoomPosition.y - zoomRectSize.height / 2,
-            width: `${zoomRectSize.width}px`,
-            height: `${zoomRectSize.height}px`,
-            border: "2px solid red",
-            pointerEvents: "none",
-            zIndex: 10,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            overflow: "hidden",
-          }}
-        >
-          <img
-            src={currentImage}
-            alt="Zoomed"
-            style={{
-              position: "absolute",
-              left: -zoomPosition.x * zoomFactor + zoomRectSize.width / 2,
-              top: -zoomPosition.y * zoomFactor + zoomRectSize.height / 2,
-              width: imageRef.current
-                ? imageRef.current.width * zoomFactor
-                : "auto",
-              height: imageRef.current
-                ? imageRef.current.height * zoomFactor
-                : "auto",
-              pointerEvents: "none",
-              maxWidth: "none",
-            }}
-          />
-        </div>
-      )}
 
       <div style={{ marginTop: "10px" }}>
         <button
@@ -205,6 +168,45 @@ const ImageToggleButton = ({
           {buttonTextRight}
         </button>
       </div>
+
+      {isDragging && zoomRectSize.width > 0 && (
+        <div
+          style={{
+            position: "fixed", // Fixed position at the bottom
+            bottom: "0", // Align to the bottom
+            left: "50%", // Center horizontally
+            transform: "translateX(-50%)", // Correctly center
+
+            width: `${zoomRectSize.width}px`, // Set rectangle width
+            height: `${zoomRectSize.height}px`, // Set rectangle height
+            borderTop: "2px solid red",
+            pointerEvents: "none",
+            zIndex: 10,
+            display: "flex",
+            justifyContent: "center", // Center the content
+            alignItems: "center",     // Align items vertically
+            overflow: "hidden",
+          }}
+        >
+          <img
+            src={currentImage}
+            alt="Zoomed"
+            style={{
+              position: "absolute",
+              left: -zoomPosition.x * zoomFactor + zoomRectSize.width/2,
+              top: -zoomPosition.y * zoomFactor + zoomRectSize.height/2,
+              width: imageRef.current
+                ? imageRef.current.width * zoomFactor
+                : "auto",
+              height: imageRef.current
+                ? imageRef.current.height * zoomFactor
+                : "auto",
+              pointerEvents: "none",
+              maxWidth: "none",
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
