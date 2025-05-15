@@ -42,18 +42,18 @@ const ImageToggleButton = ({
   };
 
   const handleTouchStart = (e) => {
-    if (e.touches.length === 1) { // Only handle single-finger touch
+    if (e.touches.length === 1) {
       setIsDragging(true);
       setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
       updateZoom(e.touches[0].clientX, e.touches[0].clientY);
-      e.preventDefault(); // Prevent scrolling/panning
+      e.preventDefault();
     }
   };
 
   const handleTouchMove = (e) => {
     if (isDragging && e.touches.length === 1) {
       updateZoom(e.touches[0].clientX, e.touches[0].clientY);
-      e.preventDefault(); // Prevent scrolling/panning
+      e.preventDefault();
     }
   };
 
@@ -76,7 +76,6 @@ const ImageToggleButton = ({
     }
   };
 
-
   const currentImage = showFirst ? firstImage.imageUrl : secondImage.imageUrl;
 
   useEffect(() => {
@@ -89,18 +88,42 @@ const ImageToggleButton = ({
     }
   }, [currentImage]);
 
+  const buttonStyle = {
+    padding: "12px 24px",
+    fontSize: "16px",
+    cursor: "pointer",
+    borderRadius: "8px",
+    border: "none",
+    backgroundColor: "#4CAF50",
+    color: "white",
+    margin: "0 8px",
+    transition: "background-color 0.3s ease",
+    "&:hover": {
+      backgroundColor: "#388E3C",
+    },
+    "&:disabled": {
+      backgroundColor: "#ccc",
+      cursor: "not-allowed",
+      color: "#666",
+    },
+  };
+
   return (
     <div
-      style={{ textAlign: "center", margin: "20px 0", position: "relative" }}
+      style={{
+        textAlign: "center",
+        margin: "20px 0",
+        position: "relative",
+        fontFamily: "Arial, sans-serif", // Added a basic font
+      }}
       ref={containerRef}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onMouseMove={handleMouseMove}
-
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd} // Good practice to handle touchcancel
+      onTouchCancel={handleTouchEnd}
     >
       <img
         src={currentImage}
@@ -112,7 +135,9 @@ const ImageToggleButton = ({
           margin: "0 auto",
           cursor: "move",
           userSelect: "none",
-          touchAction: 'none', // Prevent default touch actions (scrolling) on the image
+          touchAction: "none",
+          borderRadius: "8px", // Slightly rounded corners for the image
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)", // Subtle shadow
         }}
         ref={imageRef}
         onMouseDown={handleMouseDown}
@@ -158,17 +183,28 @@ const ImageToggleButton = ({
         </div>
       )}
 
-      <button
-        onClick={toggleImage}
-        style={{
-          marginTop: "10px",
-          padding: "10px 20px",
-          fontSize: "16px",
-          cursor: "pointer",
-        }}
-      >
-        {showFirst ? buttonTextRight : buttonTextLeft}
-      </button>
+      <div style={{ marginTop: "10px" }}>
+        <button
+          onClick={toggleImage}
+          disabled={showFirst}
+          style={{
+            ...buttonStyle,
+            ...(showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+          }}
+        >
+          {buttonTextLeft}
+        </button>
+        <button
+          onClick={toggleImage}
+          disabled={!showFirst}
+          style={{
+            ...buttonStyle,
+            ...(!showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+          }}
+        >
+          {buttonTextRight}
+        </button>
+      </div>
     </div>
   );
 };
