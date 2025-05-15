@@ -5,7 +5,6 @@ const ImageToggleButton = ({
                              secondImage,
                              buttonTextLeft = "Show Left",
                              buttonTextRight = "Show Right",
-                             zoomFactor = 2,
                            }) => {
   const [showFirst, setShowFirst] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
@@ -16,6 +15,10 @@ const ImageToggleButton = ({
   const containerRef = useRef(null);
   const [touchStart, setTouchStart] = useState({ x: null, y: null });
   const [rectangleTop, setRectangleTop] = useState(0);
+
+  const zoomFactor = 5; // Set your desired zoom factor here
+  const previewPercentage = 0.3; // Set your desired preview percentage here
+
 
   const toggleImage = () => {
     setShowFirst(!showFirst);
@@ -84,8 +87,10 @@ const ImageToggleButton = ({
     if (imageRef.current) {
       const imageWidth = imageRef.current.width;
       const imageHeight = imageRef.current.height;
-      const newZoomRectWidth = imageWidth * 0.50;
-      const newZoomRectHeight = imageHeight * 0.50;
+      const newZoomRectWidth = document.documentElement.clientWidth * previewPercentage;
+      const newZoomRectHeight = newZoomRectWidth;
+
+
       setZoomRectSize({ width: newZoomRectWidth, height: newZoomRectHeight });
 
       // Calculate and set the top position of the rectangle
@@ -198,8 +203,8 @@ const ImageToggleButton = ({
           style={{
             position: "fixed",
             top: `${rectangleTop}px`,
-            left: 0,  // Changed to 0 for full width
-            width: "100%", // Changed to 100%
+            left: 0,
+            width: "100%",
             height: `calc(100vh - ${rectangleTop}px)`,
             borderTop: "2px solid red",
             pointerEvents: "none",
