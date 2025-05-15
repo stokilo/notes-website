@@ -15,12 +15,14 @@ const ImageToggleButton = ({
   const imageRef = useRef(null);
   const containerRef = useRef(null);
   const [touchStart, setTouchStart] = useState({ x: null, y: null });
+  const [rectangleTop, setRectangleTop] = useState(0);
 
   const toggleImage = () => {
     setShowFirst(!showFirst);
     setIsDragging(false);
     setZoomPosition({ x: 0, y: 0 });
     setZoomRectSize({ width: 0, height: 0 });
+    setRectangleTop(0); // Reset top position when toggling
   };
 
   const handleMouseDown = (e) => {
@@ -85,8 +87,24 @@ const ImageToggleButton = ({
       const newZoomRectWidth = imageWidth * 0.50;
       const newZoomRectHeight = imageHeight * 0.50;
       setZoomRectSize({ width: newZoomRectWidth, height: newZoomRectHeight });
+
+      // Calculate and set the top position of the rectangle
+      const rect = imageRef.current.getBoundingClientRect();
+      setRectangleTop(rect.bottom + 10);
     }
   }, [currentImage]);
+
+  useEffect(() => {
+    if (imageRef.current) {
+      const rect = imageRef.current.getBoundingClientRect();
+      setRectangleTop(rect.bottom + 10);
+    }
+  }, [zoomRectSize]);
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    setZoomPosition({ x: 0, y: 0 });
+  };
 
   const buttonStyle = {
     padding: "12px 24px",
@@ -118,7 +136,7 @@ const ImageToggleButton = ({
       }}
       ref={containerRef}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -142,8 +160,14 @@ const ImageToggleButton = ({
         ref={imageRef}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
         draggable="false"
+        onLoad={() => {
+          if (imageRef.current) {
+            const rect = imageRef.current.getBoundingClientRect();
+            setRectangleTop(rect.bottom + 10);
+          }
+        }}
       />
 
       <div style={{ marginTop: "10px" }}>
@@ -169,22 +193,20 @@ const ImageToggleButton = ({
         </button>
       </div>
 
-      {isDragging && zoomRectSize.width > 0 && (
+      {isDragging && zoomRectSize.width > 0 && rectangleTop > 0 && (
         <div
           style={{
-            position: "fixed", // Fixed position at the bottom
-            bottom: "0", // Align to the bottom
-            left: "50%", // Center horizontally
-            transform: "translateX(-50%)", // Correctly center
-
-            width: `${zoomRectSize.width}px`, // Set rectangle width
-            height: `${zoomRectSize.height}px`, // Set rectangle height
+            position: "fixed",
+            top: `${rectangleTop}px`,
+            left: 0,  // Changed to 0 for full width
+            width: "100%", // Changed to 100%
+            height: `calc(100vh - ${rectangleTop}px)`,
             borderTop: "2px solid red",
             pointerEvents: "none",
             zIndex: 10,
             display: "flex",
-            justifyContent: "center", // Center the content
-            alignItems: "center",     // Align items vertically
+            justifyContent: "center",
+            alignItems: "center",
             overflow: "hidden",
           }}
         >
