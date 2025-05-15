@@ -1,118 +1,32 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 
 const ImageToggleButton = ({
                              firstImage,
                              secondImage,
-                             buttonTextLeft = "Before",
-                             buttonTextRight = "After",
+                             buttonTextLeft = "Show Left",
+                             buttonTextRight = "Show Right",
                            }) => {
   const [showFirst, setShowFirst] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
-  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [zoomRectSize, setZoomRectSize] = useState({ width: 0, height: 0 });
-  const imageRef = useRef(null);
-  const containerRef = useRef(null);
-  const [touchStart, setTouchStart] = useState({ x: null, y: null });
-  const [rectangleTop, setRectangleTop] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(null);
-
-  const zoomFactor = 5;
-  const previewPercentage = 0.3;
 
   const toggleImage = () => {
     setShowFirst(!showFirst);
     if (isFullScreen) {
-      setFullScreenImage(showFirst ? secondImage.imageUrl : firstImage.imageUrl); // Update image on fullscreen
-    }
-    setIsDragging(false);
-    setZoomPosition({ x: 0, y: 0 });
-    setZoomRectSize({ width: 0, height: 0 });
-    setRectangleTop(0);
-  };
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    updateZoom(e.clientX, e.clientY);
-    e.preventDefault();
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseMove = (e) => {
-    if (isDragging) {
-      updateZoom(e.clientX, e.clientY);
-    } else {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    }
-  };
-
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-      updateZoom(e.touches[0].clientX, e.touches[0].clientY);
-      e.preventDefault();
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (isDragging && e.touches.length === 1) {
-      updateZoom(e.touches[0].clientX, e.touches[0].clientY);
-      e.preventDefault();
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    setTouchStart({ x: null, y: null });
-  };
-
-  const updateZoom = (clientX, clientY) => {
-    if (!imageRef.current) return;
-
-    const imageElement = imageRef.current;
-    const rect = imageElement.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-
-    if (x >= 0 && x <= rect.width && y >= 0 && y >= 0) {
-      setMousePosition({ x: clientX, y: clientY });
-      setZoomPosition({ x, y });
+      setFullScreenImage(showFirst ? secondImage.imageUrl : firstImage.imageUrl);
     }
   };
 
   const currentImage = showFirst ? firstImage.imageUrl : secondImage.imageUrl;
 
-  useEffect(() => {
-    if (imageRef.current) {
-      const imageWidth = imageRef.current.width;
-      const imageHeight = imageRef.current.height;
-      const newZoomRectWidth =
-        document.documentElement.clientWidth * previewPercentage;
-      const newZoomRectHeight = newZoomRectWidth;
+  const enterFullScreen = () => {
+    setIsFullScreen(true);
+    setFullScreenImage(currentImage);
+  };
 
-      setZoomRectSize({ width: newZoomRectWidth, height: newZoomRectHeight });
-
-      // Calculate and set the top position of the rectangle
-      const rect = imageRef.current.getBoundingClientRect();
-      setRectangleTop(rect.bottom + 10);
-    }
-  }, [currentImage]);
-
-  useEffect(() => {
-    if (imageRef.current) {
-      const rect = imageRef.current.getBoundingClientRect();
-      setRectangleTop(rect.bottom + 10);
-    }
-  }, [zoomRectSize]);
-
-  const handleMouseLeave = () => {
-    setIsDragging(false);
-    setZoomPosition({ x: 0, y: 0 });
+  const exitFullScreen = () => {
+    setIsFullScreen(false);
+    setFullScreenImage(null);
   };
 
   const buttonStyle = {
@@ -135,16 +49,6 @@ const ImageToggleButton = ({
     },
   };
 
-  const enterFullScreen = () => {
-    setIsFullScreen(true);
-    setFullScreenImage(currentImage); // Set initial image on fullscreen
-  };
-
-  const exitFullScreen = () => {
-    setIsFullScreen(false);
-    setFullScreenImage(null);
-  };
-
   return (
     <>
       {!isFullScreen ? (
@@ -152,17 +56,8 @@ const ImageToggleButton = ({
           style={{
             textAlign: "center",
             margin: "20px 0",
-            position: "relative",
             fontFamily: "Arial, sans-serif",
           }}
-          ref={containerRef}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onMouseMove={handleMouseMove}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
         >
           <img
             src={currentImage}
@@ -172,22 +67,8 @@ const ImageToggleButton = ({
               height: "auto",
               display: "block",
               margin: "0 auto",
-              cursor: "move",
-              userSelect: "none",
-              touchAction: "none",
               borderRadius: "8px",
               boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-            }}
-            ref={imageRef}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-            draggable="false"
-            onLoad={() => {
-              if (imageRef.current) {
-                const rect = imageRef.current.getBoundingClientRect();
-                setRectangleTop(rect.bottom + 10);
-              }
             }}
           />
 
@@ -216,43 +97,6 @@ const ImageToggleButton = ({
               Zoom
             </button>
           </div>
-
-          {isDragging && zoomRectSize.width > 0 && rectangleTop > 0 && (
-            <div
-              style={{
-                position: "fixed",
-                top: `${rectangleTop}px`,
-                left: 0,
-                width: "100%",
-                height: `calc(100vh - ${rectangleTop}px)`,
-                borderTop: "2px solid red",
-                pointerEvents: "none",
-                zIndex: 10,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                overflow: "hidden",
-              }}
-            >
-              <img
-                src={currentImage}
-                alt="Zoomed"
-                style={{
-                  position: "absolute",
-                  left: -zoomPosition.x * zoomFactor + zoomRectSize.width / 2,
-                  top: -zoomPosition.y * zoomFactor + zoomRectSize.height / 2,
-                  width: imageRef.current
-                    ? imageRef.current.width * zoomFactor
-                    : "auto",
-                  height: imageRef.current
-                    ? imageRef.current.height * zoomFactor
-                    : "auto",
-                  pointerEvents: "none",
-                  maxWidth: "none",
-                }}
-              />
-            </div>
-          )}
         </div>
       ) : (
         <div
