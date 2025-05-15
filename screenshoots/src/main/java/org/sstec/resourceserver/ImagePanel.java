@@ -1,13 +1,12 @@
 package org.sstec.resourceserver;
 
-// ImagePanel.java
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList; // Keep for currentDrawingRect logic if needed for feedback
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.io.InputStream;

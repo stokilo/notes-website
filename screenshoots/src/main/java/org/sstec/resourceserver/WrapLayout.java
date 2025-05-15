@@ -6,14 +6,6 @@ import java.io.Serializable;
 public class WrapLayout extends FlowLayout implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    public WrapLayout() {
-        super();
-    }
-
-    public WrapLayout(int align) {
-        super(align);
-    }
-
     public WrapLayout(int align, int hgap, int vgap) {
         super(align, hgap, vgap);
     }

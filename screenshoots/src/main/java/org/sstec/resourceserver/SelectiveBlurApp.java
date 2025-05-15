@@ -2,8 +2,6 @@ package org.sstec.resourceserver;
 
 // SelectiveBlurApp.java
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.*;
@@ -14,19 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import org.apache.batik.anim.dom.SVGDOMImplementation;
-import org.apache.batik.util.SVGConstants;
-import org.w3c.dom.DOMImplementation;
-import org.w3c.dom.Document;
-import org.w3c.dom.svg.SVGDocument;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
-import javax.swing.border.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import java.util.Properties;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 
 public class SelectiveBlurApp extends JFrame {
 

@@ -1,6 +1,5 @@
 package org.sstec.resourceserver;
 
-// GaussianFilter.java
 import java.awt.image.BufferedImage;
 import java.awt.image.Kernel;
 import java.awt.image.ConvolveOp;
