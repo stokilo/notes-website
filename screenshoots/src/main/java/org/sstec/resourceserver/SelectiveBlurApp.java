@@ -53,6 +53,7 @@ public class SelectiveBlurApp extends JFrame {
     private final BasicStroke SELECTION_BORDER_STROKE = new BasicStroke(2f); // Border thickness
 
     private Rectangle lastSelectionRect = null; // Add this field to remember last selection
+    private JPanel controlPanel; // Add this field at class level
 
     public SelectiveBlurApp() {
         setTitle("Selective Blur Tool");
@@ -217,7 +218,7 @@ public class SelectiveBlurApp extends JFrame {
 
     private void layoutComponents() {
         // Create control panel with WrapLayout
-        JPanel controlPanel = new JPanel(new WrapLayout(FlowLayout.LEFT, 8, 8));
+        controlPanel = new JPanel(new WrapLayout(FlowLayout.LEFT, 8, 8));
         controlPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         controlPanel.setBackground(new Color(245, 245, 245));
         
@@ -232,26 +233,15 @@ public class SelectiveBlurApp extends JFrame {
         controlPanel.add(deleteButton);
         controlPanel.add(new JSeparator(SwingConstants.VERTICAL));
         
-        // Create a panel for shape controls
-        JPanel shapePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        shapePanel.setOpaque(false);
-        shapePanel.add(new JLabel("Shape:"));
-        shapePanel.add(shapeSelector);
+        // Create style selection panels
+        JPanel shapePanel = createStylePanel("Shape", createShapeButtons());
+        JPanel borderPanel = createStylePanel("Border", createBorderButtons());
+        JPanel colorPanel = createStylePanel("Color", createColorButtons());
+        JPanel pillPanel = createStylePanel("Pill", createPillButtons());
+        
         controlPanel.add(shapePanel);
-        
-        // Create a panel for border controls
-        JPanel borderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        borderPanel.setOpaque(false);
-        borderPanel.add(new JLabel("Border:"));
-        borderPanel.add(borderStyleSelector);
-        borderPanel.add(borderColorSelector);
         controlPanel.add(borderPanel);
-        
-        // Create a panel for pill controls
-        JPanel pillPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        pillPanel.setOpaque(false);
-        pillPanel.add(new JLabel("Pill:"));
-        pillPanel.add(pillStyleSelector);
+        controlPanel.add(colorPanel);
         controlPanel.add(pillPanel);
         
         // Create a panel for blur controls
@@ -272,6 +262,307 @@ public class SelectiveBlurApp extends JFrame {
         setLayout(new BorderLayout());
         add(controlPanel, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
+    }
+
+    private JPanel createStylePanel(String title, List<JButton> buttons) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        panel.setOpaque(false);
+        
+        JLabel label = new JLabel(title + ":");
+        label.setFont(new Font("Arial", Font.BOLD, 12));
+        panel.add(label);
+        
+        for (JButton button : buttons) {
+            panel.add(button);
+        }
+        
+        return panel;
+    }
+
+    private List<JButton> createShapeButtons() {
+        List<JButton> buttons = new ArrayList<>();
+        String[] shapes = {
+            "Rectangle", 
+            "Ellipse", 
+            "Rounded Rectangle",
+            "Diamond",
+            "Star",
+            "Hexagon",
+            "Octagon"
+        };
+        
+        for (String shape : shapes) {
+            JButton button = createStyleButton(shape, 32, 32);
+            button.addActionListener(e -> {
+                currentShape = shape;
+                imagePanel.setCurrentShape(shape);
+                updateStyleButtons();
+            });
+            buttons.add(button);
+        }
+        
+        return buttons;
+    }
+
+    private List<JButton> createBorderButtons() {
+        List<JButton> buttons = new ArrayList<>();
+        String[] styles = {
+            "Solid",
+            "Dashed",
+            "Dotted",
+            "Double",
+            "Groove",
+            "Ridge"
+        };
+        
+        for (String style : styles) {
+            JButton button = createStyleButton(style, 32, 32);
+            button.addActionListener(e -> {
+                currentBorderStyle = style;
+                imagePanel.setBorderStyle(style);
+                updateStyleButtons();
+            });
+            buttons.add(button);
+        }
+        
+        return buttons;
+    }
+
+    private List<JButton> createColorButtons() {
+        List<JButton> buttons = new ArrayList<>();
+        String[] colors = {
+            "Red",
+            "Blue",
+            "Green",
+            "Purple",
+            "Orange",
+            "Teal"
+        };
+        
+        for (String color : colors) {
+            JButton button = createStyleButton(color, 32, 32);
+            button.addActionListener(e -> {
+                currentBorderColor = color;
+                imagePanel.setBorderColor(color);
+                updateStyleButtons();
+            });
+            buttons.add(button);
+        }
+        
+        return buttons;
+    }
+
+    private List<JButton> createPillButtons() {
+        List<JButton> buttons = new ArrayList<>();
+        String[] styles = {
+            "Modern",
+            "Classic",
+            "Minimal",
+            "Bold",
+            "Outline"
+        };
+        
+        for (String style : styles) {
+            JButton button = createStyleButton(style, 32, 32);
+            button.addActionListener(e -> {
+                currentPillStyle = style;
+                imagePanel.setPillStyle(style);
+                updateStyleButtons();
+            });
+            buttons.add(button);
+        }
+        
+        return buttons;
+    }
+
+    private JButton createStyleButton(String style, int width, int height) {
+        JButton button = new JButton();
+        button.setPreferredSize(new Dimension(width, height));
+        button.setMinimumSize(new Dimension(width, height));
+        button.setMaximumSize(new Dimension(width, height));
+        button.setFocusPainted(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setName(style);
+        
+        // Create preview icon
+        BufferedImage icon = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = icon.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        // Draw preview based on style type
+        if (style.equals("Red") || style.equals("Blue") || style.equals("Green") || 
+            style.equals("Purple") || style.equals("Orange") || style.equals("Teal")) {
+            // Color button
+            Color color = getColorFromName(style);
+            g2d.setColor(color);
+            g2d.fillRoundRect(4, 4, width-8, height-8, 8, 8);
+        } else if (style.equals("Solid") || style.equals("Dashed") || style.equals("Dotted") || 
+                   style.equals("Double") || style.equals("Groove") || style.equals("Ridge")) {
+            // Border style button
+            g2d.setColor(new Color(200, 200, 200, 128));
+            g2d.fillRoundRect(4, 4, width-8, height-8, 8, 8);
+            g2d.setColor(Color.RED);
+            switch (style) {
+                case "Dashed":
+                    g2d.setStroke(new BasicStroke(2, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 
+                        10.0f, new float[]{5.0f, 5.0f}, 0.0f));
+                    break;
+                case "Dotted":
+                    g2d.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 
+                        10.0f, new float[]{2.0f, 2.0f}, 0.0f));
+                    break;
+                case "Double":
+                    g2d.setStroke(new BasicStroke(2));
+                    g2d.drawRoundRect(6, 6, width-12, height-12, 6, 6);
+                    g2d.setStroke(new BasicStroke(1));
+                    break;
+                case "Groove":
+                case "Ridge":
+                    g2d.setStroke(new BasicStroke(3));
+                    break;
+                default:
+                    g2d.setStroke(new BasicStroke(2));
+            }
+            g2d.drawRoundRect(4, 4, width-8, height-8, 8, 8);
+        } else if (style.equals("Modern") || style.equals("Classic") || style.equals("Minimal") || 
+                   style.equals("Bold") || style.equals("Outline")) {
+            // Pill style button
+            g2d.setColor(new Color(200, 200, 200, 128));
+            g2d.fillRoundRect(4, 4, width-8, height-8, 8, 8);
+            g2d.setColor(Color.RED);
+            switch (style) {
+                case "Classic":
+                    g2d.setColor(new Color(255, 59, 48, 200));
+                    break;
+                case "Minimal":
+                    g2d.setColor(new Color(255, 59, 48, 180));
+                    break;
+                case "Bold":
+                    g2d.setColor(new Color(255, 59, 48));
+                    break;
+                case "Outline":
+                    g2d.setStroke(new BasicStroke(2));
+                    g2d.drawRoundRect(4, 4, width-8, height-8, 8, 8);
+                    g2d.dispose();
+                    button.setIcon(new ImageIcon(icon));
+                    return button;
+            }
+            g2d.fillRoundRect(4, 4, width-8, height-8, 8, 8);
+        } else {
+            // Shape button
+            g2d.setColor(new Color(200, 200, 200, 128));
+            g2d.fillRoundRect(4, 4, width-8, height-8, 8, 8);
+            g2d.setColor(Color.RED);
+            g2d.setStroke(new BasicStroke(2));
+            
+            int x = 4;
+            int y = 4;
+            int w = width-8;
+            int h = height-8;
+            
+            switch (style) {
+                case "Ellipse":
+                    g2d.drawOval(x, y, w, h);
+                    break;
+                case "Rounded Rectangle":
+                    g2d.drawRoundRect(x, y, w, h, 8, 8);
+                    break;
+                case "Diamond":
+                    int[] xPoints = {x + w/2, x + w, x + w/2, x};
+                    int[] yPoints = {y, y + h/2, y + h, y + h/2};
+                    g2d.drawPolygon(xPoints, yPoints, 4);
+                    break;
+                case "Star":
+                    int centerX = x + w/2;
+                    int centerY = y + h/2;
+                    int outerRadius = Math.min(w, h)/2;
+                    int innerRadius = outerRadius/2;
+                    int[] starXPoints = new int[10];
+                    int[] starYPoints = new int[10];
+                    for (int i = 0; i < 10; i++) {
+                        double angle = Math.PI * i / 5;
+                        int radius = (i % 2 == 0) ? outerRadius : innerRadius;
+                        starXPoints[i] = centerX + (int)(radius * Math.sin(angle));
+                        starYPoints[i] = centerY - (int)(radius * Math.cos(angle));
+                    }
+                    g2d.drawPolygon(starXPoints, starYPoints, 10);
+                    break;
+                case "Hexagon":
+                    int[] hexXPoints = new int[6];
+                    int[] hexYPoints = new int[6];
+                    for (int i = 0; i < 6; i++) {
+                        double angle = 2 * Math.PI * i / 6;
+                        int radius = Math.min(w, h)/2;
+                        hexXPoints[i] = x + w/2 + (int)(radius * Math.cos(angle));
+                        hexYPoints[i] = y + h/2 + (int)(radius * Math.sin(angle));
+                    }
+                    g2d.drawPolygon(hexXPoints, hexYPoints, 6);
+                    break;
+                case "Octagon":
+                    int[] octXPoints = new int[8];
+                    int[] octYPoints = new int[8];
+                    for (int i = 0; i < 8; i++) {
+                        double angle = 2 * Math.PI * i / 8;
+                        int radius = Math.min(w, h)/2;
+                        octXPoints[i] = x + w/2 + (int)(radius * Math.cos(angle));
+                        octYPoints[i] = y + h/2 + (int)(radius * Math.sin(angle));
+                    }
+                    g2d.drawPolygon(octXPoints, octYPoints, 8);
+                    break;
+                default: // Rectangle
+                    g2d.drawRect(x, y, w, h);
+            }
+        }
+        
+        g2d.dispose();
+        button.setIcon(new ImageIcon(icon));
+        
+        // Add hover effect
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBorder(BorderFactory.createLineBorder(new Color(0, 122, 255), 2));
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!button.getName().equals(currentShape) && 
+                    !button.getName().equals(currentBorderStyle) && 
+                    !button.getName().equals(currentBorderColor) && 
+                    !button.getName().equals(currentPillStyle)) {
+                    button.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+                }
+            }
+        });
+        
+        return button;
+    }
+
+    private void updateStyleButtons() {
+        // Update all style buttons to show current selection
+        for (Component comp : controlPanel.getComponents()) {
+            if (comp instanceof JPanel) {
+                JPanel panel = (JPanel) comp;
+                for (Component button : panel.getComponents()) {
+                    if (button instanceof JButton) {
+                        JButton styleButton = (JButton) button;
+                        String style = styleButton.getName();
+                        if (style != null) {
+                            if (style.equals(currentShape) || 
+                                style.equals(currentBorderStyle) || 
+                                style.equals(currentBorderColor) || 
+                                style.equals(currentPillStyle)) {
+                                styleButton.setBorder(BorderFactory.createLineBorder(new Color(0, 122, 255), 2));
+                            } else {
+                                styleButton.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void addListeners() {
@@ -1671,6 +1962,23 @@ public class SelectiveBlurApp extends JFrame {
                 "Error capturing screen: " + ex.getMessage(), 
                 "Error", 
                 JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private Color getColorFromName(String colorName) {
+        switch (colorName) {
+            case "Blue":
+                return new Color(0, 122, 255);
+            case "Green":
+                return new Color(52, 199, 89);
+            case "Purple":
+                return new Color(175, 82, 222);
+            case "Orange":
+                return new Color(255, 149, 0);
+            case "Teal":
+                return new Color(90, 200, 250);
+            default: // Red
+                return new Color(255, 59, 48);
         }
     }
 
