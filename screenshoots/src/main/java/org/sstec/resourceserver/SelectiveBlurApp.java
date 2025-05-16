@@ -86,6 +86,9 @@ public class SelectiveBlurApp extends JFrame {
         setSize(800, 600);
         setMinimumSize(new Dimension(800, 600));
         setLocationRelativeTo(null);
+
+        // Capture screen area on startup
+        captureInitialScreenArea();
     }
 
     private void initComponents() {
@@ -1516,6 +1519,46 @@ public class SelectiveBlurApp extends JFrame {
         
         // Restore original font
         g2d.setFont(originalFont);
+    }
+
+    private void captureInitialScreenArea() {
+        try {
+            // Hide the main window temporarily
+            setVisible(false);
+            Thread.sleep(100); // Small delay to ensure window is hidden
+            
+            // Get screen dimensions
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            int screenWidth = screenSize.width;
+            int screenHeight = screenSize.height;
+            
+            // Calculate 30% dimensions
+            int captureWidth = (int)(screenWidth * 0.3);
+            int captureHeight = (int)(screenHeight * 0.3);
+            
+            // Calculate center position
+            int captureX = (screenWidth - captureWidth) / 2;
+            int captureY = (screenHeight - captureHeight) / 2;
+            
+            // Create capture rectangle
+            Rectangle captureRect = new Rectangle(captureX, captureY, captureWidth, captureHeight);
+            
+            // Capture the screen
+            BufferedImage screenImage = new Robot().createScreenCapture(captureRect);
+            
+            // Process the captured area
+            processScreenshot(screenImage);
+            
+            // Show the main window
+            setVisible(true);
+            
+        } catch (Exception ex) {
+            setVisible(true);
+            JOptionPane.showMessageDialog(this, 
+                "Error capturing screen: " + ex.getMessage(), 
+                "Error", 
+                JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public static void main(String[] args) {
