@@ -19,8 +19,8 @@ let selectionWindow = null;
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 800,
+    height: 600,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -46,14 +46,12 @@ function createMainWindow() {
   }
 }
 
-function createSelectionWindow() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  
+function createSelectionWindow(bounds, scaleFactor) {
   selectionWindow = new BrowserWindow({
-    width,
-    height,
-    x: 0,
-    y: 0,
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -65,15 +63,26 @@ function createSelectionWindow() {
 
   selectionWindow.loadFile(path.join(__dirname, 'selection.html'));
   selectionWindow.setIgnoreMouseEvents(false);
+  return selectionWindow;
 }
 
 async function captureScreen() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+  const scaleFactor = primaryDisplay.scaleFactor;
+
   const sources = await desktopCapturer.getSources({
     types: ['screen'],
-    thumbnailSize: screen.getPrimaryDisplay().workAreaSize
+    thumbnailSize: {
+      width: width * scaleFactor,
+      height: height * scaleFactor
+    }
   });
   
-  return sources[0].thumbnail.toDataURL();
+  return {
+    image: sources[0].thumbnail.toDataURL(),
+    scaleFactor
+  };
 }
 
 app.whenReady().then(() => {
@@ -86,15 +95,16 @@ app.whenReady().then(() => {
       setTimeout(async () => {
         // Capture the entire screen first
         const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-        const screenshot = await captureScreen();
+        const { image, scaleFactor } = await captureScreen();
 
-        createSelectionWindow();
+        createSelectionWindow({ x: 0, y: 0, width, height }, scaleFactor);
         
         // Send the screenshot data to the selection window
         selectionWindow.webContents.on('did-finish-load', () => {
           selectionWindow.webContents.send('screenshot-data', {
-            image: screenshot,
-            bounds: { x: 0, y: 0, width, height }
+            image,
+            bounds: { x: 0, y: 0, width, height },
+            scaleFactor
           });
         });
       }, 100);
@@ -115,55 +125,36 @@ app.on('window-all-closed', () => {
 });
 
 // IPC handlers
-ipcMain.on('take-screenshot', async () => {
-  if (mainWindow) {
-    mainWindow.hide();
-    setTimeout(async () => {
-      // Capture the entire screen first
-      const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-      const screenshot = await captureScreen();
+ipcMain.on('start-screenshot', () => {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { bounds, scaleFactor } = primaryDisplay;
 
-      createSelectionWindow();
-      
-      // Send the screenshot data to the selection window
-      selectionWindow.webContents.on('did-finish-load', () => {
-        selectionWindow.webContents.send('screenshot-data', {
-          image: screenshot,
-          bounds: { x: 0, y: 0, width, height }
-        });
-      });
-    }, 100);
+  createSelectionWindow(bounds, scaleFactor);
+});
+
+ipcMain.on('screenshot-data', (event, data) => {
+  if (selectionWindow) {
+    selectionWindow.webContents.send('screenshot-data', {
+      image: data.image,
+      bounds: data.bounds,
+      scaleFactor: data.scaleFactor
+    });
   }
 });
 
-ipcMain.on('capture-screen', async (event, bounds) => {
-  if (!bounds) {
-    // If no bounds provided, capture the entire screen
-    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-    bounds = { x: 0, y: 0, width, height };
+ipcMain.on('capture-screen', (event, selection) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('screenshot-captured', selection);
   }
-
-  const { x, y, width, height } = bounds;
-  const screenshot = await captureScreen();
-
   if (selectionWindow) {
     selectionWindow.close();
-    selectionWindow = null;
   }
-
-  mainWindow.show();
-  mainWindow.webContents.send('screenshot-captured', {
-    image: screenshot,
-    bounds: { x, y, width, height }
-  });
 });
 
 ipcMain.on('cancel-screenshot', () => {
   if (selectionWindow) {
     selectionWindow.close();
-    selectionWindow = null;
   }
-  mainWindow.show();
 });
 
 ipcMain.on('save-settings', (event, settings) => {

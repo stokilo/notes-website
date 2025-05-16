@@ -1,9 +1,15 @@
 const { ipcRenderer } = require('electron');
+const { desktopCapturer } = require('electron');
 const sharp = require('sharp');
 
 class ScreenshotApp {
     constructor() {
         this.canvas = document.getElementById('mainCanvas');
+        if (!this.canvas) {
+            console.error('Canvas element not found');
+            return;
+        }
+        
         this.ctx = this.canvas.getContext('2d');
         this.selections = [];
         this.currentSelection = null;
@@ -12,6 +18,7 @@ class ScreenshotApp {
         this.selectedShapeIndex = -1;
         this.draggedShapeIndex = -1;
         this.dragOffset = null;
+        this.originalImage = null;
         
         // Current styles
         this.currentShape = 'rectangle';
@@ -20,22 +27,57 @@ class ScreenshotApp {
         this.currentPillStyle = 'modern';
         this.blurRadius = 0;
         
+        this.initializeCanvas();
         this.initializeEventListeners();
         this.loadSettings();
     }
 
+    initializeCanvas() {
+        // Set initial canvas size
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        
+        // Clear canvas
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
     initializeEventListeners() {
         // Toolbar buttons
-        document.getElementById('screenshotBtn').addEventListener('click', () => {
-            ipcRenderer.send('take-screenshot');
-        });
+        const screenshotBtn = document.getElementById('screenshotBtn');
+        if (screenshotBtn) {
+            screenshotBtn.addEventListener('click', () => this.startScreenshot());
+        }
 
-        document.getElementById('openBtn').addEventListener('click', () => this.openImage());
-        document.getElementById('saveBtn').addEventListener('click', () => this.saveImage());
-        document.getElementById('saveSelectedBtn').addEventListener('click', () => this.saveSelectedAreas());
-        document.getElementById('clearBtn').addEventListener('click', () => this.clearSelections());
-        document.getElementById('undoBtn').addEventListener('click', () => this.undoLastSelection());
-        document.getElementById('copyBtn').addEventListener('click', () => this.copyLastSelection());
+        const openBtn = document.getElementById('openBtn');
+        if (openBtn) {
+            openBtn.addEventListener('click', () => this.openImage());
+        }
+
+        const saveBtn = document.getElementById('saveBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveImage());
+        }
+
+        const saveSelectedBtn = document.getElementById('saveSelectedBtn');
+        if (saveSelectedBtn) {
+            saveSelectedBtn.addEventListener('click', () => this.saveSelectedAreas());
+        }
+
+        const clearBtn = document.getElementById('clearBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.clearSelections());
+        }
+
+        const undoBtn = document.getElementById('undoBtn');
+        if (undoBtn) {
+            undoBtn.addEventListener('click', () => this.undoLastSelection());
+        }
+
+        const copyBtn = document.getElementById('copyBtn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => this.copyLastSelection());
+        }
 
         // Style buttons
         document.querySelectorAll('.shape-buttons button').forEach(btn => {
@@ -55,10 +97,13 @@ class ScreenshotApp {
         });
 
         // Blur radius
-        document.getElementById('blurRadius').addEventListener('change', (e) => {
-            this.blurRadius = parseInt(e.target.value);
-            this.updateCanvas();
-        });
+        const blurRadius = document.getElementById('blurRadius');
+        if (blurRadius) {
+            blurRadius.addEventListener('change', (e) => {
+                this.blurRadius = parseInt(e.target.value);
+                this.updateCanvas();
+            });
+        }
 
         // Canvas events
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
@@ -66,14 +111,20 @@ class ScreenshotApp {
         this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
 
         // IPC events
-        ipcRenderer.on('screenshot-captured', (event, data) => {
-            this.loadScreenshot(data.image, data.bounds);
+        ipcRenderer.on('screenshot-captured', (event, selection) => {
+            this.displayScreenshot(selection);
         });
 
         ipcRenderer.on('settings-loaded', (event, settings) => {
             if (settings) {
                 this.applySettings(settings);
             }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            this.initializeCanvas();
+            this.updateCanvas();
         });
     }
 
@@ -314,6 +365,89 @@ class ScreenshotApp {
             notification.style.opacity = '0';
             setTimeout(() => notification.remove(), 300);
         }, 2000);
+    }
+
+    async startScreenshot() {
+        try {
+            // Hide the main window
+            ipcRenderer.send('start-screenshot');
+
+            // Capture the screen
+            const sources = await desktopCapturer.getSources({
+                types: ['screen'],
+                thumbnailSize: { width: 0, height: 0 }
+            });
+
+            if (sources.length > 0) {
+                const source = sources[0];
+                const image = source.thumbnail.toDataURL();
+                const { width, height } = source.thumbnail.getSize();
+
+                // Send the screenshot data to the selection window
+                ipcRenderer.send('screenshot-data', {
+                    image,
+                    bounds: { x: 0, y: 0, width, height },
+                    scaleFactor: source.display_id ? source.display_id : 1
+                });
+            } else {
+                this.showNotification('No screen source found', true);
+            }
+        } catch (error) {
+            console.error('Screenshot capture failed:', error);
+            this.showNotification('Failed to capture screenshot', true);
+        }
+    }
+
+    displayScreenshot(selection) {
+        if (!selection || !selection.image) {
+            this.showNotification('Invalid screenshot data', true);
+            return;
+        }
+
+        try {
+            // Create a temporary canvas to draw the selection
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = selection.width;
+            tempCanvas.height = selection.height;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Draw the selection
+            const img = new Image();
+            img.onload = () => {
+                tempCtx.drawImage(
+                    img,
+                    selection.x,
+                    selection.y,
+                    selection.width,
+                    selection.height,
+                    0,
+                    0,
+                    selection.width,
+                    selection.height
+                );
+
+                // Update main canvas
+                this.canvas.width = selection.width;
+                this.canvas.height = selection.height;
+                this.ctx.drawImage(tempCanvas, 0, 0);
+
+                // Store the original image
+                this.originalImage = img;
+
+                // Update UI
+                this.updateButtonStates();
+                this.showNotification('Screenshot captured successfully');
+            };
+
+            img.onerror = () => {
+                this.showNotification('Failed to load screenshot', true);
+            };
+
+            img.src = selection.image;
+        } catch (error) {
+            console.error('Failed to display screenshot:', error);
+            this.showNotification('Failed to display screenshot', true);
+        }
     }
 }
 

@@ -9,6 +9,7 @@ class SelectionWindow {
         this.currentSelection = null;
         this.originalImage = null;
         this.bounds = null;
+        this.scaleFactor = 1;
 
         this.initializeEventListeners();
         this.initializeKeyboardShortcuts();
@@ -27,7 +28,7 @@ class SelectionWindow {
 
         // IPC events
         ipcRenderer.on('screenshot-data', (event, data) => {
-            this.loadScreenshot(data.image, data.bounds);
+            this.loadScreenshot(data.image, data.bounds, data.scaleFactor);
         });
     }
 
@@ -41,13 +42,14 @@ class SelectionWindow {
         });
     }
 
-    loadScreenshot(dataUrl, bounds) {
+    loadScreenshot(dataUrl, bounds, scaleFactor) {
         this.bounds = bounds;
+        this.scaleFactor = scaleFactor;
         this.originalImage = new Image();
         this.originalImage.onload = () => {
             this.canvas.width = bounds.width;
             this.canvas.height = bounds.height;
-            this.ctx.drawImage(this.originalImage, 0, 0);
+            this.ctx.drawImage(this.originalImage, 0, 0, bounds.width, bounds.height);
             this.updateCanvas();
         };
         this.originalImage.src = dataUrl;
@@ -100,7 +102,7 @@ class SelectionWindow {
 
         // Draw original image
         if (this.originalImage) {
-            this.ctx.drawImage(this.originalImage, 0, 0);
+            this.ctx.drawImage(this.originalImage, 0, 0, this.canvas.width, this.canvas.height);
         }
 
         // Draw semi-transparent overlay
@@ -137,10 +139,10 @@ class SelectionWindow {
     captureSelection() {
         if (this.currentSelection && this.originalImage) {
             const selection = {
-                x: this.currentSelection.x,
-                y: this.currentSelection.y,
-                width: this.currentSelection.width,
-                height: this.currentSelection.height
+                x: Math.round(this.currentSelection.x * this.scaleFactor),
+                y: Math.round(this.currentSelection.y * this.scaleFactor),
+                width: Math.round(this.currentSelection.width * this.scaleFactor),
+                height: Math.round(this.currentSelection.height * this.scaleFactor)
             };
 
             // Create a temporary canvas to crop the selection
