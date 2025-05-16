@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
+import BrowserOnly from '@docusaurus/BrowserOnly';
 
-const ImageCarousel = ({
+const ImageCarouselInner = ({
   images,
   buttonTextLeft = "<",
   buttonTextRight = ">",
@@ -277,6 +278,16 @@ const ImageCarousel = ({
         </div>
       )}
     </>
+  );
+};
+
+const ImageCarousel= (props) => {
+  return (
+    <BrowserOnly fallback={<div>Loading...</div>}>
+      {() => {
+        return <ImageCarouselInner {...props} />
+      }}
+    </BrowserOnly>
   );
 };
 
