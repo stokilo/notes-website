@@ -760,15 +760,9 @@ public class SelectiveBlurApp extends JFrame {
                 Rectangle start = sortedRects.get(i);
                 Rectangle end = sortedRects.get(i + 1);
 
-                // Calculate arrow points
-                Point startPoint = new Point(
-                    start.x + start.width / 2,
-                    start.y + start.height / 2
-                );
-                Point endPoint = new Point(
-                    end.x + end.width / 2,
-                    end.y + end.height / 2
-                );
+                // Calculate arrow points on rectangle borders
+                Point startPoint = getBorderIntersectionPoint(start, end);
+                Point endPoint = getBorderIntersectionPoint(end, start);
 
                 // Draw arrow
                 drawArrow(g2d, startPoint, endPoint);
@@ -779,6 +773,33 @@ public class SelectiveBlurApp extends JFrame {
 
         // Save this newly created image
         saveImageToFile(selectedAreasImage, "2.png");
+    }
+
+    private Point getBorderIntersectionPoint(Rectangle rect, Rectangle target) {
+        // Calculate center points
+        Point rectCenter = new Point(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        Point targetCenter = new Point(target.x + target.width / 2, target.y + target.height / 2);
+
+        // Calculate angle between centers
+        double angle = Math.atan2(targetCenter.y - rectCenter.y, targetCenter.x - rectCenter.x);
+
+        // Calculate intersection with rectangle border
+        double halfWidth = rect.width / 2.0;
+        double halfHeight = rect.height / 2.0;
+
+        // Calculate the point on the rectangle's border
+        double x, y;
+        if (Math.abs(Math.cos(angle)) > Math.abs(Math.sin(angle))) {
+            // Intersects with left or right border
+            x = rectCenter.x + (Math.cos(angle) > 0 ? halfWidth : -halfWidth);
+            y = rectCenter.y + Math.tan(angle) * (x - rectCenter.x);
+        } else {
+            // Intersects with top or bottom border
+            y = rectCenter.y + (Math.sin(angle) > 0 ? halfHeight : -halfHeight);
+            x = rectCenter.x + (y - rectCenter.y) / Math.tan(angle);
+        }
+
+        return new Point((int) x, (int) y);
     }
 
     private void drawArrow(Graphics2D g2d, Point start, Point end) {

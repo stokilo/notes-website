@@ -1,32 +1,30 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 
 const BeforeAfterImage = ({
-                             firstImage,
-                             secondImage,
-                             buttonTextLeft = "Show Left",
-                             buttonTextRight = "Show Right",
-                           }) => {
-  const [showFirst, setShowFirst] = useState(true);
+  images,
+  buttonTextLeft = "<",
+  buttonTextRight = ">",
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [fullScreenImage, setFullScreenImage] = useState(null);
 
-  const toggleImage = () => {
-    setShowFirst(!showFirst);
-    if (isFullScreen) {
-      setFullScreenImage(showFirst ? secondImage.imageUrl : firstImage.imageUrl);
-    }
+  const nextImage = () => {
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
   };
 
-  const currentImage = showFirst ? firstImage.imageUrl : secondImage.imageUrl;
+  const previousImage = () => {
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+  };
+
+  const currentImage = images[currentIndex].imageUrl;
+  const currentFileName = images[currentIndex].imageUrl.split('/').pop();
 
   const enterFullScreen = () => {
     setIsFullScreen(true);
-    setFullScreenImage(currentImage);
   };
 
   const exitFullScreen = () => {
     setIsFullScreen(false);
-    setFullScreenImage(null);
   };
 
   const buttonStyle = {
@@ -55,6 +53,23 @@ const BeforeAfterImage = ({
     fontFamily: "Arial, sans-serif",
   };
 
+  const imageContainerStyle = {
+    position: "relative",
+    display: "inline-block",
+  };
+
+  const filenameStyle = {
+    position: "absolute",
+    bottom: "10px",
+    right: "10px",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    color: "white",
+    padding: "4px 8px",
+    borderRadius: "4px",
+    fontSize: "14px",
+    zIndex: 1,
+  };
+
   return (
     <>
       {!isFullScreen ? (
@@ -68,39 +83,44 @@ const BeforeAfterImage = ({
             display: "inline-block",
             maxWidth: "100%",
           }}>
-            <img
-              src={currentImage}
-              alt="Comparison"
-              onClick={enterFullScreen}
-              style={{
-                maxWidth: "100%",
-                height: "auto",
-                display: "block",
-                margin: "0 auto",
-                cursor: "pointer",
-              }}
-            />
+            <div style={imageContainerStyle}>
+              <img
+                src={currentImage}
+                alt={`Image ${currentIndex + 1}`}
+                onClick={enterFullScreen}
+                style={{
+                  maxWidth: "100%",
+                  height: "auto",
+                  display: "block",
+                  margin: "0 auto",
+                  cursor: "pointer",
+                }}
+              />
+              <div style={filenameStyle}>
+                {currentFileName}
+              </div>
+            </div>
             <div style={{ 
               padding: "10px", 
               borderTop: "1px solid #e0e0e0",
               backgroundColor: "#f5f5f5",
             }}>
               <button
-                onClick={toggleImage}
-                disabled={showFirst}
+                onClick={previousImage}
+                disabled={currentIndex === 0}
                 style={{
                   ...buttonStyle,
-                  ...(showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+                  ...(currentIndex === 0 ? buttonStyle["&:disabled"] : {}),
                 }}
               >
                 {buttonTextLeft}
               </button>
               <button
-                onClick={toggleImage}
-                disabled={!showFirst}
+                onClick={nextImage}
+                disabled={currentIndex === images.length - 1}
                 style={{
                   ...buttonStyle,
-                  ...(!showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+                  ...(currentIndex === images.length - 1 ? buttonStyle["&:disabled"] : {}),
                 }}
               >
                 {buttonTextRight}
@@ -128,37 +148,42 @@ const BeforeAfterImage = ({
             padding: "20px",
           }}
         >
-          <img
-            src={fullScreenImage}
-            alt="Full Screen"
-            onClick={exitFullScreen}
-            style={{
-              maxHeight: "80vh",
-              maxWidth: "90%",
-              objectFit: "contain",
-              overflow: "auto",
-              cursor: "pointer",
-              borderRadius: "8px",
-              boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-            }}
-          />
+          <div style={imageContainerStyle}>
+            <img
+              src={currentImage}
+              alt={`Full Screen Image ${currentIndex + 1}`}
+              onClick={exitFullScreen}
+              style={{
+                maxHeight: "80vh",
+                maxWidth: "90%",
+                objectFit: "contain",
+                overflow: "auto",
+                cursor: "pointer",
+                borderRadius: "8px",
+                boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
+              }}
+            />
+            <div style={filenameStyle}>
+              {currentFileName}
+            </div>
+          </div>
           <div style={{ marginTop: "10px" }}>
             <button
-              onClick={toggleImage}
-              disabled={showFirst}
+              onClick={previousImage}
+              disabled={currentIndex === 0}
               style={{
                 ...buttonStyle,
-                ...(showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+                ...(currentIndex === 0 ? buttonStyle["&:disabled"] : {}),
               }}
             >
               {buttonTextLeft}
             </button>
             <button
-              onClick={toggleImage}
-              disabled={!showFirst}
+              onClick={nextImage}
+              disabled={currentIndex === images.length - 1}
               style={{
                 ...buttonStyle,
-                ...(!showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+                ...(currentIndex === images.length - 1 ? buttonStyle["&:disabled"] : {}),
               }}
             >
               {buttonTextRight}

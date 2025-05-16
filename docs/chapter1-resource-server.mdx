@@ -16,14 +16,17 @@ import Highlight from './components/Highlight';
 **Create a customer**
 
 <BeforeAfterImage
-  firstImage={{imageUrl: '/img/chapter1/11.png'}}
-  secondImage={{imageUrl: '/img/chapter1/22.png'}}
-/>
+  images={[
+    { imageUrl: '/img/chapter1/1.png' },
+    { imageUrl: '/img/chapter1/2.png' },
+    { imageUrl: '/img/chapter1/1.png' },
+  ]} />
 
 **Web Security Config**
 
 
-<ShikiCodeBlock language="java" theme="catppuccin-frappe" source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/chapter1-resource-server/src/main/java/org/sstec/resourceserver/SecurityConfig.java" />
+<ShikiCodeBlock language="java" theme="catppuccin-frappe"
+                source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/chapter1-resource-server/src/main/java/org/sstec/resourceserver/SecurityConfig.java" />
 
 
 
