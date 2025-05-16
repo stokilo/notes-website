@@ -11,6 +11,7 @@ class SelectionWindow {
         this.bounds = null;
 
         this.initializeEventListeners();
+        this.initializeKeyboardShortcuts();
     }
 
     initializeEventListeners() {
@@ -30,6 +31,16 @@ class SelectionWindow {
         });
     }
 
+    initializeKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === 'Return') {
+                this.captureSelection();
+            } else if (e.key === 'Escape') {
+                this.cancelSelection();
+            }
+        });
+    }
+
     loadScreenshot(dataUrl, bounds) {
         this.bounds = bounds;
         this.originalImage = new Image();
@@ -37,6 +48,7 @@ class SelectionWindow {
             this.canvas.width = bounds.width;
             this.canvas.height = bounds.height;
             this.ctx.drawImage(this.originalImage, 0, 0);
+            this.updateCanvas();
         };
         this.originalImage.src = dataUrl;
     }
@@ -113,6 +125,12 @@ class SelectionWindow {
                 this.currentSelection.width,
                 this.currentSelection.height
             );
+
+            // Draw size info
+            const sizeText = `${Math.round(this.currentSelection.width)} x ${Math.round(this.currentSelection.height)}`;
+            this.ctx.fillStyle = '#00ff00';
+            this.ctx.font = '14px Arial';
+            this.ctx.fillText(sizeText, this.currentSelection.x, this.currentSelection.y - 5);
         }
     }
 
@@ -145,14 +163,11 @@ class SelectionWindow {
             );
 
             // Send the cropped image data back to the main window
-            ipcRenderer.send('selection-captured', {
-                image: tempCanvas.toDataURL(),
-                bounds: {
-                    x: selection.x + this.bounds.x,
-                    y: selection.y + this.bounds.y,
-                    width: selection.width,
-                    height: selection.height
-                }
+            ipcRenderer.send('capture-screen', {
+                x: selection.x,
+                y: selection.y,
+                width: selection.width,
+                height: selection.height
             });
         }
     }

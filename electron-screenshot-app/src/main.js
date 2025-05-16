@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, desktopCapturer } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
@@ -67,6 +67,15 @@ function createSelectionWindow() {
   selectionWindow.setIgnoreMouseEvents(false);
 }
 
+async function captureScreen() {
+  const sources = await desktopCapturer.getSources({
+    types: ['screen'],
+    thumbnailSize: screen.getPrimaryDisplay().workAreaSize
+  });
+  
+  return sources[0].thumbnail.toDataURL();
+}
+
 app.whenReady().then(() => {
   createMainWindow();
 
@@ -74,8 +83,20 @@ app.whenReady().then(() => {
   globalShortcut.register('CommandOrControl+Shift+S', () => {
     if (mainWindow) {
       mainWindow.hide();
-      setTimeout(() => {
+      setTimeout(async () => {
+        // Capture the entire screen first
+        const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+        const screenshot = await captureScreen();
+
         createSelectionWindow();
+        
+        // Send the screenshot data to the selection window
+        selectionWindow.webContents.on('did-finish-load', () => {
+          selectionWindow.webContents.send('screenshot-data', {
+            image: screenshot,
+            bounds: { x: 0, y: 0, width, height }
+          });
+        });
       }, 100);
     }
   });
@@ -94,16 +115,28 @@ app.on('window-all-closed', () => {
 });
 
 // IPC handlers
-ipcMain.on('take-screenshot', () => {
+ipcMain.on('take-screenshot', async () => {
   if (mainWindow) {
     mainWindow.hide();
-    setTimeout(() => {
+    setTimeout(async () => {
+      // Capture the entire screen first
+      const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+      const screenshot = await captureScreen();
+
       createSelectionWindow();
+      
+      // Send the screenshot data to the selection window
+      selectionWindow.webContents.on('did-finish-load', () => {
+        selectionWindow.webContents.send('screenshot-data', {
+          image: screenshot,
+          bounds: { x: 0, y: 0, width, height }
+        });
+      });
     }, 100);
   }
 });
 
-ipcMain.on('capture-screen', (event, bounds) => {
+ipcMain.on('capture-screen', async (event, bounds) => {
   if (!bounds) {
     // If no bounds provided, capture the entire screen
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -111,12 +144,7 @@ ipcMain.on('capture-screen', (event, bounds) => {
   }
 
   const { x, y, width, height } = bounds;
-  const screenshot = screen.getPrimaryDisplay().capturePage({
-    x: Math.floor(x),
-    y: Math.floor(y),
-    width: Math.floor(width),
-    height: Math.floor(height)
-  });
+  const screenshot = await captureScreen();
 
   if (selectionWindow) {
     selectionWindow.close();
@@ -125,7 +153,7 @@ ipcMain.on('capture-screen', (event, bounds) => {
 
   mainWindow.show();
   mainWindow.webContents.send('screenshot-captured', {
-    image: screenshot.toDataURL(),
+    image: screenshot,
     bounds: { x, y, width, height }
   });
 });
