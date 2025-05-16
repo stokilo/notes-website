@@ -441,24 +441,6 @@ class ImagePanel extends JPanel {
                 drawShape(g2d, previewShape, true, -1);
             }
 
-            // Draw mouse coordinates if available
-            if (currentMousePoint != null) {
-                Point imagePoint = panelToImageCoordinates(currentMousePoint);
-                String coordText = String.format("Panel: (%d, %d) Image: (%d, %d)", 
-                    currentMousePoint.x, currentMousePoint.y,
-                    imagePoint.x, imagePoint.y);
-                
-                // Draw background for text
-                FontMetrics fm = g2d.getFontMetrics();
-                int textWidth = fm.stringWidth(coordText);
-                int textHeight = fm.getHeight();
-                g2d.setColor(new Color(0, 0, 0, 180));
-                g2d.fillRect(10, 10, textWidth + 10, textHeight + 5);
-                
-                // Draw text
-                g2d.setColor(Color.WHITE);
-                g2d.drawString(coordText, 15, 15 + fm.getAscent());
-            }
         } else if (placeholderImage != null) {
             // Calculate position to center the placeholder
             int imageX = (panelWidth - placeholderImage.getWidth()) / 2;
