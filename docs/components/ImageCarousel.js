@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const BeforeAfterImage = ({
+const ImageCarousel = ({
   images,
   buttonTextLeft = "<",
   buttonTextRight = ">",
@@ -198,4 +198,4 @@ const BeforeAfterImage = ({
   );
 };
 
-export default BeforeAfterImage;
+export default ImageCarousel;
