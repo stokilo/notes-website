@@ -11,9 +11,11 @@ import Highlight from './components/Highlight';
 
 **Chapter 1**
 
-<Highlight color="#e91e63">Keycloak Resource Server</Highlight> configuration with Spring Security.
+We'll start with a very simple Spring Boot application acting as a <Highlight color="#e91e63">Resource Server</Highlight>, secured by Keycloak. It will only perform authentication (i.e., verify the JWT token is valid and issued by our Keycloak instance) but not authorization (i.e., check specific roles or permissions yet).
 
-**Create a customer**
+
+**Create a realm**
+
 
 <ImageCarousel
   images={[
