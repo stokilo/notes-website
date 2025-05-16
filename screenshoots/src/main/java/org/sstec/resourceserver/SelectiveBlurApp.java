@@ -1123,43 +1123,20 @@ public class SelectiveBlurApp extends JFrame {
             }
 
             try {
-                // Create a new image with the same dimensions as the processed image
-                BufferedImage finalImage = new BufferedImage(
-                    processedImage.getWidth(),
-                    processedImage.getHeight(),
+                // Create a buffered image of the panel's size
+                BufferedImage capture = new BufferedImage(
+                    imagePanel.getWidth(),
+                    imagePanel.getHeight(),
                     BufferedImage.TYPE_INT_ARGB
                 );
-                Graphics2D g2d = finalImage.createGraphics();
-
-                // Fill background with grey to match app
-                g2d.setColor(new Color(200, 200, 200, 80));
-                g2d.fillRect(0, 0, finalImage.getWidth(), finalImage.getHeight());
-
-                // Set high-quality rendering hints
-                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Draw the processed image (with blur effect)
-                g2d.drawImage(processedImage, 0, 0, null);
-
-                // Get all shapes from ImagePanel
-                List<SelectionShape> shapes = imagePanel.getShapes();
                 
-                // Draw all shapes with their specific styles
-                for (int i = 0; i < shapes.size(); i++) {
-                    SelectionShape shape = shapes.get(i);
-                    Rectangle rect = shape.getBounds();
-                    
-                    // Draw the shape with its specific style
-                    drawShapeWithStyle(g2d, rect, shape.getShape(), shape.getBorderStyle(), shape.getBorderColor());
-                    drawPillWithStyle(g2d, rect, i, shape.getPillPosition(), shape.getPillStyle());
-                }
-
+                // Paint the panel to the buffered image
+                Graphics2D g2d = capture.createGraphics();
+                imagePanel.paint(g2d);
                 g2d.dispose();
 
-                // Save the image
-                boolean success = ImageIO.write(finalImage, "png", selectedFile);
+                // Save the captured image
+                boolean success = ImageIO.write(capture, "png", selectedFile);
                 if (success) {
                     showNotification("Image saved successfully!");
                 } else {
