@@ -1,0 +1,22 @@
+---
+sidebar_label: 'Introduction'
+sidebar_position: 1
+---
+
+import ShikiCodeBlock from './components/ShikiCodeBlock';
+
+# Keycloak Introduction
+
+**Running Keycloak docker container**
+
+<ShikiCodeBlock language="shell" theme="catppuccin-frappe"
+                code={"docker run -p 8180:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:latest start-dev"} />
+
+**Access Keycloak Admin Panel under docker**
+
+[http://localhost:8180](http://localhost:8180)
+
+username: admin
+
+password: admin
+
