@@ -68,17 +68,6 @@ const BeforeAfterImage = ({
             display: "inline-block",
             maxWidth: "100%",
           }}>
-            <div style={{ 
-              padding: "10px", 
-              borderBottom: "1px solid #e0e0e0",
-              backgroundColor: "#f5f5f5",
-              display: "flex",
-              justifyContent: "flex-end"
-            }}>
-              <button onClick={enterFullScreen} style={buttonStyle}>
-                Zoom
-              </button>
-            </div>
             <img
               src={currentImage}
               alt="Comparison"
@@ -115,6 +104,9 @@ const BeforeAfterImage = ({
                 }}
               >
                 {buttonTextRight}
+              </button>
+              <button onClick={enterFullScreen} style={buttonStyle}>
+                Zoom
               </button>
             </div>
           </div>
