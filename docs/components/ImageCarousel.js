@@ -183,11 +183,18 @@ const ImageCarousel = ({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: "20px",
+            padding: "10px",
+            boxSizing: "border-box",
           }}
         >
           <div 
-            style={imageContainerStyle}
+            style={{
+              ...imageContainerStyle,
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -197,8 +204,10 @@ const ImageCarousel = ({
               alt={`Full Screen Image ${currentIndex + 1}`}
               onClick={exitFullScreen}
               style={{
-                maxHeight: "80vh",
-                maxWidth: "90%",
+                maxHeight: "85vh",
+                maxWidth: "100%",
+                width: "auto",
+                height: "auto",
                 objectFit: "contain",
                 overflow: "auto",
                 cursor: "pointer",
