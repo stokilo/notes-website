@@ -204,14 +204,22 @@ class ImagePanel extends JPanel {
                 newShapes.add(existingShape);
             } else {
                 // Create new shape with current styles
-                newShapes.add(new SelectionShape(
+                SelectionShape newShape = new SelectionShape(
                     newSelections.get(i),
                     currentShape,
                     currentBorderStyle,
                     currentBorderColor,
                     currentPillStyle,
                     0
-                ));
+                );
+                newShapes.add(newShape);
+                
+                // Initialize pill position and style for the new shape
+                pillPositions.put(i, 0);
+                selectionShapes.put(i, currentShape);
+                selectionBorderStyles.put(i, currentBorderStyle);
+                selectionBorderColors.put(i, currentBorderColor);
+                selectionPillStyles.put(i, currentPillStyle);
             }
         }
         
@@ -344,7 +352,8 @@ class ImagePanel extends JPanel {
             g2d.drawImage(processedImageToDisplay, imageX, imageY, null);
 
             // Draw all shapes
-            for (SelectionShape shape : shapes) {
+            for (int i = 0; i < shapes.size(); i++) {
+                SelectionShape shape = shapes.get(i);
                 Rectangle rect = shape.getBounds();
                 Rectangle panelRect = new Rectangle(
                     rect.x + imageX,
@@ -359,7 +368,7 @@ class ImagePanel extends JPanel {
                     shape.getBorderColor(),
                     shape.getPillStyle(),
                     shape.getPillPosition()
-                ), false);
+                ), false, i);
             }
 
             // Draw preview if exists
@@ -378,7 +387,7 @@ class ImagePanel extends JPanel {
                     currentPillStyle,
                     0
                 );
-                drawShape(g2d, previewShape, true);
+                drawShape(g2d, previewShape, true, -1);
             }
         } else if (placeholderImage != null) {
             // Calculate position to center the placeholder
@@ -399,7 +408,7 @@ class ImagePanel extends JPanel {
         g2d.dispose();
     }
 
-    private void drawShape(Graphics2D g2d, SelectionShape shape, boolean isPreview) {
+    private void drawShape(Graphics2D g2d, SelectionShape shape, boolean isPreview, int shapeIndex) {
         Stroke originalStroke = g2d.getStroke();
         Color originalColor = g2d.getColor();
         
@@ -467,7 +476,7 @@ class ImagePanel extends JPanel {
         
         // Draw pill if not preview
         if (!isPreview) {
-            drawPill(g2d, rect, shapes.indexOf(shape), shape.getPillPosition(), shape.getPillStyle());
+            drawPill(g2d, rect, shapeIndex, shape.getPillPosition(), shape.getPillStyle());
         }
         
         // Restore original stroke and color
