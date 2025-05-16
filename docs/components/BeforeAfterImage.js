@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 
-const ImageToggleButton = ({
+const BeforeAfterImage = ({
                              firstImage,
                              secondImage,
                              buttonTextLeft = "Show Left",
@@ -181,4 +181,4 @@ const ImageToggleButton = ({
   );
 };
 
-export default ImageToggleButton;
+export default BeforeAfterImage;
