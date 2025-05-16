@@ -50,6 +50,7 @@ const ImageCarousel = ({
     color: "white",
     margin: "0 8px",
     transition: "background-color 0.3s ease",
+    userSelect: "none",
     "&:hover": {
       backgroundColor: "#388E3C",
     },
