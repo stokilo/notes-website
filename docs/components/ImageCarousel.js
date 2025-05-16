@@ -12,6 +12,7 @@ const ImageCarousel = ({
   const [imageDimensions, setImageDimensions] = useState({ width: null, height: null });
   const [viewportSize, setViewportSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const loadingTimeoutRef = useRef(null);
+  const imageRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -53,7 +54,12 @@ const ImageCarousel = ({
     }
     loadingTimeoutRef.current = setTimeout(() => {
       setIsLoading(false);
-    }, 2000); // Fallback after 2 seconds
+    }, 5000); // Increased timeout to 5 seconds for slower connections
+
+    // Force image reload on iOS Safari
+    if (imageRef.current) {
+      imageRef.current.src = currentImage;
+    }
 
     return () => {
       if (loadingTimeoutRef.current) {
@@ -197,6 +203,7 @@ const ImageCarousel = ({
             <div style={imageContainerStyle}>
               {isLoading && <div style={loadingStyle}>Loading...</div>}
               <img
+                ref={imageRef}
                 src={currentImage}
                 alt={`Image ${currentIndex + 1}`}
                 onClick={enterFullScreen}
@@ -204,6 +211,7 @@ const ImageCarousel = ({
                 onError={handleImageError}
                 style={getImageStyle(false)}
                 {...(isGif && { autoPlay: true, loop: true })}
+                loading="eager"
               />
             </div>
             <div style={filenameStyle}>
@@ -271,6 +279,7 @@ const ImageCarousel = ({
           >
             {isLoading && <div style={{...loadingStyle, color: "white"}}>Loading...</div>}
             <img
+              ref={imageRef}
               src={currentImage}
               alt={`Full Screen Image ${currentIndex + 1}`}
               onClick={exitFullScreen}
@@ -278,6 +287,7 @@ const ImageCarousel = ({
               onError={handleImageError}
               style={getImageStyle(true)}
               {...(isGif && { autoPlay: true, loop: true })}
+              loading="eager"
             />
           </div>
           <div style={{
