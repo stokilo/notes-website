@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Collections;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
@@ -704,9 +705,14 @@ public class SelectiveBlurApp extends JFrame {
         BufferedImage selectedAreasImage = new BufferedImage(
                 originalImage.getWidth(),
                 originalImage.getHeight(),
-                BufferedImage.TYPE_INT_ARGB // Use ARGB for potential transparency if needed later, though filling white
+                BufferedImage.TYPE_INT_ARGB
         );
         Graphics2D g2d = selectedAreasImage.createGraphics();
+
+        // Enable high-quality rendering
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
 
         // Fill background with white
         g2d.setColor(Color.WHITE);
@@ -725,17 +731,80 @@ public class SelectiveBlurApp extends JFrame {
                     );
                     g2d.drawImage(portion, clippedRect.x, clippedRect.y, null);
                 } catch (RasterFormatException rfe) {
-                    // This can happen if the rectangle, after clipping, is outside the original image bounds
-                    // (though the intersection should prevent this for getSubimage).
-                    // Or if width/height become zero due to clipping.
                     System.err.println("Error creating subimage for rect: " + clippedRect + " - " + rfe.getMessage());
                 }
             }
         }
+
+        // Draw rectangles with their styling
+        for (int i = 0; i < selections.size(); i++) {
+            Rectangle rect = selections.get(i);
+            String shape = imagePanel.getShapeForSelection(i);
+            String borderStyle = imagePanel.getBorderStyleForSelection(i);
+            String borderColor = imagePanel.getBorderColorForSelection(i);
+            drawShapeWithStyle(g2d, rect, shape, borderStyle, borderColor);
+        }
+
+        // Draw connecting arrows between rectangles
+        if (selections.size() > 1) {
+            // Sort rectangles by their pill numbers
+            List<Rectangle> sortedRects = new ArrayList<>(selections);
+            Collections.sort(sortedRects, (r1, r2) -> {
+                int index1 = selections.indexOf(r1);
+                int index2 = selections.indexOf(r2);
+                return Integer.compare(index1, index2);
+            });
+
+            // Draw arrows between consecutive rectangles
+            for (int i = 0; i < sortedRects.size() - 1; i++) {
+                Rectangle start = sortedRects.get(i);
+                Rectangle end = sortedRects.get(i + 1);
+
+                // Calculate arrow points
+                Point startPoint = new Point(
+                    start.x + start.width / 2,
+                    start.y + start.height / 2
+                );
+                Point endPoint = new Point(
+                    end.x + end.width / 2,
+                    end.y + end.height / 2
+                );
+
+                // Draw arrow
+                drawArrow(g2d, startPoint, endPoint);
+            }
+        }
+
         g2d.dispose();
 
         // Save this newly created image
-        saveImageToFile(selectedAreasImage, "selected_areas_only.png");
+        saveImageToFile(selectedAreasImage, "2.png");
+    }
+
+    private void drawArrow(Graphics2D g2d, Point start, Point end) {
+        // Set arrow style
+        g2d.setColor(new Color(0, 122, 255, 180));
+        g2d.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+        // Calculate arrow head
+        double angle = Math.atan2(end.y - start.y, end.x - start.x);
+        int arrowLength = 15;
+        int arrowWidth = 8;
+
+        // Draw arrow line
+        g2d.drawLine(start.x, start.y, end.x, end.y);
+
+        // Draw arrow head
+        int[] xPoints = new int[3];
+        int[] yPoints = new int[3];
+        xPoints[0] = end.x;
+        yPoints[0] = end.y;
+        xPoints[1] = (int) (end.x - arrowLength * Math.cos(angle - Math.PI / 6));
+        yPoints[1] = (int) (end.y - arrowLength * Math.sin(angle - Math.PI / 6));
+        xPoints[2] = (int) (end.x - arrowLength * Math.cos(angle + Math.PI / 6));
+        yPoints[2] = (int) (end.y - arrowLength * Math.sin(angle + Math.PI / 6));
+
+        g2d.fillPolygon(xPoints, yPoints, 3);
     }
 
     private void saveImageToFile(BufferedImage imageToSave, String defaultFileName) {
@@ -860,21 +929,12 @@ public class SelectiveBlurApp extends JFrame {
                 // Save the final image with pills
                 boolean success = ImageIO.write(finalImage, "PNG", outputFile);
                 if (success) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Image saved successfully to:\n" + outputFile.getAbsolutePath(), 
-                        "Success", 
-                        JOptionPane.INFORMATION_MESSAGE);
+                    showNotification("Image saved successfully!");
                 } else {
-                    JOptionPane.showMessageDialog(this, 
-                        "Failed to save image. ImageIO writer error.", 
-                        "Error", 
-                        JOptionPane.ERROR_MESSAGE);
+                    showNotification("Failed to save image", true);
                 }
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, 
-                    "Error saving image: " + ex.getMessage(), 
-                    "Error", 
-                    JOptionPane.ERROR_MESSAGE);
+                showNotification("Error saving image: " + ex.getMessage(), true);
             }
         }
     }
