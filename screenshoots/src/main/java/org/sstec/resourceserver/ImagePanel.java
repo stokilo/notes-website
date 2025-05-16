@@ -61,6 +61,7 @@ class ImagePanel extends JPanel {
     private Map<Integer, String> selectionPillStyles = new HashMap<>();
     private int selectedShapeIndex = -1;
     private Consumer<SelectionShape> shapeSelectedListener;
+    private Map<Integer, Double> pillSizes = new HashMap<>(); // Store custom pill sizes
 
     public ImagePanel() {
         loadPlaceholderImage();
@@ -76,9 +77,17 @@ class ImagePanel extends JPanel {
                     SelectionShape shape = shapes.get(i);
                     int currentPosition = pillPositions.getOrDefault(i, 0);
                     if (isPointInPill(imagePoint, shape.getBounds(), i, currentPosition)) {
-                        // Cycle pill position
-                        int newPosition = (currentPosition + 1) % PILL_POSITION_COUNT;
-                        pillPositions.put(i, newPosition);
+                        // If right click, cycle pill size
+                        if (SwingUtilities.isRightMouseButton(e)) {
+                            double currentSize = pillSizes.getOrDefault(i, PILL_SIZE_RATIO);
+                            double newSize = currentSize + 0.05; // Increase by 5%
+                            if (newSize > 0.3) newSize = 0.1; // Reset to 10% if over 30%
+                            pillSizes.put(i, newSize);
+                        } else {
+                            // Left click cycles position
+                            int newPosition = (currentPosition + 1) % PILL_POSITION_COUNT;
+                            pillPositions.put(i, newPosition);
+                        }
                         repaint();
                         return;
                     }
@@ -522,9 +531,10 @@ class ImagePanel extends JPanel {
     }
 
     private void drawPill(Graphics2D g2d, Rectangle rect, int index, int position, String pillStyle) {
-        // Calculate pill size based on rectangle size
-        int pillWidth = (int)(rect.width * PILL_SIZE_RATIO);
-        int pillHeight = (int)(rect.height * PILL_SIZE_RATIO);
+        // Calculate pill size based on rectangle size and custom size if set
+        double sizeRatio = pillSizes.getOrDefault(index, PILL_SIZE_RATIO);
+        int pillWidth = (int)(rect.width * sizeRatio);
+        int pillHeight = (int)(rect.height * sizeRatio);
         
         // Apply min/max constraints
         pillWidth = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillWidth));
@@ -656,8 +666,62 @@ class ImagePanel extends JPanel {
     }
 
     private boolean isPointInPill(Point point, Rectangle rect, int index, int position) {
-        // Implementation of isPointInPill method
-        return false; // Placeholder return, actual implementation needed
+        // Calculate pill size
+        double sizeRatio = pillSizes.getOrDefault(index, PILL_SIZE_RATIO);
+        int pillWidth = (int)(rect.width * sizeRatio);
+        int pillHeight = (int)(rect.height * sizeRatio);
+        
+        // Apply min/max constraints
+        pillWidth = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillWidth));
+        pillHeight = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillHeight));
+        
+        // Calculate pill position
+        int pillX, pillY;
+        int padding = pillHeight / 4;
+        
+        switch (position) {
+            case 0: // Top right inside
+                pillX = rect.x + rect.width - pillWidth - padding;
+                pillY = rect.y + padding;
+                break;
+            case 1: // Top left inside
+                pillX = rect.x + padding;
+                pillY = rect.y + padding;
+                break;
+            case 2: // Bottom left inside
+                pillX = rect.x + padding;
+                pillY = rect.y + rect.height - pillHeight - padding;
+                break;
+            case 3: // Bottom right inside
+                pillX = rect.x + rect.width - pillWidth - padding;
+                pillY = rect.y + rect.height - pillHeight - padding;
+                break;
+            case 4: // Top right outside
+                pillX = rect.x + rect.width + padding;
+                pillY = rect.y - pillHeight - padding;
+                break;
+            case 5: // Top left outside
+                pillX = rect.x - pillWidth - padding;
+                pillY = rect.y - pillHeight - padding;
+                break;
+            case 6: // Bottom left outside
+                pillX = rect.x - pillWidth - padding;
+                pillY = rect.y + rect.height + padding;
+                break;
+            case 7: // Bottom right outside
+                pillX = rect.x + rect.width + padding;
+                pillY = rect.y + rect.height + padding;
+                break;
+            default:
+                pillX = rect.x + rect.width - pillWidth - padding;
+                pillY = rect.y + padding;
+        }
+        
+        // Create pill rectangle
+        Rectangle pillRect = new Rectangle(pillX, pillY, pillWidth, pillHeight);
+        
+        // Check if point is inside pill
+        return pillRect.contains(point);
     }
 
     public Point panelToImageCoordinates(Point panelPoint) {
@@ -705,6 +769,15 @@ class ImagePanel extends JPanel {
 
     public void setPillPositions(Map<Integer, Integer> positions) {
         this.pillPositions = new HashMap<>(positions);
+        repaint();
+    }
+
+    public Map<Integer, Double> getPillSizes() {
+        return new HashMap<>(pillSizes);
+    }
+
+    public void setPillSizes(Map<Integer, Double> sizes) {
+        this.pillSizes = new HashMap<>(sizes);
         repaint();
     }
 

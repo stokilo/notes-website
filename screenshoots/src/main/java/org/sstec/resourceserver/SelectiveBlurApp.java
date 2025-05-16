@@ -882,7 +882,7 @@ public class SelectiveBlurApp extends JFrame {
     private void loadZoomIcon() {
         try {
             // Load SVG from resources
-            InputStream svgStream = getClass().getResourceAsStream("/zoom-in.svg");
+            InputStream svgStream = getClass().getResourceAsStream("/icons/zoom-in.svg");
             if (svgStream == null) {
                 System.err.println("Could not find zoom-in.svg in resources");
                 return;

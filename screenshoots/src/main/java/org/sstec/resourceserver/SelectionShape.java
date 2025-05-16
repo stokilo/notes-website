@@ -9,6 +9,7 @@ public class SelectionShape {
     private String borderColor;
     private String pillStyle;
     private int pillPosition;
+    private double pillSize;
 
     public SelectionShape(Rectangle bounds, String shape, String borderStyle, 
                          String borderColor, String pillStyle, int pillPosition) {
@@ -18,6 +19,7 @@ public class SelectionShape {
         this.borderColor = borderColor;
         this.pillStyle = pillStyle;
         this.pillPosition = pillPosition;
+        this.pillSize = 0.10; // Default pill size ratio
     }
 
     // Getters
@@ -27,6 +29,7 @@ public class SelectionShape {
     public String getBorderColor() { return borderColor; }
     public String getPillStyle() { return pillStyle; }
     public int getPillPosition() { return pillPosition; }
+    public double getPillSize() { return pillSize; }
 
     // Setters
     public void setBounds(Rectangle bounds) { this.bounds = bounds; }
@@ -35,10 +38,11 @@ public class SelectionShape {
     public void setBorderColor(String borderColor) { this.borderColor = borderColor; }
     public void setPillStyle(String pillStyle) { this.pillStyle = pillStyle; }
     public void setPillPosition(int pillPosition) { this.pillPosition = pillPosition; }
+    public void setPillSize(double pillSize) { this.pillSize = pillSize; }
 
     // Create a copy of this shape
     public SelectionShape copy() {
-        return new SelectionShape(
+        SelectionShape copy = new SelectionShape(
             new Rectangle(bounds),
             shape,
             borderStyle,
@@ -46,5 +50,7 @@ public class SelectionShape {
             pillStyle,
             pillPosition
         );
+        copy.setPillSize(pillSize);
+        return copy;
     }
 } 
