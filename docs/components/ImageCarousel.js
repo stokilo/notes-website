@@ -9,6 +9,20 @@ const ImageCarousel = ({
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isGif, setIsGif] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [imageDimensions, setImageDimensions] = useState({ width: null, height: null });
+  const [viewportSize, setViewportSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const nextImage = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
@@ -28,8 +42,28 @@ const ImageCarousel = ({
     setIsLoading(true);
   }, [currentImage]);
 
-  const handleImageLoad = () => {
+  const handleImageLoad = (e) => {
     setIsLoading(false);
+    // Set dimensions based on the first image
+    if (!imageDimensions.width && !imageDimensions.height) {
+      const maxWidth = viewportSize.width * 0.8; // 80% of viewport width
+      const maxHeight = viewportSize.height * 0.6; // 60% of viewport height
+      
+      let width = e.target.naturalWidth;
+      let height = e.target.naturalHeight;
+      
+      // Scale down if image is larger than max dimensions
+      if (width > maxWidth || height > maxHeight) {
+        const widthRatio = maxWidth / width;
+        const heightRatio = maxHeight / height;
+        const scale = Math.min(widthRatio, heightRatio);
+        
+        width = width * scale;
+        height = height * scale;
+      }
+      
+      setImageDimensions({ width, height });
+    }
   };
 
   const enterFullScreen = () => {
@@ -65,11 +99,16 @@ const ImageCarousel = ({
     textAlign: "center",
     margin: "20px 0",
     fontFamily: "Arial, sans-serif",
+    maxWidth: "100%",
+    overflow: "hidden",
   };
 
   const imageContainerStyle = {
     position: "relative",
     display: "inline-block",
+    width: imageDimensions.width ? `${imageDimensions.width}px` : "auto",
+    height: imageDimensions.height ? `${imageDimensions.height}px` : "auto",
+    maxWidth: "100%",
   };
 
   const filenameStyle = {
@@ -87,6 +126,29 @@ const ImageCarousel = ({
     color: "#666",
     fontSize: "16px",
   };
+
+  const getImageStyle = (isFullScreenMode) => ({
+    maxWidth: "100%",
+    height: "auto",
+    display: "block",
+    margin: "0 auto",
+    cursor: "pointer",
+    userSelect: "none",
+    opacity: isLoading ? 0 : 1,
+    transition: "opacity 0.3s ease",
+    ...(isFullScreenMode ? {
+      maxHeight: "80vh", // Reduced from 85vh to ensure buttons are visible
+      width: "auto",
+      objectFit: "contain",
+      overflow: "auto",
+      borderRadius: "8px",
+      boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
+    } : {
+      width: imageDimensions.width ? `${imageDimensions.width}px` : "auto",
+      height: imageDimensions.height ? `${imageDimensions.height}px` : "auto",
+      objectFit: "contain",
+    })
+  });
 
   return (
     <>
@@ -108,16 +170,7 @@ const ImageCarousel = ({
                 alt={`Image ${currentIndex + 1}`}
                 onClick={enterFullScreen}
                 onLoad={handleImageLoad}
-                style={{
-                  maxWidth: "100%",
-                  height: "auto",
-                  display: "block",
-                  margin: "0 auto",
-                  cursor: "pointer",
-                  userSelect: "none",
-                  opacity: isLoading ? 0 : 1,
-                  transition: "opacity 0.3s ease",
-                }}
+                style={getImageStyle(false)}
                 {...(isGif && { autoPlay: true, loop: true })}
               />
             </div>
@@ -169,8 +222,9 @@ const ImageCarousel = ({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: "10px",
+            padding: "20px",
             boxSizing: "border-box",
+            gap: "20px",
           }}
         >
           <div 
@@ -180,6 +234,7 @@ const ImageCarousel = ({
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
+              flex: 1,
             }}
           >
             {isLoading && <div style={{...loadingStyle, color: "white"}}>Loading...</div>}
@@ -188,31 +243,18 @@ const ImageCarousel = ({
               alt={`Full Screen Image ${currentIndex + 1}`}
               onClick={exitFullScreen}
               onLoad={handleImageLoad}
-              style={{
-                maxHeight: "85vh",
-                maxWidth: "100%",
-                width: "auto",
-                height: "auto",
-                objectFit: "contain",
-                overflow: "auto",
-                cursor: "pointer",
-                borderRadius: "8px",
-                boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-                userSelect: "none",
-                opacity: isLoading ? 0 : 1,
-                transition: "opacity 0.3s ease",
-              }}
+              style={getImageStyle(true)}
               {...(isGif && { autoPlay: true, loop: true })}
             />
           </div>
           <div style={{
             ...filenameStyle,
             color: "white",
-            marginTop: "16px",
+            marginTop: "0",
           }}>
             {currentFileName}
           </div>
-          <div style={{ marginTop: "10px" }}>
+          <div style={{ marginTop: "0" }}>
             <button
               onClick={previousImage}
               disabled={currentIndex === 0}
