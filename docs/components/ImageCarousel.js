@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const ImageCarousel = ({
   images,
@@ -7,6 +7,7 @@ const ImageCarousel = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isGif, setIsGif] = useState(false);
 
   const nextImage = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
@@ -18,6 +19,11 @@ const ImageCarousel = ({
 
   const currentImage = images[currentIndex].imageUrl;
   const currentFileName = images[currentIndex].imageUrl.split('/').pop();
+
+  useEffect(() => {
+    // Check if the current image is a GIF
+    setIsGif(currentImage.toLowerCase().endsWith('.gif'));
+  }, [currentImage]);
 
   const enterFullScreen = () => {
     setIsFullScreen(true);
@@ -95,6 +101,7 @@ const ImageCarousel = ({
                   margin: "0 auto",
                   cursor: "pointer",
                 }}
+                {...(isGif && { autoPlay: true, loop: true })}
               />
               <div style={filenameStyle}>
                 {currentFileName}
@@ -162,6 +169,7 @@ const ImageCarousel = ({
                 borderRadius: "8px",
                 boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
               }}
+              {...(isGif && { autoPlay: true, loop: true })}
             />
             <div style={filenameStyle}>
               {currentFileName}
