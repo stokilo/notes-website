@@ -63,51 +63,95 @@ function createSelectionWindow(bounds, scaleFactor) {
 
   selectionWindow.loadFile(path.join(__dirname, 'selection.html'));
   selectionWindow.setIgnoreMouseEvents(false);
+  selectionWindow.setAlwaysOnTop(true, 'screen-saver');
+  selectionWindow.setVisibleOnAllWorkspaces(true);
+  
+  // Open DevTools
+  selectionWindow.webContents.openDevTools();
+  
   return selectionWindow;
 }
 
 async function captureScreen() {
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
-  const scaleFactor = primaryDisplay.scaleFactor;
+  try {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.workAreaSize;
+    const scaleFactor = primaryDisplay.scaleFactor;
 
-  const sources = await desktopCapturer.getSources({
-    types: ['screen'],
-    thumbnailSize: {
-      width: width * scaleFactor,
-      height: height * scaleFactor
+    console.log('Capturing screen with dimensions:', { width, height, scaleFactor });
+
+    // Wait a bit to ensure the window is hidden
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: {
+        width: width * scaleFactor,
+        height: height * scaleFactor
+      }
+    });
+    
+    if (!sources || sources.length === 0) {
+      console.error('No screen sources found');
+      return null;
     }
-  });
-  
-  return {
-    image: sources[0].thumbnail.toDataURL(),
-    scaleFactor
-  };
+
+    const source = sources[0];
+    const image = source.thumbnail.toDataURL();
+    
+    console.log('Screen captured successfully');
+    return {
+      image,
+      scaleFactor,
+      width,
+      height
+    };
+  } catch (error) {
+    console.error('Error capturing screen:', error);
+    return null;
+  }
 }
 
 app.whenReady().then(() => {
   createMainWindow();
 
   // Register global shortcut for taking screenshots
-  globalShortcut.register('CommandOrControl+Shift+S', () => {
+  globalShortcut.register('CommandOrControl+Shift+S', async () => {
     if (mainWindow) {
-      mainWindow.hide();
-      setTimeout(async () => {
-        // Capture the entire screen first
-        const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-        const { image, scaleFactor } = await captureScreen();
-
-        createSelectionWindow({ x: 0, y: 0, width, height }, scaleFactor);
+      try {
+        // Hide the main window
+        mainWindow.hide();
         
-        // Send the screenshot data to the selection window
-        selectionWindow.webContents.on('did-finish-load', () => {
-          selectionWindow.webContents.send('screenshot-data', {
-            image,
-            bounds: { x: 0, y: 0, width, height },
-            scaleFactor
+        // Capture the screen
+        const captureResult = await captureScreen();
+        if (!captureResult) {
+          console.error('Failed to capture screen');
+          mainWindow.show();
+          return;
+        }
+
+        const { image, scaleFactor, width, height } = captureResult;
+        console.log('Creating selection window with dimensions:', { width, height, scaleFactor });
+
+        // Create selection window
+        const selectionWin = createSelectionWindow({ x: 0, y: 0, width, height }, scaleFactor);
+        
+        // Wait for the window to load
+        await new Promise(resolve => {
+          selectionWin.webContents.on('did-finish-load', () => {
+            console.log('Selection window loaded, sending screenshot data');
+            selectionWin.webContents.send('screenshot-data', {
+              image,
+              bounds: { x: 0, y: 0, width, height },
+              scaleFactor
+            });
+            resolve();
           });
         });
-      }, 100);
+      } catch (error) {
+        console.error('Error in screenshot process:', error);
+        mainWindow.show();
+      }
     }
   });
 
@@ -125,11 +169,50 @@ app.on('window-all-closed', () => {
 });
 
 // IPC handlers
-ipcMain.on('start-screenshot', () => {
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { bounds, scaleFactor } = primaryDisplay;
+ipcMain.on('start-screenshot', async () => {
+  console.log('Starting screenshot process');
+  try {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { bounds, scaleFactor } = primaryDisplay;
 
-  createSelectionWindow(bounds, scaleFactor);
+    // Hide the main window
+    if (mainWindow) {
+      mainWindow.hide();
+    }
+
+    // Capture the screen
+    const captureResult = await captureScreen();
+    if (!captureResult) {
+      console.error('Failed to capture screen');
+      if (mainWindow) {
+        mainWindow.show();
+      }
+      return;
+    }
+
+    const { image } = captureResult;
+    
+    // Create selection window
+    const selectionWin = createSelectionWindow(bounds, scaleFactor);
+    
+    // Wait for the window to load
+    await new Promise(resolve => {
+      selectionWin.webContents.on('did-finish-load', () => {
+        console.log('Selection window loaded, sending screenshot data');
+        selectionWin.webContents.send('screenshot-data', {
+          image,
+          bounds,
+          scaleFactor
+        });
+        resolve();
+      });
+    });
+  } catch (error) {
+    console.error('Error in screenshot process:', error);
+    if (mainWindow) {
+      mainWindow.show();
+    }
+  }
 });
 
 ipcMain.on('screenshot-data', (event, data) => {
@@ -145,6 +228,7 @@ ipcMain.on('screenshot-data', (event, data) => {
 ipcMain.on('capture-screen', (event, selection) => {
   if (mainWindow) {
     mainWindow.webContents.send('screenshot-captured', selection);
+    mainWindow.show();
   }
   if (selectionWindow) {
     selectionWindow.close();
@@ -154,6 +238,9 @@ ipcMain.on('capture-screen', (event, selection) => {
 ipcMain.on('cancel-screenshot', () => {
   if (selectionWindow) {
     selectionWindow.close();
+  }
+  if (mainWindow) {
+    mainWindow.show();
   }
 });
 

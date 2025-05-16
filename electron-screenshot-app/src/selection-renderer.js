@@ -3,6 +3,10 @@ const { ipcRenderer } = require('electron');
 class SelectionWindow {
     constructor() {
         this.canvas = document.getElementById('selectionCanvas');
+        if (!this.canvas) {
+            console.error('Canvas element not found!');
+            return;
+        }
         this.ctx = this.canvas.getContext('2d');
         this.isDrawing = false;
         this.startPoint = null;
@@ -11,25 +15,75 @@ class SelectionWindow {
         this.bounds = null;
         this.scaleFactor = 1;
 
+        // Set canvas size to match window size
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+
         this.initializeEventListeners();
         this.initializeKeyboardShortcuts();
     }
 
+    resizeCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        if (this.originalImage) {
+            this.updateCanvas();
+        }
+    }
+
     initializeEventListeners() {
-        // Canvas events
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        try {
+            // Canvas events
+            this.canvas.addEventListener('mousedown', (e) => {
+                console.log('Mouse down event:', e);
+                this.handleMouseDown(e);
+            });
+            this.canvas.addEventListener('mousemove', (e) => {
+                if (this.isDrawing) {
+                    console.log('Mouse move event:', e);
+                    this.handleMouseMove(e);
+                }
+            });
+            this.canvas.addEventListener('mouseup', (e) => {
+                console.log('Mouse up event:', e);
+                this.handleMouseUp(e);
+            });
 
-        // Control panel buttons
-        document.getElementById('captureBtn').addEventListener('click', () => this.captureSelection());
-        document.getElementById('newSelectionBtn').addEventListener('click', () => this.resetSelection());
-        document.getElementById('cancelBtn').addEventListener('click', () => this.cancelSelection());
+            // Control panel buttons
+            const captureBtn = document.getElementById('captureBtn');
+            const newSelectionBtn = document.getElementById('newSelectionBtn');
+            const cancelBtn = document.getElementById('cancelBtn');
 
-        // IPC events
-        ipcRenderer.on('screenshot-data', (event, data) => {
-            this.loadScreenshot(data.image, data.bounds, data.scaleFactor);
-        });
+            if (!captureBtn || !newSelectionBtn || !cancelBtn) {
+                console.error('Control panel buttons not found!');
+                return;
+            }
+
+            captureBtn.addEventListener('click', () => {
+                console.log('Capture button clicked');
+                this.captureSelection();
+            });
+            newSelectionBtn.addEventListener('click', () => {
+                console.log('New selection button clicked');
+                this.resetSelection();
+            });
+            cancelBtn.addEventListener('click', () => {
+                console.log('Cancel button clicked');
+                this.cancelSelection();
+            });
+
+            // IPC events
+            ipcRenderer.on('screenshot-data', (event, data) => {
+                console.log('Received screenshot data:', data);
+                if (!data || !data.image) {
+                    console.error('Invalid screenshot data received');
+                    return;
+                }
+                this.loadScreenshot(data.image, data.bounds, data.scaleFactor);
+            });
+        } catch (error) {
+            console.error('Error initializing event listeners:', error);
+        }
     }
 
     initializeKeyboardShortcuts() {
@@ -43,22 +97,55 @@ class SelectionWindow {
     }
 
     loadScreenshot(dataUrl, bounds, scaleFactor) {
+        console.log('Loading screenshot with bounds:', bounds);
+        if (!dataUrl) {
+            console.error('No image data provided');
+            return;
+        }
+
         this.bounds = bounds;
         this.scaleFactor = scaleFactor;
-        this.originalImage = new Image();
-        this.originalImage.onload = () => {
-            this.canvas.width = bounds.width;
-            this.canvas.height = bounds.height;
-            this.ctx.drawImage(this.originalImage, 0, 0, bounds.width, bounds.height);
-            this.updateCanvas();
+        
+        // Create a new image and wait for it to load
+        const img = new Image();
+        
+        img.onload = () => {
+            console.log('Original image loaded successfully');
+            console.log('Image dimensions:', img.width, 'x', img.height);
+            
+            // Store the loaded image
+            this.originalImage = img;
+            
+            // Set canvas size to match image size
+            this.canvas.width = img.width;
+            this.canvas.height = img.height;
+            
+            // Draw the image
+            this.ctx.drawImage(img, 0, 0);
+            
+            // Draw initial overlay
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            console.log('Canvas initialized with image');
         };
-        this.originalImage.src = dataUrl;
+
+        img.onerror = (error) => {
+            console.error('Error loading image:', error);
+        };
+
+        console.log('Setting image source');
+        img.src = dataUrl;
     }
 
     handleMouseDown(e) {
+        console.log('Handling mouse down');
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+
+        console.log('Mouse position:', x, y);
+        console.log('Canvas bounds:', rect);
 
         this.isDrawing = true;
         this.startPoint = { x, y };
@@ -68,28 +155,33 @@ class SelectionWindow {
             width: 0,
             height: 0
         };
+        console.log('Started selection at:', this.startPoint);
     }
 
     handleMouseMove(e) {
-        if (this.isDrawing && this.startPoint) {
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+        if (!this.isDrawing || !this.startPoint) return;
 
-            this.currentSelection.x = Math.min(this.startPoint.x, x);
-            this.currentSelection.y = Math.min(this.startPoint.y, y);
-            this.currentSelection.width = Math.abs(x - this.startPoint.x);
-            this.currentSelection.height = Math.abs(y - this.startPoint.y);
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-            this.updateCanvas();
-        }
+        this.currentSelection.x = Math.min(this.startPoint.x, x);
+        this.currentSelection.y = Math.min(this.startPoint.y, y);
+        this.currentSelection.width = Math.abs(x - this.startPoint.x);
+        this.currentSelection.height = Math.abs(y - this.startPoint.y);
+
+        console.log('Current selection:', this.currentSelection);
+        this.updateCanvas();
     }
 
     handleMouseUp(e) {
+        console.log('Handling mouse up');
         if (this.isDrawing && this.currentSelection) {
             if (this.currentSelection.width > 10 && this.currentSelection.height > 10) {
+                console.log('Selection completed:', this.currentSelection);
                 this.updateCanvas();
             } else {
+                console.log('Selection too small, resetting');
                 this.resetSelection();
             }
         }
@@ -97,89 +189,88 @@ class SelectionWindow {
     }
 
     updateCanvas() {
-        // Clear canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        try {
+            if (!this.originalImage) {
+                console.error('No original image available for update');
+                return;
+            }
 
-        // Draw original image
-        if (this.originalImage) {
-            this.ctx.drawImage(this.originalImage, 0, 0, this.canvas.width, this.canvas.height);
-        }
+            // Clear canvas
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw semi-transparent overlay
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            // Draw original image
+            this.ctx.drawImage(this.originalImage, 0, 0);
 
-        // Draw selection
-        if (this.currentSelection) {
-            this.ctx.clearRect(
-                this.currentSelection.x,
-                this.currentSelection.y,
-                this.currentSelection.width,
-                this.currentSelection.height
-            );
+            // Draw semi-transparent overlay
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-            // Draw selection border
-            this.ctx.strokeStyle = '#00ff00';
-            this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(
-                this.currentSelection.x,
-                this.currentSelection.y,
-                this.currentSelection.width,
-                this.currentSelection.height
-            );
+            // Draw selection
+            if (this.currentSelection) {
+                // Clear the selection area
+                this.ctx.clearRect(
+                    this.currentSelection.x,
+                    this.currentSelection.y,
+                    this.currentSelection.width,
+                    this.currentSelection.height
+                );
 
-            // Draw size info
-            const sizeText = `${Math.round(this.currentSelection.width)} x ${Math.round(this.currentSelection.height)}`;
-            this.ctx.fillStyle = '#00ff00';
-            this.ctx.font = '14px Arial';
-            this.ctx.fillText(sizeText, this.currentSelection.x, this.currentSelection.y - 5);
+                // Draw selection border
+                this.ctx.strokeStyle = '#00ff00';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(
+                    this.currentSelection.x,
+                    this.currentSelection.y,
+                    this.currentSelection.width,
+                    this.currentSelection.height
+                );
+
+                // Draw size info
+                const sizeText = `${Math.round(this.currentSelection.width)} x ${Math.round(this.currentSelection.height)}`;
+                this.ctx.fillStyle = '#00ff00';
+                this.ctx.font = '14px Arial';
+                this.ctx.fillText(sizeText, this.currentSelection.x, this.currentSelection.y - 5);
+            }
+        } catch (error) {
+            console.error('Error updating canvas:', error);
         }
     }
 
     captureSelection() {
-        if (this.currentSelection && this.originalImage) {
-            const selection = {
-                x: Math.round(this.currentSelection.x * this.scaleFactor),
-                y: Math.round(this.currentSelection.y * this.scaleFactor),
-                width: Math.round(this.currentSelection.width * this.scaleFactor),
-                height: Math.round(this.currentSelection.height * this.scaleFactor)
-            };
+        console.log('Capturing selection');
+        console.log('Current selection:', this.currentSelection);
+        console.log('Original image:', this.originalImage);
 
-            // Create a temporary canvas to crop the selection
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = selection.width;
-            tempCanvas.height = selection.height;
-            const tempCtx = tempCanvas.getContext('2d');
-
-            // Draw the selected portion
-            tempCtx.drawImage(
-                this.originalImage,
-                selection.x,
-                selection.y,
-                selection.width,
-                selection.height,
-                0,
-                0,
-                selection.width,
-                selection.height
-            );
-
-            // Send the cropped image data back to the main window
-            ipcRenderer.send('capture-screen', {
-                x: selection.x,
-                y: selection.y,
-                width: selection.width,
-                height: selection.height
-            });
+        if (!this.currentSelection) {
+            console.error('No selection available');
+            return;
         }
+
+        if (!this.originalImage) {
+            console.error('No original image available');
+            return;
+        }
+
+        const selection = {
+            x: Math.round(this.currentSelection.x * this.scaleFactor),
+            y: Math.round(this.currentSelection.y * this.scaleFactor),
+            width: Math.round(this.currentSelection.width * this.scaleFactor),
+            height: Math.round(this.currentSelection.height * this.scaleFactor),
+            image: this.originalImage.src
+        };
+
+        console.log('Sending selection:', selection);
+        ipcRenderer.send('capture-screen', selection);
     }
 
     resetSelection() {
+        console.log('Resetting selection');
         this.currentSelection = null;
         this.updateCanvas();
     }
 
     cancelSelection() {
+        console.log('Canceling selection');
         ipcRenderer.send('cancel-screenshot');
     }
 }

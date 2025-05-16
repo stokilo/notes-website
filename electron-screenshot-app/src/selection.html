@@ -8,6 +8,8 @@
             padding: 0;
             overflow: hidden;
             background: transparent;
+            width: 100vw;
+            height: 100vh;
         }
         
         #selectionCanvas {
@@ -17,6 +19,7 @@
             cursor: crosshair;
             width: 100vw;
             height: 100vh;
+            z-index: 1;
         }
         
         .control-panel {
@@ -28,7 +31,7 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
+            z-index: 2;
         }
         
         .control-panel button {
@@ -40,10 +43,15 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            user-select: none;
         }
         
         .control-panel button:hover {
             background: #4c4c4c;
+        }
+
+        .control-panel button:active {
+            background: #2c2c2c;
         }
     </style>
 </head>
