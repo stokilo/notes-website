@@ -60,6 +60,7 @@ class ImagePanel extends JPanel {
     private Map<Integer, String> selectionBorderColors = new HashMap<>();
     private Map<Integer, String> selectionPillStyles = new HashMap<>();
     private int selectedShapeIndex = -1;
+    private Consumer<SelectionShape> shapeSelectedListener;
 
     public ImagePanel() {
         loadPlaceholderImage();
@@ -87,9 +88,13 @@ class ImagePanel extends JPanel {
                 for (int i = shapes.size() - 1; i >= 0; i--) {
                     SelectionShape shape = shapes.get(i);
                     if (shape.getBounds().contains(imagePoint)) {
+                        setSelectedShapeIndex(i);
                         return;
                     }
                 }
+                
+                // If no shape was clicked, deselect
+                setSelectedShapeIndex(-1);
                 
                 // Start drawing new selection
                 dragStartPoint = imagePoint;
@@ -234,21 +239,37 @@ class ImagePanel extends JPanel {
 
     public void setCurrentShape(String shape) {
         this.currentShape = shape;
+        if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+            shapes.get(selectedShapeIndex).setShape(shape);
+            selectionShapes.put(selectedShapeIndex, shape);
+        }
         repaint();
     }
 
     public void setBorderStyle(String style) {
         this.currentBorderStyle = style;
+        if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+            shapes.get(selectedShapeIndex).setBorderStyle(style);
+            selectionBorderStyles.put(selectedShapeIndex, style);
+        }
         repaint();
     }
 
     public void setBorderColor(String color) {
         this.currentBorderColor = color;
+        if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+            shapes.get(selectedShapeIndex).setBorderColor(color);
+            selectionBorderColors.put(selectedShapeIndex, color);
+        }
         repaint();
     }
 
     public void setPillStyle(String style) {
         this.currentPillStyle = style;
+        if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+            shapes.get(selectedShapeIndex).setPillStyle(style);
+            selectionPillStyles.put(selectedShapeIndex, style);
+        }
         repaint();
     }
 
@@ -886,5 +907,21 @@ class ImagePanel extends JPanel {
         if (!isShadow) {
             g2d.drawPolygon(xPoints, yPoints, sides);
         }
+    }
+
+    public List<SelectionShape> getShapes() {
+        return new ArrayList<>(shapes);
+    }
+
+    public void setShapeSelectedListener(Consumer<SelectionShape> listener) {
+        this.shapeSelectedListener = listener;
+    }
+
+    public void setSelectedShapeIndex(int index) {
+        this.selectedShapeIndex = index;
+        if (index >= 0 && index < shapes.size() && shapeSelectedListener != null) {
+            shapeSelectedListener.accept(shapes.get(index));
+        }
+        repaint();
     }
 }

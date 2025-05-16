@@ -94,6 +94,14 @@ public class SelectiveBlurApp extends JFrame {
     private void initComponents() {
         imagePanel = new ImagePanel();
         
+        // Set up shape selection listener
+        imagePanel.setShapeSelectedListener(shape -> {
+            shapeSelector.setSelectedItem(shape.getShape());
+            borderStyleSelector.setSelectedItem(shape.getBorderStyle());
+            borderColorSelector.setSelectedItem(shape.getBorderColor());
+            pillStyleSelector.setSelectedItem(shape.getPillStyle());
+        });
+        
         // Create buttons with icons
         openButton = createIconButton("open", "Open Image", 32, 32);
         saveButton = createIconButton("save", "Save Image", 32, 32);
@@ -1131,22 +1139,20 @@ public class SelectiveBlurApp extends JFrame {
                 g2d.setColor(Color.WHITE);
                 g2d.fillRect(0, 0, finalImage.getWidth(), finalImage.getHeight());
 
-                // Draw the processed image
+                // Draw the processed image (with blur effect)
                 g2d.drawImage(processedImage, 0, 0, null);
 
+                // Get all shapes from ImagePanel
+                List<SelectionShape> shapes = imagePanel.getShapes();
+                
                 // Draw all shapes with their specific styles
-                List<Rectangle> selections = imagePanel.getSelections();
-                for (int i = 0; i < selections.size(); i++) {
-                    Rectangle rect = selections.get(i);
-                    String shape = imagePanel.getShapeForSelection(i);
-                    String borderStyle = imagePanel.getBorderStyleForSelection(i);
-                    String borderColor = imagePanel.getBorderColorForSelection(i);
-                    String pillStyle = imagePanel.getPillStyleForSelection(i);
-                    int pillPosition = imagePanel.getPillPositions().getOrDefault(i, 0);
-
+                for (int i = 0; i < shapes.size(); i++) {
+                    SelectionShape shape = shapes.get(i);
+                    Rectangle rect = shape.getBounds();
+                    
                     // Draw the shape with its specific style
-                    drawShapeWithStyle(g2d, rect, shape, borderStyle, borderColor);
-                    drawPillWithStyle(g2d, rect, i, pillPosition, pillStyle);
+                    drawShapeWithStyle(g2d, rect, shape.getShape(), shape.getBorderStyle(), shape.getBorderColor());
+                    drawPillWithStyle(g2d, rect, i, shape.getPillPosition(), shape.getPillStyle());
                 }
 
                 g2d.dispose();
@@ -1274,6 +1280,27 @@ public class SelectiveBlurApp extends JFrame {
                 g2d.fillRect(rect.x + 2, rect.y + 2, rect.width, rect.height);
         }
 
+        // Set fill color (same as border color)
+        switch (borderColor) {
+            case "Blue":
+                g2d.setColor(new Color(0, 122, 255));
+                break;
+            case "Green":
+                g2d.setColor(new Color(52, 199, 89));
+                break;
+            case "Purple":
+                g2d.setColor(new Color(175, 82, 222));
+                break;
+            case "Orange":
+                g2d.setColor(new Color(255, 149, 0));
+                break;
+            case "Teal":
+                g2d.setColor(new Color(90, 200, 250));
+                break;
+            default: // Red
+                g2d.setColor(new Color(255, 59, 48));
+        }
+
         // Set border style
         switch (borderStyle) {
             case "Dotted":
@@ -1298,28 +1325,7 @@ public class SelectiveBlurApp extends JFrame {
                 }
         }
 
-        // Set border color
-        switch (borderColor) {
-            case "Blue":
-                g2d.setColor(new Color(0, 122, 255));
-                break;
-            case "Green":
-                g2d.setColor(new Color(52, 199, 89));
-                break;
-            case "Purple":
-                g2d.setColor(new Color(175, 82, 222));
-                break;
-            case "Orange":
-                g2d.setColor(new Color(255, 149, 0));
-                break;
-            case "Teal":
-                g2d.setColor(new Color(90, 200, 250));
-                break;
-            default: // Red
-                g2d.setColor(new Color(255, 59, 48));
-        }
-
-        // Draw the shape
+        // Draw the border
         switch (shape) {
             case "Ellipse":
                 g2d.drawOval(rect.x, rect.y, rect.width, rect.height);

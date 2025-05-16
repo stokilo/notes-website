@@ -24,6 +24,7 @@ class GaussianFilter {
             dst = new BufferedImage(src.getWidth(), src.getHeight(), src.getType());
         }
 
+
         // Apply horizontal convolution
         BufferedImage temp = new BufferedImage(src.getWidth(), src.getHeight(), src.getType());
         horizontalOp.filter(src, temp);
