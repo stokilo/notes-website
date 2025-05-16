@@ -62,6 +62,7 @@ const ImageToggleButton = ({
           <img
             src={currentImage}
             alt="Comparison"
+            onClick={enterFullScreen}
             style={{
               maxWidth: "100%",
               height: "auto",
@@ -69,6 +70,7 @@ const ImageToggleButton = ({
               margin: "0 auto",
               borderRadius: "8px",
               boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+              cursor: "pointer",
             }}
           />
 
@@ -117,11 +119,13 @@ const ImageToggleButton = ({
           <img
             src={fullScreenImage}
             alt="Full Screen"
+            onClick={exitFullScreen}
             style={{
               maxHeight: "80vh",
               maxWidth: "90%",
               objectFit: "contain",
               overflow: "auto",
+              cursor: "pointer",
             }}
           />
           <div style={{ marginTop: "10px" }}>
