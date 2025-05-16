@@ -8,10 +8,8 @@ const ImageCarousel = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isGif, setIsGif] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [imageDimensions, setImageDimensions] = useState({ width: null, height: null });
   const [viewportSize, setViewportSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-  const loadingTimeoutRef = useRef(null);
   const imageRef = useRef(null);
 
   useEffect(() => {
@@ -25,9 +23,6 @@ const ImageCarousel = ({
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
     };
   }, []);
 
@@ -45,35 +40,14 @@ const ImageCarousel = ({
   useEffect(() => {
     // Check if the current image is a GIF
     setIsGif(currentImage.toLowerCase().endsWith('.gif'));
-    // Reset loading state when image changes
-    setIsLoading(true);
     
-    // Set a fallback timeout to hide loading state
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-    }
-    loadingTimeoutRef.current = setTimeout(() => {
-      setIsLoading(false);
-    }, 5000); // Increased timeout to 5 seconds for slower connections
-
     // Force image reload on iOS Safari
     if (imageRef.current) {
       imageRef.current.src = currentImage;
     }
-
-    return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-    };
   }, [currentImage]);
 
   const handleImageLoad = (e) => {
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-    }
-    setIsLoading(false);
-    
     // Set dimensions based on the first image
     if (!imageDimensions.width && !imageDimensions.height) {
       const maxWidth = viewportSize.width * 0.8; // 80% of viewport width
@@ -94,13 +68,6 @@ const ImageCarousel = ({
       
       setImageDimensions({ width, height });
     }
-  };
-
-  const handleImageError = () => {
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-    }
-    setIsLoading(false);
   };
 
   const enterFullScreen = () => {
@@ -155,15 +122,6 @@ const ImageCarousel = ({
     padding: "4px 8px",
   };
 
-  const loadingStyle = {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    color: "#666",
-    fontSize: "16px",
-  };
-
   const getImageStyle = (isFullScreenMode) => ({
     maxWidth: "100%",
     height: "auto",
@@ -171,10 +129,8 @@ const ImageCarousel = ({
     margin: "0 auto",
     cursor: "pointer",
     userSelect: "none",
-    opacity: isLoading ? 0 : 1,
-    transition: "opacity 0.3s ease",
     ...(isFullScreenMode ? {
-      maxHeight: "80vh", // Reduced from 85vh to ensure buttons are visible
+      maxHeight: "80vh",
       width: "auto",
       objectFit: "contain",
       overflow: "auto",
@@ -201,14 +157,12 @@ const ImageCarousel = ({
             maxWidth: "100%",
           }}>
             <div style={imageContainerStyle}>
-              {isLoading && <div style={loadingStyle}>Loading...</div>}
               <img
                 ref={imageRef}
                 src={currentImage}
                 alt={`Image ${currentIndex + 1}`}
                 onClick={enterFullScreen}
                 onLoad={handleImageLoad}
-                onError={handleImageError}
                 style={getImageStyle(false)}
                 {...(isGif && { autoPlay: true, loop: true })}
                 loading="eager"
@@ -277,14 +231,12 @@ const ImageCarousel = ({
               flex: 1,
             }}
           >
-            {isLoading && <div style={{...loadingStyle, color: "white"}}>Loading...</div>}
             <img
               ref={imageRef}
               src={currentImage}
               alt={`Full Screen Image ${currentIndex + 1}`}
               onClick={exitFullScreen}
               onLoad={handleImageLoad}
-              onError={handleImageError}
               style={getImageStyle(true)}
               {...(isGif && { autoPlay: true, loop: true })}
               loading="eager"
