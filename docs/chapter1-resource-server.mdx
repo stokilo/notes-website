@@ -88,4 +88,20 @@ Once this is updated, you can acquire 'access_token'
     ]} />
 
 
+**Aud claim**
+In the application.properties we have **spring.security.oauth2.resourceserver.jwt.audiences=spring-resource-server**
+But when you check the claim 'aud' in access_token you will notice is set to 'account'. In order to fix it you need to
+add Dedicated Client Scope with token mapper to Audience claim
+
+<ImageCarousel
+  images={[
+    { imageUrl: '/img/chapter1/screenshot_11Vqeamit.png'},
+    { imageUrl: '/img/chapter1/screenshot_22FsB2xg5U.png'},
+    { imageUrl: '/img/chapter1/screenshot_33J9bAgXC.png'},
+    { imageUrl: '/img/chapter1/screenshot_44acNr2Jwe.png'},
+    { imageUrl: '/img/chapter1/screenshot_55NbA2v2hG.png'},
+    { imageUrl: '/img/chapter1/screenshot_66HOSPvmRB.png'},
+    { imageUrl: '/img/chapter1/screenshot_77sPCu4cdn.png'},
+
+    ]} />
 
