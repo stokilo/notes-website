@@ -93,6 +93,14 @@ In the application.properties we have **spring.security.oauth2.resourceserver.jw
 But when you check the claim 'aud' in access_token you will notice is set to 'account'. In order to fix it you need to
 add Dedicated Client Scope with token mapper to Audience claim
 
+
+Understanding the aud (Audience) Claim:
+   * The aud claim in a JWT identifies the intended recipient(s) of the token.
+   * A Resource Server (your Spring Boot app) should validate that it is an intended audience for any token it accepts. This prevents a token issued for one service from being replayed against another.
+   * The aud claim can be a single string or an array of strings if the token is intended for multiple audiences.
+
+When you used the password grant (grant_type=password) with client_id=spring-resource-server and scope=openid, Keycloak, by default for this flow and client configuration, issued a token whose primary audience is the account client.
+
 <ImageCarousel
   images={[
     { imageUrl: '/img/chapter1/screenshot_11Vqeamit.png'},
