@@ -49,55 +49,74 @@ const ImageToggleButton = ({
     },
   };
 
+  const containerStyle = {
+    textAlign: "center",
+    margin: "20px 0",
+    fontFamily: "Arial, sans-serif",
+  };
+
   return (
     <>
       {!isFullScreen ? (
-        <div
-          style={{
-            textAlign: "center",
-            margin: "20px 0",
-            fontFamily: "Arial, sans-serif",
-          }}
-        >
-          <img
-            src={currentImage}
-            alt="Comparison"
-            onClick={enterFullScreen}
-            style={{
-              maxWidth: "100%",
-              height: "auto",
-              display: "block",
-              margin: "0 auto",
-              borderRadius: "8px",
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-              cursor: "pointer",
-            }}
-          />
-
-          <div style={{ marginTop: "10px" }}>
-            <button
-              onClick={toggleImage}
-              disabled={showFirst}
+        <div style={containerStyle}>
+          <div style={{
+            border: "1px solid #e0e0e0",
+            borderRadius: "8px",
+            overflow: "hidden",
+            backgroundColor: "white",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            display: "inline-block",
+            maxWidth: "100%",
+          }}>
+            <div style={{ 
+              padding: "10px", 
+              borderBottom: "1px solid #e0e0e0",
+              backgroundColor: "#f5f5f5",
+              display: "flex",
+              justifyContent: "flex-end"
+            }}>
+              <button onClick={enterFullScreen} style={buttonStyle}>
+                Zoom
+              </button>
+            </div>
+            <img
+              src={currentImage}
+              alt="Comparison"
+              onClick={enterFullScreen}
               style={{
-                ...buttonStyle,
-                ...(showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+                maxWidth: "100%",
+                height: "auto",
+                display: "block",
+                margin: "0 auto",
+                cursor: "pointer",
               }}
-            >
-              {buttonTextLeft}
-            </button>
-            <button
-              onClick={toggleImage}
-              disabled={!showFirst}
-              style={{
-                ...buttonStyle,
-                ...(!showFirst ? buttonStyle["&:disabled"] : buttonStyle),
-              }}
-            >
-              {buttonTextRight}
-            </button>
-            <button onClick={enterFullScreen} style={buttonStyle}>
-              Zoom
-            </button>
+            />
+            <div style={{ 
+              padding: "10px", 
+              borderTop: "1px solid #e0e0e0",
+              backgroundColor: "#f5f5f5",
+            }}>
+              <button
+                onClick={toggleImage}
+                disabled={showFirst}
+                style={{
+                  ...buttonStyle,
+                  ...(showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+                }}
+              >
+                {buttonTextLeft}
+              </button>
+              <button
+                onClick={toggleImage}
+                disabled={!showFirst}
+                style={{
+                  ...buttonStyle,
+                  ...(!showFirst ? buttonStyle["&:disabled"] : buttonStyle),
+                }}
+              >
+                {buttonTextRight}
+              </button>
+            </div>
           </div>
         </div>
       ) : (
@@ -114,6 +133,7 @@ const ImageToggleButton = ({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
+            padding: "20px",
           }}
         >
           <img
@@ -126,6 +146,8 @@ const ImageToggleButton = ({
               objectFit: "contain",
               overflow: "auto",
               cursor: "pointer",
+              borderRadius: "8px",
+              boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
             }}
           />
           <div style={{ marginTop: "10px" }}>
