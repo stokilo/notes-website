@@ -62,6 +62,7 @@ class ImagePanel extends JPanel {
     private int selectedShapeIndex = -1;
     private Consumer<SelectionShape> shapeSelectedListener;
     private Map<Integer, Double> pillSizes = new HashMap<>(); // Store custom pill sizes
+    private Point currentMousePoint = null;
 
     public ImagePanel() {
         loadPlaceholderImage();
@@ -76,18 +77,22 @@ class ImagePanel extends JPanel {
                 for (int i = shapes.size() - 1; i >= 0; i--) {
                     SelectionShape shape = shapes.get(i);
                     int currentPosition = pillPositions.getOrDefault(i, 0);
-                    if (isPointInPill(imagePoint, shape.getBounds(), i, currentPosition)) {
+                    if (isPointInPill(e.getPoint(), shape.getBounds(), i, currentPosition)) {
                         // If right click, cycle pill size
                         if (SwingUtilities.isRightMouseButton(e)) {
                             double currentSize = pillSizes.getOrDefault(i, PILL_SIZE_RATIO);
                             double newSize = currentSize + 0.05; // Increase by 5%
                             if (newSize > 0.3) newSize = 0.1; // Reset to 10% if over 30%
                             pillSizes.put(i, newSize);
+                            System.out.println("Pill size changed to: " + newSize);
                         } else {
                             // Left click cycles position
                             int newPosition = (currentPosition + 1) % PILL_POSITION_COUNT;
+                            System.out.println("Changing pill position from " + currentPosition + " to " + newPosition);
                             pillPositions.put(i, newPosition);
+                            System.out.println("Current pill positions map: " + pillPositions);
                         }
+                        System.out.println("Triggering repaint after pill change");
                         repaint();
                         return;
                     }
@@ -151,6 +156,12 @@ class ImagePanel extends JPanel {
                     updateCurrentRectPreview(dragStartPoint, imageCurrentPoint);
                     repaint();
                 }
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                currentMousePoint = e.getPoint();
+                repaint();
             }
         });
     }
@@ -397,7 +408,7 @@ class ImagePanel extends JPanel {
                     shape.getBorderStyle(),
                     shape.getBorderColor(),
                     shape.getPillStyle(),
-                    shape.getPillPosition()
+                    pillPositions.getOrDefault(i, 0)
                 ), false, i);
             }
 
@@ -418,6 +429,25 @@ class ImagePanel extends JPanel {
                     0
                 );
                 drawShape(g2d, previewShape, true, -1);
+            }
+
+            // Draw mouse coordinates if available
+            if (currentMousePoint != null) {
+                Point imagePoint = panelToImageCoordinates(currentMousePoint);
+                String coordText = String.format("Panel: (%d, %d) Image: (%d, %d)", 
+                    currentMousePoint.x, currentMousePoint.y,
+                    imagePoint.x, imagePoint.y);
+                
+                // Draw background for text
+                FontMetrics fm = g2d.getFontMetrics();
+                int textWidth = fm.stringWidth(coordText);
+                int textHeight = fm.getHeight();
+                g2d.setColor(new Color(0, 0, 0, 180));
+                g2d.fillRect(10, 10, textWidth + 10, textHeight + 5);
+                
+                // Draw text
+                g2d.setColor(Color.WHITE);
+                g2d.drawString(coordText, 15, 15 + fm.getAscent());
             }
         } else if (placeholderImage != null) {
             // Calculate position to center the placeholder
@@ -506,7 +536,7 @@ class ImagePanel extends JPanel {
         
         // Draw pill if not preview
         if (!isPreview) {
-            drawPill(g2d, rect, shapeIndex, shape.getPillPosition(), shape.getPillStyle());
+            drawPill(g2d, rect, shapeIndex, pillPositions.getOrDefault(shapeIndex, 0), shape.getPillStyle());
         }
         
         // Restore original stroke and color
@@ -561,6 +591,8 @@ class ImagePanel extends JPanel {
         // Ensure position is within valid range
         position = position % PILL_POSITION_COUNT;
         
+        System.out.println("Drawing pill for index " + index + " at position " + position);
+        
         switch (position) {
             case 0: // Top right inside
                 pillX = rect.x + rect.width - pillWidth - padding;
@@ -598,7 +630,9 @@ class ImagePanel extends JPanel {
                 pillX = rect.x + rect.width - pillWidth - padding;
                 pillY = rect.y + padding;
         }
-
+        
+        System.out.println("Pill coordinates: (" + pillX + ", " + pillY + ")");
+        
         // Draw pill based on style
         switch (pillStyle) {
             case "Classic":
@@ -666,10 +700,13 @@ class ImagePanel extends JPanel {
     }
 
     private boolean isPointInPill(Point point, Rectangle rect, int index, int position) {
+        // Convert rectangle to panel coordinates
+        Rectangle panelRect = imageToPanelCoordinates(rect);
+        
         // Calculate pill size
         double sizeRatio = pillSizes.getOrDefault(index, PILL_SIZE_RATIO);
-        int pillWidth = (int)(rect.width * sizeRatio);
-        int pillHeight = (int)(rect.height * sizeRatio);
+        int pillWidth = (int)(panelRect.width * sizeRatio);
+        int pillHeight = (int)(panelRect.height * sizeRatio);
         
         // Apply min/max constraints
         pillWidth = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillWidth));
@@ -679,46 +716,55 @@ class ImagePanel extends JPanel {
         int pillX, pillY;
         int padding = pillHeight / 4;
         
+        // Ensure position is within valid range
+        position = position % PILL_POSITION_COUNT;
+        
         switch (position) {
             case 0: // Top right inside
-                pillX = rect.x + rect.width - pillWidth - padding;
-                pillY = rect.y + padding;
+                pillX = panelRect.x + panelRect.width - pillWidth - padding;
+                pillY = panelRect.y + padding;
                 break;
             case 1: // Top left inside
-                pillX = rect.x + padding;
-                pillY = rect.y + padding;
+                pillX = panelRect.x + padding;
+                pillY = panelRect.y + padding;
                 break;
             case 2: // Bottom left inside
-                pillX = rect.x + padding;
-                pillY = rect.y + rect.height - pillHeight - padding;
+                pillX = panelRect.x + padding;
+                pillY = panelRect.y + panelRect.height - pillHeight - padding;
                 break;
             case 3: // Bottom right inside
-                pillX = rect.x + rect.width - pillWidth - padding;
-                pillY = rect.y + rect.height - pillHeight - padding;
+                pillX = panelRect.x + panelRect.width - pillWidth - padding;
+                pillY = panelRect.y + panelRect.height - pillHeight - padding;
                 break;
             case 4: // Top right outside
-                pillX = rect.x + rect.width + padding;
-                pillY = rect.y - pillHeight - padding;
+                pillX = panelRect.x + panelRect.width + padding;
+                pillY = panelRect.y - pillHeight - padding;
                 break;
             case 5: // Top left outside
-                pillX = rect.x - pillWidth - padding;
-                pillY = rect.y - pillHeight - padding;
+                pillX = panelRect.x - pillWidth - padding;
+                pillY = panelRect.y - pillHeight - padding;
                 break;
             case 6: // Bottom left outside
-                pillX = rect.x - pillWidth - padding;
-                pillY = rect.y + rect.height + padding;
+                pillX = panelRect.x - pillWidth - padding;
+                pillY = panelRect.y + panelRect.height + padding;
                 break;
             case 7: // Bottom right outside
-                pillX = rect.x + rect.width + padding;
-                pillY = rect.y + rect.height + padding;
+                pillX = panelRect.x + panelRect.width + padding;
+                pillY = panelRect.y + panelRect.height + padding;
                 break;
             default:
-                pillX = rect.x + rect.width - pillWidth - padding;
-                pillY = rect.y + padding;
+                pillX = panelRect.x + panelRect.width - pillWidth - padding;
+                pillY = panelRect.y + padding;
         }
         
         // Create pill rectangle
         Rectangle pillRect = new Rectangle(pillX, pillY, pillWidth, pillHeight);
+        
+        // Debug logging
+        System.out.println("Position " + position);
+        System.out.println("Click point: " + point);
+        System.out.println("Pill rect: " + pillRect);
+        System.out.println("Contains: " + pillRect.contains(point));
         
         // Check if point is inside pill
         return pillRect.contains(point);
