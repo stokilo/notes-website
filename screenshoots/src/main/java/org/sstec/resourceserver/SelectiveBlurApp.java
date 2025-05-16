@@ -798,6 +798,14 @@ public class SelectiveBlurApp extends JFrame {
         // Save as animated GIF
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Save Animated GIF");
+        
+        // Set default directory to user's Desktop
+        String userHome = System.getProperty("user.home");
+        File desktopDir = new File(userHome, "Desktop");
+        if (desktopDir.exists() && desktopDir.isDirectory()) {
+            fileChooser.setCurrentDirectory(desktopDir);
+        }
+        
         fileChooser.setSelectedFile(new File("animation.gif"));
         fileChooser.setFileFilter(new FileNameExtensionFilter("GIF Images", "gif"));
         
