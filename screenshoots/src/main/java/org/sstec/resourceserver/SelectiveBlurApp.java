@@ -647,21 +647,6 @@ public class SelectiveBlurApp extends JFrame {
                             clippedRect.x, clippedRect.y, clippedRect.width, clippedRect.height
                     );
                     g2dProcessed.drawImage(unblurredPortion, clippedRect.x, clippedRect.y, null);
-
-                    // Draw shadow for elevation effect
-                    g2dProcessed.setColor(new Color(0, 0, 0, 30));
-                    g2dProcessed.fillRect(clippedRect.x + 3, clippedRect.y + 3, 
-                                       clippedRect.width, clippedRect.height);
-                    
-                    // Draw dashed border
-                    Stroke originalStroke = g2dProcessed.getStroke();
-                    float[] dash = {5.0f, 5.0f};
-                    g2dProcessed.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 
-                        10.0f, dash, 0.0f));
-                    g2dProcessed.setColor(new Color(255, 59, 48)); // Modern red
-                    g2dProcessed.drawRect(clippedRect.x, clippedRect.y, 
-                                       clippedRect.width, clippedRect.height);
-                    g2dProcessed.setStroke(originalStroke);
                 }
             }
         }
