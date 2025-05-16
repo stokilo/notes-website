@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screenshot Selection</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: transparent;
+        }
+        
+        #selectionCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+        
+        .control-panel {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .control-panel button {
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: white;
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .control-panel button:hover {
+            background: #4c4c4c;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="selectionCanvas"></canvas>
+    <div class="control-panel">
+        <button id="captureBtn">Capture (Enter)</button>
+        <button id="newSelectionBtn">New Selection</button>
+        <button id="cancelBtn">Cancel (Esc)</button>
+    </div>
+    <script src="selection-renderer.js"></script>
+</body>
+</html> 

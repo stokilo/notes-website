@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screenshot Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <button id="screenshotBtn" class="toolbar-btn" title="Take Screenshot (Ctrl+Shift+S)">
+                <img src="../assets/screenshot.svg" alt="Screenshot">
+            </button>
+            <button id="openBtn" class="toolbar-btn" title="Open Image">
+                <img src="../assets/open.svg" alt="Open">
+            </button>
+            <button id="saveBtn" class="toolbar-btn" title="Save Image">
+                <img src="../assets/save.svg" alt="Save">
+            </button>
+            <button id="saveSelectedBtn" class="toolbar-btn" title="Save Selected Areas">
+                <img src="../assets/save-selected.svg" alt="Save Selected">
+            </button>
+            <button id="clearBtn" class="toolbar-btn" title="Clear Selections">
+                <img src="../assets/clear.svg" alt="Clear">
+            </button>
+            <button id="undoBtn" class="toolbar-btn" title="Undo Last Selection">
+                <img src="../assets/undo.svg" alt="Undo">
+            </button>
+            <button id="copyBtn" class="toolbar-btn" title="Copy Last Selection">
+                <img src="../assets/copy.svg" alt="Copy">
+            </button>
+       
+        </div>
+
+        <div class="style-panel">
+            <div class="style-group">
+                <label>Shape:</label>
+                <div class="shape-buttons">
+                    <button data-shape="rectangle" class="active">Rectangle</button>
+                    <button data-shape="ellipse">Ellipse</button>
+                    <button data-shape="rounded">Rounded</button>
+                    <button data-shape="diamond">Diamond</button>
+                    <button data-shape="star">Star</button>
+                    <button data-shape="hexagon">Hexagon</button>
+                    <button data-shape="octagon">Octagon</button>
+                </div>
+            </div>
+
+            <div class="style-group">
+                <label>Border:</label>
+                <div class="border-buttons">
+                    <button data-border="solid" class="active">Solid</button>
+                    <button data-border="dashed">Dashed</button>
+                    <button data-border="dotted">Dotted</button>
+                    <button data-border="double">Double</button>
+                    <button data-border="groove">Groove</button>
+                    <button data-border="ridge">Ridge</button>
+                </div>
+            </div>
+
+            <div class="style-group">
+                <label>Color:</label>
+                <div class="color-buttons">
+                    <button data-color="red" class="active">Red</button>
+                    <button data-color="blue">Blue</button>
+                    <button data-color="green">Green</button>
+                    <button data-color="purple">Purple</button>
+                    <button data-color="orange">Orange</button>
+                    <button data-color="teal">Teal</button>
+                </div>
+            </div>
+
+            <div class="style-group">
+                <label>Pill Style:</label>
+                <div class="pill-buttons">
+                    <button data-pill="modern" class="active">Modern</button>
+                    <button data-pill="classic">Classic</button>
+                    <button data-pill="minimal">Minimal</button>
+                    <button data-pill="bold">Bold</button>
+                    <button data-pill="outline">Outline</button>
+                </div>
+            </div>
+
+            <div class="style-group">
+                <label>Blur:</label>
+                <select id="blurRadius">
+                    <option value="0">0</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                    <option value="25">25</option>
+                    <option value="30">30</option>
+                    <option value="35">35</option>
+                    <option value="40">40</option>
+                    <option value="45">45</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="mainCanvas"></canvas>
+        </div>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+</html> 
