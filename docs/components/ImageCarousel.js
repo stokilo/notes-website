@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 const ImageCarousel = ({
   images,
@@ -11,6 +11,7 @@ const ImageCarousel = ({
   const [isLoading, setIsLoading] = useState(true);
   const [imageDimensions, setImageDimensions] = useState({ width: null, height: null });
   const [viewportSize, setViewportSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const loadingTimeoutRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -21,7 +22,12 @@ const ImageCarousel = ({
     };
 
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
   }, []);
 
   const nextImage = () => {
@@ -40,10 +46,28 @@ const ImageCarousel = ({
     setIsGif(currentImage.toLowerCase().endsWith('.gif'));
     // Reset loading state when image changes
     setIsLoading(true);
+    
+    // Set a fallback timeout to hide loading state
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+    loadingTimeoutRef.current = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000); // Fallback after 2 seconds
+
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
   }, [currentImage]);
 
   const handleImageLoad = (e) => {
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
     setIsLoading(false);
+    
     // Set dimensions based on the first image
     if (!imageDimensions.width && !imageDimensions.height) {
       const maxWidth = viewportSize.width * 0.8; // 80% of viewport width
@@ -64,6 +88,13 @@ const ImageCarousel = ({
       
       setImageDimensions({ width, height });
     }
+  };
+
+  const handleImageError = () => {
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+    setIsLoading(false);
   };
 
   const enterFullScreen = () => {
@@ -170,6 +201,7 @@ const ImageCarousel = ({
                 alt={`Image ${currentIndex + 1}`}
                 onClick={enterFullScreen}
                 onLoad={handleImageLoad}
+                onError={handleImageError}
                 style={getImageStyle(false)}
                 {...(isGif && { autoPlay: true, loop: true })}
               />
@@ -243,6 +275,7 @@ const ImageCarousel = ({
               alt={`Full Screen Image ${currentIndex + 1}`}
               onClick={exitFullScreen}
               onLoad={handleImageLoad}
+              onError={handleImageError}
               style={getImageStyle(true)}
               {...(isGif && { autoPlay: true, loop: true })}
             />
