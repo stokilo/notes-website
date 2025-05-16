@@ -14,26 +14,27 @@ import Highlight from './components/Highlight';
 We'll start with a very simple Spring Boot application acting as a <Highlight color="#e91e63">Resource Server</Highlight>, secured by Keycloak. It will only perform authentication (i.e., verify the JWT token is valid and issued by our Keycloak instance) but not authorization (i.e., check specific roles or permissions yet).
 
 
-**Keycloak Configuration*
+**Keycloak Configuration for Realm And Client*
 
 Realm config details: [Realm](Realm.html)
 
 | Variable name    | Value |
 | -------- | ------- |
 | Realm name  | my-spring-realm   |
-| Client ID  | my-resource-server-client   |
-| Valid Redirect URIs | http://localhost:8080/* |
+| Client ID  | spring-resource-server  |
 
 <ImageCarousel
   images={[
-    { imageUrl: '/img/chapter1/screenshot_J4FfXSS3.png' },
-    { imageUrl: '/img/chapter1/screenshot_zXGW6aM7.png' },
-    { imageUrl: '/img/chapter1/screenshot_mFgZwR7j.png' },
-    { imageUrl: '/img/chapter1/screenshot_UybjUJqL.png' },
-    { imageUrl: '/img/chapter1/screenshot_7iyUHOqo.png' },
-    { imageUrl: '/img/chapter1/screenshot_j6wyqv72.png' },
-    { imageUrl: '/img/chapter1/screenshot_7NhLpog7.png' },
+    { imageUrl: '/img/chapter1/screenshot_1YjGmo5BZ.png' },
+    { imageUrl: '/img/chapter1/screenshot_25ph2hZD.png'},
+    { imageUrl: '/img/chapter1/screenshot_3sY4Fyvp.png'},
+    { imageUrl: '/img/chapter1/screenshot_4sKWbEZG.png'},
+    { imageUrl: '/img/chapter1/screenshot_5BHOyiYq.png'},
+    { imageUrl: '/img/chapter1/screenshot_6YSXwngq.png'},
+    { imageUrl: '/img/chapter1/screenshot_7JtNbPRT.png'}
   ]} />
+
+**User Creation**
 
 
 
