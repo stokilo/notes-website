@@ -35,9 +35,11 @@ class ImagePanel extends JPanel {
     private static final Color PILL_BACKGROUND = new Color(255, 59, 48, 230);
     private static final Color PILL_TEXT_COLOR = Color.WHITE;
     public static final double PILL_SIZE_RATIO = 0.10; // 10% of rectangle size
-    public static final double PILL_SIZE_RATIO_SMALL = 0.07; // 7% of rectangle size
-    public static final double PILL_SIZE_RATIO_TINY = 0.05; // 5% of rectangle size
-    public static final int MIN_PILL_SIZE = 20; // Decreased minimum size
+    public static final double PILL_SIZE_RATIO_SMALL = 0.15; // 15% of rectangle size
+    public static final double PILL_SIZE_RATIO_MEDIUM = 0.20; // 20% of rectangle size
+    public static final double PILL_SIZE_RATIO_LARGE = 0.25; // 25% of rectangle size
+    public static final double PILL_SIZE_RATIO_XLARGE = 0.40; // 40% of rectangle size
+    public static final int MIN_PILL_SIZE = 20; // Minimum size
     public static final int MAX_PILL_SIZE = 60; // Maximum size
     private final float[] SELECTION_DASH = {5.0f, 5.0f}; // Dashed border pattern
     private String currentShape = "Rounded Rectangle";
@@ -87,7 +89,11 @@ class ImagePanel extends JPanel {
                             if (currentSize == PILL_SIZE_RATIO) {
                                 newSize = PILL_SIZE_RATIO_SMALL;
                             } else if (currentSize == PILL_SIZE_RATIO_SMALL) {
-                                newSize = PILL_SIZE_RATIO_TINY;
+                                newSize = PILL_SIZE_RATIO_MEDIUM;
+                            } else if (currentSize == PILL_SIZE_RATIO_MEDIUM) {
+                                newSize = PILL_SIZE_RATIO_LARGE;
+                            } else if (currentSize == PILL_SIZE_RATIO_LARGE) {
+                                newSize = PILL_SIZE_RATIO_XLARGE;
                             } else {
                                 newSize = PILL_SIZE_RATIO;
                             }
