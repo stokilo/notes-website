@@ -806,7 +806,7 @@ public class SelectiveBlurApp extends JFrame {
             fileChooser.setCurrentDirectory(desktopDir);
         }
         
-        fileChooser.setSelectedFile(new File("animation.gif"));
+        fileChooser.setSelectedFile(new File(generateRandomFileName() + ".gif"));
         fileChooser.setFileFilter(new FileNameExtensionFilter("GIF Images", "gif"));
         
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -1576,7 +1576,7 @@ public class SelectiveBlurApp extends JFrame {
         fileChooser.setDialogTitle("Save Image");
         fileChooser.setFileFilter(new FileNameExtensionFilter("PNG Images", "png"));
         fileChooser.setCurrentDirectory(new File(System.getProperty("user.home"), "Desktop"));
-        fileChooser.setSelectedFile(new File("1.png"));
+        fileChooser.setSelectedFile(new File(generateRandomFileName() + ".png"));
 
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
@@ -2151,6 +2151,17 @@ public class SelectiveBlurApp extends JFrame {
             default: // Red
                 return new Color(255, 59, 48);
         }
+    }
+
+    private String generateRandomFileName() {
+        // Generate a random 8-character alphanumeric string
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+        for (int i = 0; i < 8; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return "screenshot_" + sb.toString();
     }
 
     public static void main(String[] args) {
