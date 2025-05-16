@@ -17,6 +17,15 @@ import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.metadata.IIOMetadataNode;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageTypeSpecifier;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import javax.imageio.IIOImage;
+import java.awt.image.BufferedImage;
 
 public class SelectiveBlurApp extends JFrame {
 
@@ -702,12 +711,12 @@ public class SelectiveBlurApp extends JFrame {
         }
 
         // Create a new image with a white background
-        BufferedImage selectedAreasImage = new BufferedImage(
+        BufferedImage baseImage = new BufferedImage(
                 originalImage.getWidth(),
                 originalImage.getHeight(),
                 BufferedImage.TYPE_INT_ARGB
         );
-        Graphics2D g2d = selectedAreasImage.createGraphics();
+        Graphics2D g2d = baseImage.createGraphics();
 
         // Enable high-quality rendering
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -716,7 +725,7 @@ public class SelectiveBlurApp extends JFrame {
 
         // Fill background with white
         g2d.setColor(Color.WHITE);
-        g2d.fillRect(0, 0, selectedAreasImage.getWidth(), selectedAreasImage.getHeight());
+        g2d.fillRect(0, 0, baseImage.getWidth(), baseImage.getHeight());
 
         // Draw only the selected portions from the original image
         for (Rectangle rect : selections) {
@@ -745,34 +754,107 @@ public class SelectiveBlurApp extends JFrame {
             drawShapeWithStyle(g2d, rect, shape, borderStyle, borderColor);
         }
 
-        // Draw connecting arrows between rectangles
-        if (selections.size() > 1) {
-            // Sort rectangles by their pill numbers
-            List<Rectangle> sortedRects = new ArrayList<>(selections);
-            Collections.sort(sortedRects, (r1, r2) -> {
-                int index1 = selections.indexOf(r1);
-                int index2 = selections.indexOf(r2);
-                return Integer.compare(index1, index2);
-            });
-
-            // Draw arrows between consecutive rectangles
-            for (int i = 0; i < sortedRects.size() - 1; i++) {
-                Rectangle start = sortedRects.get(i);
-                Rectangle end = sortedRects.get(i + 1);
-
-                // Calculate arrow points on rectangle borders
-                Point startPoint = getBorderIntersectionPoint(start, end);
-                Point endPoint = getBorderIntersectionPoint(end, start);
-
-                // Draw arrow
-                drawArrow(g2d, startPoint, endPoint);
-            }
-        }
-
         g2d.dispose();
 
-        // Save this newly created image
-        saveImageToFile(selectedAreasImage, "2.png");
+        // Create frames for animation
+        List<BufferedImage> frames = new ArrayList<>();
+        List<Rectangle> sortedRects = new ArrayList<>(selections);
+        Collections.sort(sortedRects, (r1, r2) -> {
+            int index1 = selections.indexOf(r1);
+            int index2 = selections.indexOf(r2);
+            return Integer.compare(index1, index2);
+        });
+
+        // Create frames with arrows
+        for (int i = 0; i < sortedRects.size(); i++) {
+            BufferedImage frame = new BufferedImage(
+                baseImage.getWidth(),
+                baseImage.getHeight(),
+                BufferedImage.TYPE_INT_ARGB
+            );
+            Graphics2D frameG2d = frame.createGraphics();
+            
+            // Enable high-quality rendering
+            frameG2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            frameG2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            frameG2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+            
+            // Draw base image
+            frameG2d.drawImage(baseImage, 0, 0, null);
+            
+            // Draw arrows up to current rectangle
+            for (int j = 0; j < i; j++) {
+                Rectangle start = sortedRects.get(j);
+                Rectangle end = sortedRects.get(j + 1);
+                Point startPoint = getBorderIntersectionPoint(start, end);
+                Point endPoint = getBorderIntersectionPoint(end, start);
+                drawArrow(frameG2d, startPoint, endPoint);
+            }
+            
+            frameG2d.dispose();
+            frames.add(frame);
+        }
+
+        // Save as animated GIF
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Save Animated GIF");
+        fileChooser.setSelectedFile(new File("animation.gif"));
+        fileChooser.setFileFilter(new FileNameExtensionFilter("GIF Images", "gif"));
+        
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            File outputFile = fileChooser.getSelectedFile();
+            if (!outputFile.getName().toLowerCase().endsWith(".gif")) {
+                outputFile = new File(outputFile.getAbsolutePath() + ".gif");
+            }
+
+            try {
+                // Create ImageWriter
+                ImageWriter writer = ImageIO.getImageWritersByFormatName("gif").next();
+                ImageWriteParam writeParam = writer.getDefaultWriteParam();
+                ImageTypeSpecifier typeSpecifier = ImageTypeSpecifier.createFromBufferedImageType(BufferedImage.TYPE_INT_ARGB);
+
+                // Create output stream
+                ImageOutputStream output = ImageIO.createImageOutputStream(outputFile);
+                writer.setOutput(output);
+
+                // Create metadata
+                IIOMetadata metadata = writer.getDefaultImageMetadata(typeSpecifier, writeParam);
+                String metaFormatName = metadata.getNativeMetadataFormatName();
+                IIOMetadataNode root = (IIOMetadataNode) metadata.getAsTree(metaFormatName);
+
+                // Add animation metadata
+                IIOMetadataNode graphicsControlExtensionNode = new IIOMetadataNode("GraphicControlExtension");
+                graphicsControlExtensionNode.setAttribute("disposalMethod", "none");
+                graphicsControlExtensionNode.setAttribute("userInputFlag", "FALSE");
+                graphicsControlExtensionNode.setAttribute("transparentColorFlag", "FALSE");
+                graphicsControlExtensionNode.setAttribute("delayTime", "50"); // 500ms = 50 * 10ms
+                graphicsControlExtensionNode.setAttribute("transparentColorIndex", "0");
+                root.appendChild(graphicsControlExtensionNode);
+
+                // Add application extension for looping
+                IIOMetadataNode appExtensionsNode = new IIOMetadataNode("ApplicationExtensions");
+                IIOMetadataNode child = new IIOMetadataNode("ApplicationExtension");
+                child.setAttribute("applicationID", "NETSCAPE");
+                child.setAttribute("authenticationCode", "2.0");
+                child.setUserObject(new byte[]{0x1, 0x0, 0x0}); // Loop forever
+                appExtensionsNode.appendChild(child);
+                root.appendChild(appExtensionsNode);
+
+                metadata.setFromTree(metaFormatName, root);
+
+                // Write frames
+                writer.prepareWriteSequence(null);
+                for (BufferedImage frame : frames) {
+                    writer.writeToSequence(new IIOImage(frame, null, metadata), writeParam);
+                }
+                writer.endWriteSequence();
+                output.close();
+
+                showNotification("Animated GIF saved successfully!");
+            } catch (IOException ex) {
+                showNotification("Error saving animated GIF: " + ex.getMessage(), true);
+            }
+        }
     }
 
     private Point getBorderIntersectionPoint(Rectangle rect, Rectangle target) {
