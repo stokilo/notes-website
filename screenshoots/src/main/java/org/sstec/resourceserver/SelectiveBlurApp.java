@@ -1114,6 +1114,7 @@ public class SelectiveBlurApp extends JFrame {
         fileChooser.setDialogTitle("Save Image");
         fileChooser.setFileFilter(new FileNameExtensionFilter("PNG Images", "png"));
         fileChooser.setCurrentDirectory(new File(System.getProperty("user.home"), "Desktop"));
+        fileChooser.setSelectedFile(new File("1.png"));
 
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
@@ -1130,14 +1131,14 @@ public class SelectiveBlurApp extends JFrame {
                 );
                 Graphics2D g2d = finalImage.createGraphics();
 
+                // Fill background with grey to match app
+                g2d.setColor(new Color(200, 200, 200, 80));
+                g2d.fillRect(0, 0, finalImage.getWidth(), finalImage.getHeight());
+
                 // Set high-quality rendering hints
                 g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
                 g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Fill background with white
-                g2d.setColor(Color.WHITE);
-                g2d.fillRect(0, 0, finalImage.getWidth(), finalImage.getHeight());
 
                 // Draw the processed image (with blur effect)
                 g2d.drawImage(processedImage, 0, 0, null);
@@ -1158,14 +1159,76 @@ public class SelectiveBlurApp extends JFrame {
                 g2d.dispose();
 
                 // Save the image
-                ImageIO.write(finalImage, "png", selectedFile);
-
-                JOptionPane.showMessageDialog(this, "Image saved successfully!");
+                boolean success = ImageIO.write(finalImage, "png", selectedFile);
+                if (success) {
+                    showNotification("Image saved successfully!");
+                } else {
+                    showNotification("Failed to save image", true);
+                }
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "Error saving image: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                showNotification("Error saving image: " + ex.getMessage(), true);
             }
         }
+    }
+
+    private void showNotification(String message) {
+        showNotification(message, false);
+    }
+
+    private void showNotification(String message, boolean isError) {
+        JWindow notification = new JWindow();
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        
+        // Set background color based on message type
+        Color bgColor = isError ? new Color(255, 59, 48, 230) : new Color(52, 199, 89, 230);
+        panel.setBackground(bgColor);
+        
+        // Create message label
+        JLabel label = new JLabel(message);
+        label.setForeground(Color.WHITE);
+        label.setFont(new Font("Arial", Font.BOLD, 14));
+        panel.add(label, BorderLayout.CENTER);
+        
+        notification.setContentPane(panel);
+        notification.pack();
+        
+        // Position the notification at the bottom-right of the screen
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int x = screenSize.width - notification.getWidth() - 20;
+        int y = screenSize.height - notification.getHeight() - 40;
+        notification.setLocation(x, y);
+        
+        // Show the notification
+        notification.setVisible(true);
+        
+        // Create fade-out effect
+        Timer fadeTimer = new Timer(50, null);
+        fadeTimer.addActionListener(new ActionListener() {
+            private float opacity = 1.0f;
+            
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                opacity -= 0.05f;
+                if (opacity <= 0) {
+                    fadeTimer.stop();
+                    notification.dispose();
+                } else {
+                    panel.setBackground(new Color(
+                        bgColor.getRed(),
+                        bgColor.getGreen(),
+                        bgColor.getBlue(),
+                        (int)(bgColor.getAlpha() * opacity)
+                    ));
+                    panel.repaint();
+                }
+            }
+        });
+        
+        // Start fade-out after 2 seconds
+        Timer delayTimer = new Timer(2000, e -> fadeTimer.start());
+        delayTimer.setRepeats(false);
+        delayTimer.start();
     }
 
     // Helper methods for saving/loading maps
@@ -1280,28 +1343,10 @@ public class SelectiveBlurApp extends JFrame {
                 g2d.fillRect(rect.x + 2, rect.y + 2, rect.width, rect.height);
         }
 
-        // Set fill color (same as app preview, with alpha=230)
-        switch (borderColor) {
-            case "Blue":
-                g2d.setColor(new Color(0, 122, 255, 230));
-                break;
-            case "Green":
-                g2d.setColor(new Color(52, 199, 89, 230));
-                break;
-            case "Purple":
-                g2d.setColor(new Color(175, 82, 222, 230));
-                break;
-            case "Orange":
-                g2d.setColor(new Color(255, 149, 0, 230));
-                break;
-            case "Teal":
-                g2d.setColor(new Color(90, 200, 250, 230));
-                break;
-            default: // Red
-                g2d.setColor(new Color(255, 59, 48, 230));
-        }
+        // Set fill color to semi-transparent grey
+        g2d.setColor(new Color(200, 200, 200, 80));
 
-        // Fill the shape with semi-transparent color
+        // Fill the shape with semi-transparent grey color
         switch (shape) {
             case "Ellipse":
                 g2d.fillOval(rect.x, rect.y, rect.width, rect.height);
