@@ -92,9 +92,8 @@ class ImagePanel extends JPanel {
                 }
                 
                 // Start drawing new selection
-                dragStartPoint = e.getPoint();
-                Point imageStartPoint = panelToImageCoordinates(e.getPoint());
-                currentDrawingRectPreview = new Rectangle(imageStartPoint.x, imageStartPoint.y, 0, 0);
+                dragStartPoint = imagePoint;
+                currentDrawingRectPreview = new Rectangle(imagePoint.x, imagePoint.y, 0, 0);
                 repaint();
             }
 
@@ -110,7 +109,7 @@ class ImagePanel extends JPanel {
                 // Only create a new selection if we were actually drawing
                 if (currentDrawingRectPreview.width > 0 && currentDrawingRectPreview.height > 0) {
                     Point imageEndPoint = panelToImageCoordinates(e.getPoint());
-                    updateCurrentRectPreview(panelToImageCoordinates(dragStartPoint), imageEndPoint);
+                    updateCurrentRectPreview(dragStartPoint, imageEndPoint);
 
                     if (rectangleDrawnListener != null) {
                         rectangleDrawnListener.accept(new Rectangle(currentDrawingRectPreview));
@@ -135,7 +134,7 @@ class ImagePanel extends JPanel {
                 
                 if (currentDrawingRectPreview != null && dragStartPoint != null) {
                     Point imageCurrentPoint = panelToImageCoordinates(e.getPoint());
-                    updateCurrentRectPreview(panelToImageCoordinates(dragStartPoint), imageCurrentPoint);
+                    updateCurrentRectPreview(dragStartPoint, imageCurrentPoint);
                     repaint();
                 }
             }
@@ -346,13 +345,33 @@ class ImagePanel extends JPanel {
 
             // Draw all shapes
             for (SelectionShape shape : shapes) {
-                drawShape(g2d, shape, false);
+                Rectangle rect = shape.getBounds();
+                Rectangle panelRect = new Rectangle(
+                    rect.x + imageX,
+                    rect.y + imageY,
+                    rect.width,
+                    rect.height
+                );
+                drawShape(g2d, new SelectionShape(
+                    panelRect,
+                    shape.getShape(),
+                    shape.getBorderStyle(),
+                    shape.getBorderColor(),
+                    shape.getPillStyle(),
+                    shape.getPillPosition()
+                ), false);
             }
 
             // Draw preview if exists
             if (currentDrawingRectPreview != null) {
+                Rectangle previewRect = new Rectangle(
+                    currentDrawingRectPreview.x + imageX,
+                    currentDrawingRectPreview.y + imageY,
+                    currentDrawingRectPreview.width,
+                    currentDrawingRectPreview.height
+                );
                 SelectionShape previewShape = new SelectionShape(
-                    currentDrawingRectPreview,
+                    previewRect,
                     currentShape,
                     currentBorderStyle,
                     currentBorderColor,
