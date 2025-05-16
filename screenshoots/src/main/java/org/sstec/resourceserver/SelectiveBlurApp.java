@@ -1280,7 +1280,92 @@ public class SelectiveBlurApp extends JFrame {
                 g2d.fillRect(rect.x + 2, rect.y + 2, rect.width, rect.height);
         }
 
-        // Set fill color (same as border color)
+        // Set fill color (same as app preview, with alpha=230)
+        switch (borderColor) {
+            case "Blue":
+                g2d.setColor(new Color(0, 122, 255, 230));
+                break;
+            case "Green":
+                g2d.setColor(new Color(52, 199, 89, 230));
+                break;
+            case "Purple":
+                g2d.setColor(new Color(175, 82, 222, 230));
+                break;
+            case "Orange":
+                g2d.setColor(new Color(255, 149, 0, 230));
+                break;
+            case "Teal":
+                g2d.setColor(new Color(90, 200, 250, 230));
+                break;
+            default: // Red
+                g2d.setColor(new Color(255, 59, 48, 230));
+        }
+
+        // Fill the shape with semi-transparent color
+        switch (shape) {
+            case "Ellipse":
+                g2d.fillOval(rect.x, rect.y, rect.width, rect.height);
+                break;
+            case "Diamond":
+                int[] xPointsFill = {
+                    rect.x + rect.width/2,
+                    rect.x + rect.width,
+                    rect.x + rect.width/2,
+                    rect.x
+                };
+                int[] yPointsFill = {
+                    rect.y,
+                    rect.y + rect.height/2,
+                    rect.y + rect.height,
+                    rect.y + rect.height/2
+                };
+                g2d.fillPolygon(xPointsFill, yPointsFill, 4);
+                break;
+            case "Star":
+                int centerXFill = rect.x + rect.width/2;
+                int centerYFill = rect.y + rect.height/2;
+                int outerRadiusFill = Math.min(rect.width, rect.height)/2;
+                int innerRadiusFill = outerRadiusFill/2;
+                int[] starXPointsFill = new int[10];
+                int[] starYPointsFill = new int[10];
+                for (int j = 0; j < 10; j++) {
+                    double angle = Math.PI * j / 5;
+                    int radius = (j % 2 == 0) ? outerRadiusFill : innerRadiusFill;
+                    starXPointsFill[j] = centerXFill + (int)(radius * Math.sin(angle));
+                    starYPointsFill[j] = centerYFill - (int)(radius * Math.cos(angle));
+                }
+                g2d.fillPolygon(starXPointsFill, starYPointsFill, 10);
+                break;
+            case "Hexagon":
+                int[] hexXPointsFill = new int[6];
+                int[] hexYPointsFill = new int[6];
+                for (int j = 0; j < 6; j++) {
+                    double angle = 2 * Math.PI * j / 6;
+                    int radius = Math.min(rect.width, rect.height)/2;
+                    hexXPointsFill[j] = rect.x + rect.width/2 + (int)(radius * Math.cos(angle));
+                    hexYPointsFill[j] = rect.y + rect.height/2 + (int)(radius * Math.sin(angle));
+                }
+                g2d.fillPolygon(hexXPointsFill, hexYPointsFill, 6);
+                break;
+            case "Octagon":
+                int[] octXPointsFill = new int[8];
+                int[] octYPointsFill = new int[8];
+                for (int j = 0; j < 8; j++) {
+                    double angle = 2 * Math.PI * j / 8;
+                    int radius = Math.min(rect.width, rect.height)/2;
+                    octXPointsFill[j] = rect.x + rect.width/2 + (int)(radius * Math.cos(angle));
+                    octYPointsFill[j] = rect.y + rect.height/2 + (int)(radius * Math.sin(angle));
+                }
+                g2d.fillPolygon(octXPointsFill, octYPointsFill, 8);
+                break;
+            case "Rounded Rectangle":
+                g2d.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 20, 20);
+                break;
+            default: // Rectangle
+                g2d.fillRect(rect.x, rect.y, rect.width, rect.height);
+        }
+
+        // Set border color (fully opaque)
         switch (borderColor) {
             case "Blue":
                 g2d.setColor(new Color(0, 122, 255));
@@ -1331,56 +1416,56 @@ public class SelectiveBlurApp extends JFrame {
                 g2d.drawOval(rect.x, rect.y, rect.width, rect.height);
                 break;
             case "Diamond":
-                int[] xPoints = {
+                int[] xPointsBorder = {
                     rect.x + rect.width/2,
                     rect.x + rect.width,
                     rect.x + rect.width/2,
                     rect.x
                 };
-                int[] yPoints = {
+                int[] yPointsBorder = {
                     rect.y,
                     rect.y + rect.height/2,
                     rect.y + rect.height,
                     rect.y + rect.height/2
                 };
-                g2d.drawPolygon(xPoints, yPoints, 4);
+                g2d.drawPolygon(xPointsBorder, yPointsBorder, 4);
                 break;
             case "Star":
-                int centerX = rect.x + rect.width/2;
-                int centerY = rect.y + rect.height/2;
-                int outerRadius = Math.min(rect.width, rect.height)/2;
-                int innerRadius = outerRadius/2;
-                int[] starXPoints = new int[10];
-                int[] starYPoints = new int[10];
+                int centerXBorder = rect.x + rect.width/2;
+                int centerYBorder = rect.y + rect.height/2;
+                int outerRadiusBorder = Math.min(rect.width, rect.height)/2;
+                int innerRadiusBorder = outerRadiusBorder/2;
+                int[] starXPointsBorder = new int[10];
+                int[] starYPointsBorder = new int[10];
                 for (int j = 0; j < 10; j++) {
                     double angle = Math.PI * j / 5;
-                    int radius = (j % 2 == 0) ? outerRadius : innerRadius;
-                    starXPoints[j] = centerX + (int)(radius * Math.sin(angle));
-                    starYPoints[j] = centerY - (int)(radius * Math.cos(angle));
+                    int radius = (j % 2 == 0) ? outerRadiusBorder : innerRadiusBorder;
+                    starXPointsBorder[j] = centerXBorder + (int)(radius * Math.sin(angle));
+                    starYPointsBorder[j] = centerYBorder - (int)(radius * Math.cos(angle));
                 }
-                g2d.drawPolygon(starXPoints, starYPoints, 10);
+                g2d.drawPolygon(starXPointsBorder, starYPointsBorder, 10);
                 break;
             case "Hexagon":
-                int[] hexXPoints = new int[6];
-                int[] hexYPoints = new int[6];
+                int[] hexXPointsBorder = new int[6];
+                int[] hexYPointsBorder = new int[6];
                 for (int j = 0; j < 6; j++) {
                     double angle = 2 * Math.PI * j / 6;
                     int radius = Math.min(rect.width, rect.height)/2;
-                    hexXPoints[j] = rect.x + rect.width/2 + (int)(radius * Math.cos(angle));
-                    hexYPoints[j] = rect.y + rect.height/2 + (int)(radius * Math.sin(angle));
+                    hexXPointsBorder[j] = rect.x + rect.width/2 + (int)(radius * Math.cos(angle));
+                    hexYPointsBorder[j] = rect.y + rect.height/2 + (int)(radius * Math.sin(angle));
                 }
-                g2d.drawPolygon(hexXPoints, hexYPoints, 6);
+                g2d.drawPolygon(hexXPointsBorder, hexYPointsBorder, 6);
                 break;
             case "Octagon":
-                int[] octXPoints = new int[8];
-                int[] octYPoints = new int[8];
+                int[] octXPointsBorder = new int[8];
+                int[] octYPointsBorder = new int[8];
                 for (int j = 0; j < 8; j++) {
                     double angle = 2 * Math.PI * j / 8;
                     int radius = Math.min(rect.width, rect.height)/2;
-                    octXPoints[j] = rect.x + rect.width/2 + (int)(radius * Math.cos(angle));
-                    octYPoints[j] = rect.y + rect.height/2 + (int)(radius * Math.sin(angle));
+                    octXPointsBorder[j] = rect.x + rect.width/2 + (int)(radius * Math.cos(angle));
+                    octYPointsBorder[j] = rect.y + rect.height/2 + (int)(radius * Math.sin(angle));
                 }
-                g2d.drawPolygon(octXPoints, octYPoints, 8);
+                g2d.drawPolygon(octXPointsBorder, octYPointsBorder, 8);
                 break;
             case "Rounded Rectangle":
                 g2d.drawRoundRect(rect.x, rect.y, rect.width, rect.height, 20, 20);
