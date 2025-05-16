@@ -245,6 +245,9 @@ class ScreenshotApp {
 
     updateButtonStates() {
         const hasSelections = this.selections.length > 0;
+        const hasImage = this.originalImage !== null;
+        
+        document.getElementById('saveBtn').disabled = !hasImage;
         document.getElementById('saveSelectedBtn').disabled = !hasSelections;
         document.getElementById('clearBtn').disabled = !hasSelections;
         document.getElementById('undoBtn').disabled = !hasSelections;
@@ -399,37 +402,26 @@ class ScreenshotApp {
     }
 
     displayScreenshot(selection) {
+        console.log('Displaying screenshot:', selection);
         if (!selection || !selection.image) {
+            console.error('Invalid screenshot data:', selection);
             this.showNotification('Invalid screenshot data', true);
             return;
         }
 
         try {
-            // Create a temporary canvas to draw the selection
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = selection.width;
-            tempCanvas.height = selection.height;
-            const tempCtx = tempCanvas.getContext('2d');
-
-            // Draw the selection
+            // Create a new image from the captured data
             const img = new Image();
+            
             img.onload = () => {
-                tempCtx.drawImage(
-                    img,
-                    selection.x,
-                    selection.y,
-                    selection.width,
-                    selection.height,
-                    0,
-                    0,
-                    selection.width,
-                    selection.height
-                );
-
-                // Update main canvas
-                this.canvas.width = selection.width;
-                this.canvas.height = selection.height;
-                this.ctx.drawImage(tempCanvas, 0, 0);
+                console.log('Image loaded successfully, dimensions:', img.width, 'x', img.height);
+                
+                // Update main canvas size to match the image
+                this.canvas.width = img.width;
+                this.canvas.height = img.height;
+                
+                // Draw the image directly on the main canvas
+                this.ctx.drawImage(img, 0, 0);
 
                 // Store the original image
                 this.originalImage = img;
@@ -439,10 +431,12 @@ class ScreenshotApp {
                 this.showNotification('Screenshot captured successfully');
             };
 
-            img.onerror = () => {
+            img.onerror = (error) => {
+                console.error('Failed to load image:', error);
                 this.showNotification('Failed to load screenshot', true);
             };
 
+            console.log('Setting image source');
             img.src = selection.image;
         } catch (error) {
             console.error('Failed to display screenshot:', error);

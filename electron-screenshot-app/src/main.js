@@ -226,8 +226,13 @@ ipcMain.on('screenshot-data', (event, data) => {
 });
 
 ipcMain.on('capture-screen', (event, selection) => {
+  console.log('Capturing screen selection:', selection);
   if (mainWindow) {
-    mainWindow.webContents.send('screenshot-captured', selection);
+    // Send the complete selection data including the image
+    mainWindow.webContents.send('screenshot-captured', {
+      ...selection,
+      image: selection.image // Make sure we include the image data
+    });
     mainWindow.show();
   }
   if (selectionWindow) {
@@ -235,7 +240,24 @@ ipcMain.on('capture-screen', (event, selection) => {
   }
 });
 
+// Add handler for getting screenshot data
+ipcMain.on('get-screenshot-data', (event) => {
+  console.log('Request for screenshot data received');
+  if (selectionWindow) {
+    selectionWindow.webContents.send('get-screenshot-data');
+  }
+});
+
+// Add handler for sending screenshot data
+ipcMain.on('send-screenshot-data', (event, data) => {
+  console.log('Screenshot data received from selection window');
+  if (mainWindow) {
+    mainWindow.webContents.send('screenshot-captured', data);
+  }
+});
+
 ipcMain.on('cancel-screenshot', () => {
+  console.log('Screenshot cancelled');
   if (selectionWindow) {
     selectionWindow.close();
   }

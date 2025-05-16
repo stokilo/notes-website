@@ -251,16 +251,61 @@ class SelectionWindow {
             return;
         }
 
-        const selection = {
-            x: Math.round(this.currentSelection.x * this.scaleFactor),
-            y: Math.round(this.currentSelection.y * this.scaleFactor),
-            width: Math.round(this.currentSelection.width * this.scaleFactor),
-            height: Math.round(this.currentSelection.height * this.scaleFactor),
-            image: this.originalImage.src
-        };
+        try {
+            // Create a temporary canvas to crop the selection
+            const tempCanvas = document.createElement('canvas');
+            const scaleFactor = this.scaleFactor || 1;
+            
+            // Set the canvas size to match the selection size
+            tempCanvas.width = this.currentSelection.width;
+            tempCanvas.height = this.currentSelection.height;
+            const tempCtx = tempCanvas.getContext('2d');
 
-        console.log('Sending selection:', selection);
-        ipcRenderer.send('capture-screen', selection);
+            // Calculate the source coordinates and dimensions
+            const sourceX = this.currentSelection.x * scaleFactor;
+            const sourceY = this.currentSelection.y * scaleFactor;
+            const sourceWidth = this.currentSelection.width * scaleFactor;
+            const sourceHeight = this.currentSelection.height * scaleFactor;
+
+            console.log('Drawing selection with dimensions:', {
+                sourceX,
+                sourceY,
+                sourceWidth,
+                sourceHeight,
+                destWidth: this.currentSelection.width,
+                destHeight: this.currentSelection.height
+            });
+
+            // Draw the selected portion
+            tempCtx.drawImage(
+                this.originalImage,
+                sourceX,
+                sourceY,
+                sourceWidth,
+                sourceHeight,
+                0,
+                0,
+                this.currentSelection.width,
+                this.currentSelection.height
+            );
+
+            // Get the image data
+            const imageData = tempCanvas.toDataURL('image/png');
+            console.log('Image data generated, length:', imageData.length);
+
+            const selection = {
+                x: Math.round(this.currentSelection.x),
+                y: Math.round(this.currentSelection.y),
+                width: Math.round(this.currentSelection.width),
+                height: Math.round(this.currentSelection.height),
+                image: imageData
+            };
+
+            console.log('Sending selection with image data');
+            ipcRenderer.send('capture-screen', selection);
+        } catch (error) {
+            console.error('Error capturing selection:', error);
+        }
     }
 
     resetSelection() {
