@@ -18,18 +18,18 @@ import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 class ImagePanel extends JPanel {
     private BufferedImage originalImageRef; // For coordinate mapping
     private BufferedImage processedImageToDisplay; // This image has selections & borders baked in
-    private List<Rectangle> selections = new ArrayList<>(); // Add this to track all selections
+    private List<SelectionShape> shapes = new ArrayList<>();
     private Rectangle currentDrawingRectPreview; // For live drawing feedback (blue rect)
     private Rectangle selectedRectangle; // For the currently selected rectangle
     private Point dragStartPoint;
     private Consumer<Rectangle> rectangleDrawnListener;
     private static final Stroke PREVIEW_BORDER_STROKE = new BasicStroke(2.0f);
     private static final Stroke SELECTION_BORDER_STROKE = new BasicStroke(2.5f);
-    private static Color SELECTION_BORDER_COLOR = new Color(255, 59, 48); // Changed from final to static
     private static final Color SELECTION_SHADOW_COLOR = new Color(0, 0, 0, 40);
     private static final int SHADOW_OFFSET = 2;
     private static final Color PILL_BACKGROUND = new Color(255, 59, 48, 230);
@@ -49,7 +49,7 @@ class ImagePanel extends JPanel {
     private final int OCTAGON_POINTS = 8;
     
     // Dragging state
-    private int draggedSelectionIndex = -1;
+    private int draggedShapeIndex = -1;
     private Point dragOffset;
     private BufferedImage placeholderImage;
 
@@ -71,10 +71,10 @@ class ImagePanel extends JPanel {
                 Point imagePoint = panelToImageCoordinates(e.getPoint());
                 
                 // Check if clicking on a pill
-                for (int i = selections.size() - 1; i >= 0; i--) {
-                    Rectangle rect = selections.get(i);
+                for (int i = shapes.size() - 1; i >= 0; i--) {
+                    SelectionShape shape = shapes.get(i);
                     int currentPosition = pillPositions.getOrDefault(i, 0);
-                    if (isPointInPill(imagePoint, rect, i, currentPosition)) {
+                    if (isPointInPill(imagePoint, shape.getBounds(), i, currentPosition)) {
                         // Cycle pill position
                         int newPosition = (currentPosition + 1) % PILL_POSITION_COUNT;
                         pillPositions.put(i, newPosition);
@@ -84,9 +84,9 @@ class ImagePanel extends JPanel {
                 }
                 
                 // Check if clicking on an existing selection
-                for (int i = selections.size() - 1; i >= 0; i--) {
-                    Rectangle rect = selections.get(i);
-                    if (rect.contains(imagePoint)) {
+                for (int i = shapes.size() - 1; i >= 0; i--) {
+                    SelectionShape shape = shapes.get(i);
+                    if (shape.getBounds().contains(imagePoint)) {
                         return;
                     }
                 }
@@ -193,39 +193,30 @@ class ImagePanel extends JPanel {
     }
 
     public void setSelectionsForDrawingFeedback(List<Rectangle> newSelections) {
-        // Create a new map for the updated selections
-        Map<Integer, Integer> newPillPositions = new HashMap<>();
-        Map<Integer, String> newShapes = new HashMap<>();
-        Map<Integer, String> newBorderStyles = new HashMap<>();
-        Map<Integer, String> newBorderColors = new HashMap<>();
-        Map<Integer, String> newPillStyles = new HashMap<>();
+        // Create new shapes list
+        List<SelectionShape> newShapes = new ArrayList<>();
         
-        // Copy existing positions and styles for selections that still exist
+        // Copy existing shapes
         for (int i = 0; i < newSelections.size(); i++) {
-            if (i < selections.size()) {
-                // Keep existing position and styles for this index
-                newPillPositions.put(i, pillPositions.getOrDefault(i, 0));
-                newShapes.put(i, selectionShapes.getOrDefault(i, currentShape));
-                newBorderStyles.put(i, selectionBorderStyles.getOrDefault(i, currentBorderStyle));
-                newBorderColors.put(i, selectionBorderColors.getOrDefault(i, currentBorderColor));
-                newPillStyles.put(i, selectionPillStyles.getOrDefault(i, currentPillStyle));
+            if (i < shapes.size()) {
+                // Keep existing shape but update bounds
+                SelectionShape existingShape = shapes.get(i);
+                existingShape.setBounds(newSelections.get(i));
+                newShapes.add(existingShape);
             } else {
-                // New selection gets current styles
-                newPillPositions.put(i, 0);
-                newShapes.put(i, currentShape);
-                newBorderStyles.put(i, currentBorderStyle);
-                newBorderColors.put(i, currentBorderColor);
-                newPillStyles.put(i, currentPillStyle);
+                // Create new shape with current styles
+                newShapes.add(new SelectionShape(
+                    newSelections.get(i),
+                    currentShape,
+                    currentBorderStyle,
+                    currentBorderColor,
+                    currentPillStyle,
+                    0
+                ));
             }
         }
         
-        // Update the selections and all associated data
-        this.selections = new ArrayList<>(newSelections);
-        this.pillPositions = newPillPositions;
-        this.selectionShapes = newShapes;
-        this.selectionBorderStyles = newBorderStyles;
-        this.selectionBorderColors = newBorderColors;
-        this.selectionPillStyles = newPillStyles;
+        this.shapes = newShapes;
         repaint();
     }
 
@@ -236,62 +227,48 @@ class ImagePanel extends JPanel {
 
     public void setCurrentShape(String shape) {
         this.currentShape = shape;
+        repaint();
     }
 
     public void setBorderStyle(String style) {
         this.currentBorderStyle = style;
+        repaint();
     }
 
     public void setBorderColor(String color) {
         this.currentBorderColor = color;
-        switch (color) {
-            case "Blue":
-                SELECTION_BORDER_COLOR = new Color(0, 122, 255);
-                break;
-            case "Green":
-                SELECTION_BORDER_COLOR = new Color(52, 199, 89);
-                break;
-            case "Purple":
-                SELECTION_BORDER_COLOR = new Color(175, 82, 222);
-                break;
-            case "Orange":
-                SELECTION_BORDER_COLOR = new Color(255, 149, 0);
-                break;
-            case "Teal":
-                SELECTION_BORDER_COLOR = new Color(90, 200, 250);
-                break;
-            default: // Red
-                SELECTION_BORDER_COLOR = new Color(255, 59, 48);
-        }
+        repaint();
     }
 
     public void setPillStyle(String style) {
         this.currentPillStyle = style;
+        repaint();
     }
 
     public void setDraggedSelection(int index, Point startPoint) {
-        if (index >= 0 && index < selections.size()) {
-            draggedSelectionIndex = index;
-            Rectangle rect = selections.get(index);
+        if (index >= 0 && index < shapes.size()) {
+            draggedShapeIndex = index;
+            SelectionShape shape = shapes.get(index);
             dragOffset = new Point(
-                startPoint.x - rect.x,
-                startPoint.y - rect.y
+                startPoint.x - shape.getBounds().x,
+                startPoint.y - shape.getBounds().y
             );
         }
     }
 
     public void clearDraggedSelection() {
-        draggedSelectionIndex = -1;
+        draggedShapeIndex = -1;
         dragOffset = null;
     }
 
     public boolean isDraggingSelection() {
-        return draggedSelectionIndex != -1;
+        return draggedShapeIndex != -1;
     }
 
     public void updateDraggedSelection(Point currentPoint) {
-        if (draggedSelectionIndex != -1 && dragOffset != null) {
-            Rectangle rect = selections.get(draggedSelectionIndex);
+        if (draggedShapeIndex != -1 && dragOffset != null) {
+            SelectionShape shape = shapes.get(draggedShapeIndex);
+            Rectangle rect = shape.getBounds();
             int newX = currentPoint.x - dragOffset.x;
             int newY = currentPoint.y - dragOffset.y;
             
@@ -302,6 +279,7 @@ class ImagePanel extends JPanel {
             }
             
             rect.setLocation(newX, newY);
+            shape.setBounds(rect);
             repaint();
         }
     }
@@ -366,39 +344,22 @@ class ImagePanel extends JPanel {
             // Draw the main image at original size
             g2d.drawImage(processedImageToDisplay, imageX, imageY, null);
 
-            // Draw all selections with borders
-            for (int i = 0; i < selections.size(); i++) {
-                Rectangle rect = selections.get(i);
-                
-                // Adjust selection coordinates to account for centered image
-                Rectangle panelRect = new Rectangle(
-                    rect.x + imageX,
-                    rect.y + imageY,
-                    rect.width,
-                    rect.height
-                );
-                
-                // Draw the shape
-                drawShape(g2d, panelRect, false);
-
-                // Draw pill at current position
-                int position = pillPositions.getOrDefault(i, 0);
-                drawPill(g2d, panelRect, i, position);
+            // Draw all shapes
+            for (SelectionShape shape : shapes) {
+                drawShape(g2d, shape, false);
             }
 
-            // Draw the current drawing rectangle preview
-            if (currentDrawingRectPreview != null && currentDrawingRectPreview.width > 0 && currentDrawingRectPreview.height > 0) {
-                Rectangle panelPreviewRect = new Rectangle(
-                    currentDrawingRectPreview.x + imageX,
-                    currentDrawingRectPreview.y + imageY,
-                    currentDrawingRectPreview.width,
-                    currentDrawingRectPreview.height
+            // Draw preview if exists
+            if (currentDrawingRectPreview != null) {
+                SelectionShape previewShape = new SelectionShape(
+                    currentDrawingRectPreview,
+                    currentShape,
+                    currentBorderStyle,
+                    currentBorderColor,
+                    currentPillStyle,
+                    0
                 );
-
-                if (panelPreviewRect.width > 0 && panelPreviewRect.height > 0) {
-                    // Draw the preview shape
-                    drawShape(g2d, panelPreviewRect, true);
-                }
+                drawShape(g2d, previewShape, true);
             }
         } else if (placeholderImage != null) {
             // Calculate position to center the placeholder
@@ -419,45 +380,20 @@ class ImagePanel extends JPanel {
         g2d.dispose();
     }
 
-    private void drawShape(Graphics2D g2d, Rectangle rect, boolean isPreview) {
+    private void drawShape(Graphics2D g2d, SelectionShape shape, boolean isPreview) {
         Stroke originalStroke = g2d.getStroke();
         Color originalColor = g2d.getColor();
         
-        // Get the specific styles for this selection
-        String shape = isPreview ? currentShape : selectionShapes.getOrDefault(selections.indexOf(rect), currentShape);
-        String borderStyle = isPreview ? currentBorderStyle : selectionBorderStyles.getOrDefault(selections.indexOf(rect), currentBorderStyle);
-        String borderColor = isPreview ? currentBorderColor : selectionBorderColors.getOrDefault(selections.indexOf(rect), currentBorderColor);
+        Rectangle rect = shape.getBounds();
+        String shapeType = isPreview ? currentShape : shape.getShape();
+        String borderStyle = isPreview ? currentBorderStyle : shape.getBorderStyle();
+        String borderColor = isPreview ? currentBorderColor : shape.getBorderColor();
         
-        // Set shadow
+        // Draw shadow
         g2d.setColor(SELECTION_SHADOW_COLOR);
+        g2d.fillRect(rect.x + SHADOW_OFFSET, rect.y + SHADOW_OFFSET, 
+                    rect.width, rect.height);
         
-        // Draw shape shadow
-        switch (shape) {
-            case "Ellipse":
-                g2d.fillOval(rect.x + SHADOW_OFFSET, rect.y + SHADOW_OFFSET, 
-                           rect.width, rect.height);
-                break;
-            case "Diamond":
-                drawDiamond(g2d, rect, true);
-                break;
-            case "Star":
-                drawStar(g2d, rect, true);
-                break;
-            case "Hexagon":
-                drawPolygon(g2d, rect, HEXAGON_POINTS, true);
-                break;
-            case "Octagon":
-                drawPolygon(g2d, rect, OCTAGON_POINTS, true);
-                break;
-            case "Rounded Rectangle":
-                g2d.fillRoundRect(rect.x + SHADOW_OFFSET, rect.y + SHADOW_OFFSET, 
-                                rect.width, rect.height, ROUNDED_RECT_ARC, ROUNDED_RECT_ARC);
-                break;
-            default: // Rectangle
-                g2d.fillRect(rect.x + SHADOW_OFFSET, rect.y + SHADOW_OFFSET, 
-                           rect.width, rect.height);
-        }
-
         // Set border style
         switch (borderStyle) {
             case "Dotted":
@@ -478,37 +414,15 @@ class ImagePanel extends JPanel {
                     g2d.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 
                         10.0f, SELECTION_DASH, 0.0f));
                 } else {
-                    g2d.setStroke(SELECTION_BORDER_STROKE);
+                    g2d.setStroke(new BasicStroke(2.5f));
                 }
         }
-
+        
         // Set border color
-        if (isPreview) {
-            g2d.setColor(new Color(0, 122, 255));
-        } else {
-            switch (borderColor) {
-                case "Blue":
-                    g2d.setColor(new Color(0, 122, 255));
-                    break;
-                case "Green":
-                    g2d.setColor(new Color(52, 199, 89));
-                    break;
-                case "Purple":
-                    g2d.setColor(new Color(175, 82, 222));
-                    break;
-                case "Orange":
-                    g2d.setColor(new Color(255, 149, 0));
-                    break;
-                case "Teal":
-                    g2d.setColor(new Color(90, 200, 250));
-                    break;
-                default: // Red
-                    g2d.setColor(new Color(255, 59, 48));
-            }
-        }
-
+        g2d.setColor(getColorFromName(borderColor));
+        
         // Draw the shape
-        switch (shape) {
+        switch (shapeType) {
             case "Ellipse":
                 g2d.drawOval(rect.x, rect.y, rect.width, rect.height);
                 break;
@@ -531,22 +445,342 @@ class ImagePanel extends JPanel {
             default: // Rectangle
                 g2d.drawRect(rect.x, rect.y, rect.width, rect.height);
         }
-
-        // Draw additional border effects
-        if (borderStyle.equals("Double")) {
-            g2d.setStroke(new BasicStroke(1.0f));
-            g2d.drawRect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6);
-        } else if (borderStyle.equals("Groove")) {
-            g2d.setColor(new Color(0, 0, 0, 50));
-            g2d.drawRect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
-        } else if (borderStyle.equals("Ridge")) {
-            g2d.setColor(new Color(255, 255, 255, 50));
-            g2d.drawRect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
+        
+        // Draw pill if not preview
+        if (!isPreview) {
+            drawPill(g2d, rect, shapes.indexOf(shape), shape.getPillPosition(), shape.getPillStyle());
         }
-
+        
         // Restore original stroke and color
         g2d.setStroke(originalStroke);
         g2d.setColor(originalColor);
+    }
+
+    private void drawShapeShadow(Graphics2D g2d, Rectangle rect, String shapeType) {
+        // Implementation of drawShapeShadow method
+    }
+
+    private void setBorderStyle(Graphics2D g2d, String borderStyle) {
+        // Implementation of setBorderStyle method
+    }
+
+    private void drawShapeOutline(Graphics2D g2d, Rectangle rect, String shapeType) {
+        // Implementation of drawShapeOutline method
+    }
+
+    private void drawBorderEffects(Graphics2D g2d, Rectangle rect, String borderStyle) {
+        // Implementation of drawBorderEffects method
+    }
+
+    private void drawPill(Graphics2D g2d, Rectangle rect, int index, int position, String pillStyle) {
+        // Calculate pill size based on rectangle size
+        int pillWidth = (int)(rect.width * PILL_SIZE_RATIO);
+        int pillHeight = (int)(rect.height * PILL_SIZE_RATIO);
+        
+        // Apply min/max constraints
+        pillWidth = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillWidth));
+        pillHeight = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillHeight));
+        
+        // Draw numbered pill
+        String number = String.valueOf(index + 1);
+        
+        // Set font size proportional to pill size
+        Font originalFont = g2d.getFont();
+        int fontSize = (int) (Math.min(pillWidth, pillHeight) * 0.6);
+        g2d.setFont(new Font(originalFont.getName(), Font.BOLD, fontSize));
+        
+        FontMetrics fm = g2d.getFontMetrics();
+        int textWidth = fm.stringWidth(number);
+        
+        // Ensure pill is wide enough for the text
+        pillWidth = Math.max(pillWidth, textWidth + (pillHeight / 4));
+        
+        // Calculate pill position based on the position index
+        int pillX, pillY;
+        int padding = pillHeight / 4;
+        
+        // Ensure position is within valid range
+        position = position % PILL_POSITION_COUNT;
+        
+        switch (position) {
+            case 0: // Top right inside
+                pillX = rect.x + rect.width - pillWidth - padding;
+                pillY = rect.y + padding;
+                break;
+            case 1: // Top left inside
+                pillX = rect.x + padding;
+                pillY = rect.y + padding;
+                break;
+            case 2: // Bottom left inside
+                pillX = rect.x + padding;
+                pillY = rect.y + rect.height - pillHeight - padding;
+                break;
+            case 3: // Bottom right inside
+                pillX = rect.x + rect.width - pillWidth - padding;
+                pillY = rect.y + rect.height - pillHeight - padding;
+                break;
+            case 4: // Top right outside
+                pillX = rect.x + rect.width + padding;
+                pillY = rect.y - pillHeight - padding;
+                break;
+            case 5: // Top left outside
+                pillX = rect.x - pillWidth - padding;
+                pillY = rect.y - pillHeight - padding;
+                break;
+            case 6: // Bottom left outside
+                pillX = rect.x - pillWidth - padding;
+                pillY = rect.y + rect.height + padding;
+                break;
+            case 7: // Bottom right outside
+                pillX = rect.x + rect.width + padding;
+                pillY = rect.y + rect.height + padding;
+                break;
+            default:
+                pillX = rect.x + rect.width - pillWidth - padding;
+                pillY = rect.y + padding;
+        }
+
+        // Draw pill based on style
+        switch (pillStyle) {
+            case "Classic":
+                // Draw classic pill with gradient
+                GradientPaint gradient = new GradientPaint(
+                    pillX, pillY, new Color(255, 59, 48),
+                    pillX, pillY + pillHeight, new Color(255, 59, 48, 200)
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(pillX, pillY, pillWidth, pillHeight, 
+                                pillHeight / 2, pillHeight / 2);
+                g2d.setColor(new Color(255, 255, 255, 50));
+                g2d.drawRoundRect(pillX, pillY, pillWidth, pillHeight, 
+                                pillHeight / 2, pillHeight / 2);
+                break;
+            
+            case "Minimal":
+                // Draw minimal pill with thin border
+                g2d.setColor(new Color(255, 59, 48, 180));
+                g2d.fillRoundRect(pillX, pillY, pillWidth, pillHeight, 
+                                pillHeight / 2, pillHeight / 2);
+                g2d.setColor(new Color(255, 59, 48));
+                g2d.setStroke(new BasicStroke(1.0f));
+                g2d.drawRoundRect(pillX, pillY, pillWidth, pillHeight, 
+                                pillHeight / 2, pillHeight / 2);
+                break;
+            
+            case "Bold":
+                // Draw bold pill with thick border
+                g2d.setColor(new Color(255, 59, 48));
+                g2d.fillRoundRect(pillX, pillY, pillWidth, pillHeight, 
+                                pillHeight / 2, pillHeight / 2);
+                g2d.setColor(Color.WHITE);
+                g2d.setStroke(new BasicStroke(2.0f));
+                g2d.drawRoundRect(pillX, pillY, pillWidth, pillHeight, 
+                                pillHeight / 2, pillHeight / 2);
+                break;
+            
+            case "Outline":
+                // Draw outline pill with no fill
+                g2d.setColor(new Color(255, 59, 48));
+                g2d.setStroke(new BasicStroke(2.0f));
+                g2d.drawRoundRect(pillX, pillY, pillWidth, pillHeight, 
+                                pillHeight / 2, pillHeight / 2);
+                break;
+            
+            default: // Modern
+                // Draw modern pill with shadow
+                g2d.setColor(new Color(0, 0, 0, 40));
+                g2d.fillRoundRect(pillX + 2, pillY + 2, pillWidth, pillHeight, 
+                                pillHeight / 2, pillHeight / 2);
+                g2d.setColor(new Color(255, 59, 48, 230));
+                g2d.fillRoundRect(pillX, pillY, pillWidth, pillHeight, 
+                                pillHeight / 2, pillHeight / 2);
+        }
+        
+        // Draw pill text
+        g2d.setColor(Color.WHITE);
+        int textX = pillX + (pillWidth - textWidth) / 2;
+        int textY = pillY + (pillHeight + fm.getAscent() - fm.getDescent()) / 2;
+        g2d.drawString(number, textX, textY);
+        
+        // Restore original font
+        g2d.setFont(originalFont);
+    }
+
+    private boolean isPointInPill(Point point, Rectangle rect, int index, int position) {
+        // Implementation of isPointInPill method
+        return false; // Placeholder return, actual implementation needed
+    }
+
+    public Point panelToImageCoordinates(Point panelPoint) {
+        if (originalImageRef == null || getWidth() == 0 || getHeight() == 0) {
+            return new Point(0,0);
+        }
+        
+        // Calculate image position to center it
+        int imageX = (getWidth() - originalImageRef.getWidth()) / 2;
+        int imageY = (getHeight() - originalImageRef.getHeight()) / 2;
+        
+        // Adjust panel coordinates to account for centered image
+        int adjustedX = panelPoint.x - imageX;
+        int adjustedY = panelPoint.y - imageY;
+        
+        // Clamp coordinates to image bounds
+        adjustedX = Math.max(0, Math.min(adjustedX, originalImageRef.getWidth() - 1));
+        adjustedY = Math.max(0, Math.min(adjustedY, originalImageRef.getHeight() - 1));
+        
+        return new Point(adjustedX, adjustedY);
+    }
+
+    private Rectangle imageToPanelCoordinates(Rectangle imageRect) {
+        if (originalImageRef == null || getWidth() == 0 || getHeight() == 0) {
+            return new Rectangle(0,0,0,0);
+        }
+        
+        // Calculate image position to center it
+        int imageX = (getWidth() - originalImageRef.getWidth()) / 2;
+        int imageY = (getHeight() - originalImageRef.getHeight()) / 2;
+        
+        // Adjust coordinates to account for centered image
+        return new Rectangle(
+            imageRect.x + imageX,
+            imageRect.y + imageY,
+            imageRect.width,
+            imageRect.height
+        );
+    }
+
+    // Add these methods to save and restore pill positions
+    public Map<Integer, Integer> getPillPositions() {
+        return new HashMap<>(pillPositions);
+    }
+
+    public void setPillPositions(Map<Integer, Integer> positions) {
+        this.pillPositions = new HashMap<>(positions);
+        repaint();
+    }
+
+    public String getShapeForSelection(int index) {
+        return selectionShapes.getOrDefault(index, currentShape);
+    }
+
+    public String getBorderStyleForSelection(int index) {
+        return selectionBorderStyles.getOrDefault(index, currentBorderStyle);
+    }
+
+    public String getBorderColorForSelection(int index) {
+        return selectionBorderColors.getOrDefault(index, currentBorderColor);
+    }
+
+    public String getPillStyleForSelection(int index) {
+        return selectionPillStyles.getOrDefault(index, currentPillStyle);
+    }
+
+    public void deleteSelectedShape() {
+        if (selectedShapeIndex >= 0 && selectedShapeIndex < shapes.size()) {
+            shapes.remove(selectedShapeIndex);
+            selectionShapes.remove(selectedShapeIndex);
+            selectionBorderStyles.remove(selectedShapeIndex);
+            selectionBorderColors.remove(selectedShapeIndex);
+            selectionPillStyles.remove(selectedShapeIndex);
+            pillPositions.remove(selectedShapeIndex);
+            
+            // Update indices for remaining shapes
+            Map<Integer, String> newShapes = new HashMap<>();
+            Map<Integer, String> newBorderStyles = new HashMap<>();
+            Map<Integer, String> newBorderColors = new HashMap<>();
+            Map<Integer, String> newPillStyles = new HashMap<>();
+            Map<Integer, Integer> newPillPositions = new HashMap<>();
+            
+            for (int i = 0; i < shapes.size(); i++) {
+                if (i < selectedShapeIndex) {
+                    newShapes.put(i, selectionShapes.get(i));
+                    newBorderStyles.put(i, selectionBorderStyles.get(i));
+                    newBorderColors.put(i, selectionBorderColors.get(i));
+                    newPillStyles.put(i, selectionPillStyles.get(i));
+                    newPillPositions.put(i, pillPositions.get(i));
+                } else {
+                    newShapes.put(i, selectionShapes.get(i + 1));
+                    newBorderStyles.put(i, selectionBorderStyles.get(i + 1));
+                    newBorderColors.put(i, selectionBorderColors.get(i + 1));
+                    newPillStyles.put(i, selectionPillStyles.get(i + 1));
+                    newPillPositions.put(i, pillPositions.get(i + 1));
+                }
+            }
+            
+            selectionShapes = newShapes;
+            selectionBorderStyles = newBorderStyles;
+            selectionBorderColors = newBorderColors;
+            selectionPillStyles = newPillStyles;
+            pillPositions = newPillPositions;
+            
+            selectedShapeIndex = -1;
+            repaint();
+        }
+    }
+
+    // Add methods to get all properties for saving
+    public Map<Integer, String> getAllShapes() {
+        return new HashMap<>(selectionShapes);
+    }
+
+    public Map<Integer, String> getAllBorderStyles() {
+        return new HashMap<>(selectionBorderStyles);
+    }
+
+    public Map<Integer, String> getAllBorderColors() {
+        return new HashMap<>(selectionBorderColors);
+    }
+
+    public Map<Integer, String> getAllPillStyles() {
+        return new HashMap<>(selectionPillStyles);
+    }
+
+    public Map<Integer, Integer> getAllPillPositions() {
+        return new HashMap<>(pillPositions);
+    }
+
+    // Add methods to set all properties when loading
+    public void setAllShapes(Map<Integer, String> shapes) {
+        this.selectionShapes = new HashMap<>(shapes);
+    }
+
+    public void setAllBorderStyles(Map<Integer, String> styles) {
+        this.selectionBorderStyles = new HashMap<>(styles);
+    }
+
+    public void setAllBorderColors(Map<Integer, String> colors) {
+        this.selectionBorderColors = new HashMap<>(colors);
+    }
+
+    public void setAllPillStyles(Map<Integer, String> styles) {
+        this.selectionPillStyles = new HashMap<>(styles);
+    }
+
+    public void setAllPillPositions(Map<Integer, Integer> positions) {
+        this.pillPositions = new HashMap<>(positions);
+    }
+
+    public List<Rectangle> getSelections() {
+        return shapes.stream()
+            .map(SelectionShape::getBounds)
+            .collect(Collectors.toList());
+    }
+
+    private Color getColorFromName(String colorName) {
+        switch (colorName) {
+            case "Blue":
+                return new Color(0, 122, 255);
+            case "Green":
+                return new Color(52, 199, 89);
+            case "Purple":
+                return new Color(175, 82, 222);
+            case "Orange":
+                return new Color(255, 149, 0);
+            case "Teal":
+                return new Color(90, 200, 250);
+            default: // Red
+                return new Color(255, 59, 48);
+        }
     }
 
     private void drawDiamond(Graphics2D g2d, Rectangle rect, boolean isShadow) {
@@ -624,346 +858,5 @@ class ImagePanel extends JPanel {
         if (!isShadow) {
             g2d.drawPolygon(xPoints, yPoints, sides);
         }
-    }
-
-    private void drawPill(Graphics2D g2d, Rectangle rect, int index, int position) {
-        // Calculate pill size based on rectangle size
-        int pillWidth = (int)(rect.width * PILL_SIZE_RATIO);
-        int pillHeight = (int)(rect.height * PILL_SIZE_RATIO);
-        
-        // Apply min/max constraints
-        pillWidth = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillWidth));
-        pillHeight = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillHeight));
-        
-        // Draw numbered pill
-        String number = String.valueOf(index + 1);
-        
-        // Set font size proportional to pill size
-        Font originalFont = g2d.getFont();
-        int fontSize = (int) (Math.min(pillWidth, pillHeight) * 0.6);
-        g2d.setFont(new Font(originalFont.getName(), Font.BOLD, fontSize));
-        
-        FontMetrics fm = g2d.getFontMetrics();
-        int textWidth = fm.stringWidth(number);
-        
-        // Ensure pill is wide enough for the text
-        pillWidth = Math.max(pillWidth, textWidth + (pillHeight / 4));
-        
-        // Calculate pill position based on the position index
-        int pillX, pillY;
-        int padding = pillHeight / 4;
-        
-        // Ensure position is within valid range
-        position = position % PILL_POSITION_COUNT;
-        
-        switch (position) {
-            case 0: // Top right inside
-                pillX = rect.x + rect.width - pillWidth - padding;
-                pillY = rect.y + padding;
-                break;
-            case 1: // Top left inside
-                pillX = rect.x + padding;
-                pillY = rect.y + padding;
-                break;
-            case 2: // Bottom left inside
-                pillX = rect.x + padding;
-                pillY = rect.y + rect.height - pillHeight - padding;
-                break;
-            case 3: // Bottom right inside
-                pillX = rect.x + rect.width - pillWidth - padding;
-                pillY = rect.y + rect.height - pillHeight - padding;
-                break;
-            case 4: // Top right outside
-                pillX = rect.x + rect.width + padding;
-                pillY = rect.y - pillHeight - padding;
-                break;
-            case 5: // Top left outside
-                pillX = rect.x - pillWidth - padding;
-                pillY = rect.y - pillHeight - padding;
-                break;
-            case 6: // Bottom left outside
-                pillX = rect.x - pillWidth - padding;
-                pillY = rect.y + rect.height + padding;
-                break;
-            case 7: // Bottom right outside
-                pillX = rect.x + rect.width + padding;
-                pillY = rect.y + rect.height + padding;
-                break;
-            default:
-                pillX = rect.x + rect.width - pillWidth - padding;
-                pillY = rect.y + padding;
-        }
-
-        // Get the pill style for this specific selection
-        String pillStyle = selectionPillStyles.getOrDefault(index, currentPillStyle);
-
-        // Draw pill based on style
-        switch (pillStyle) {
-            case "Classic":
-                // Draw classic pill with gradient
-                GradientPaint gradient = new GradientPaint(
-                    pillX, pillY, new Color(255, 59, 48),
-                    pillX, pillY + pillHeight, new Color(255, 59, 48, 200)
-                );
-                g2d.setPaint(gradient);
-                g2d.fillRoundRect(pillX, pillY, pillWidth, pillHeight, 
-                                pillHeight / 2, pillHeight / 2);
-                g2d.setColor(new Color(255, 255, 255, 50));
-                g2d.drawRoundRect(pillX, pillY, pillWidth, pillHeight, 
-                                pillHeight / 2, pillHeight / 2);
-                break;
-                
-            case "Minimal":
-                // Draw minimal pill with thin border
-                g2d.setColor(new Color(255, 59, 48, 180));
-                g2d.fillRoundRect(pillX, pillY, pillWidth, pillHeight, 
-                                pillHeight / 2, pillHeight / 2);
-                g2d.setColor(new Color(255, 59, 48));
-                g2d.setStroke(new BasicStroke(1.0f));
-                g2d.drawRoundRect(pillX, pillY, pillWidth, pillHeight, 
-                                pillHeight / 2, pillHeight / 2);
-                break;
-                
-            case "Bold":
-                // Draw bold pill with thick border
-                g2d.setColor(new Color(255, 59, 48));
-                g2d.fillRoundRect(pillX, pillY, pillWidth, pillHeight, 
-                                pillHeight / 2, pillHeight / 2);
-                g2d.setColor(Color.WHITE);
-                g2d.setStroke(new BasicStroke(2.0f));
-                g2d.drawRoundRect(pillX, pillY, pillWidth, pillHeight, 
-                                pillHeight / 2, pillHeight / 2);
-                break;
-                
-            case "Outline":
-                // Draw outline pill with no fill
-                g2d.setColor(new Color(255, 59, 48));
-                g2d.setStroke(new BasicStroke(2.0f));
-                g2d.drawRoundRect(pillX, pillY, pillWidth, pillHeight, 
-                                pillHeight / 2, pillHeight / 2);
-                break;
-                
-            default: // Modern
-                // Draw modern pill with shadow
-                g2d.setColor(new Color(0, 0, 0, 40));
-                g2d.fillRoundRect(pillX + 2, pillY + 2, pillWidth, pillHeight, 
-                                pillHeight / 2, pillHeight / 2);
-                g2d.setColor(new Color(255, 59, 48, 230));
-                g2d.fillRoundRect(pillX, pillY, pillWidth, pillHeight, 
-                                pillHeight / 2, pillHeight / 2);
-        }
-        
-        // Draw pill text
-        g2d.setColor(Color.WHITE);
-        int textX = pillX + (pillWidth - textWidth) / 2;
-        int textY = pillY + (pillHeight + fm.getAscent() - fm.getDescent()) / 2;
-        g2d.drawString(number, textX, textY);
-        
-        // Restore original font
-        g2d.setFont(originalFont);
-    }
-
-    private boolean isPointInPill(Point point, Rectangle rect, int index, int position) {
-        int pillWidth = (int)(rect.width * PILL_SIZE_RATIO);
-        int pillHeight = (int)(rect.height * PILL_SIZE_RATIO);
-        pillWidth = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillWidth));
-        pillHeight = Math.max(MIN_PILL_SIZE, Math.min(MAX_PILL_SIZE, pillHeight));
-        
-        // Calculate pill position (same as in drawPill)
-        int pillX, pillY;
-        int padding = pillHeight / 4;
-        
-        switch (position) {
-            case 0: // Top right inside
-                pillX = rect.x + rect.width - pillWidth - padding;
-                pillY = rect.y + padding;
-                break;
-            case 1: // Top left inside
-                pillX = rect.x + padding;
-                pillY = rect.y + padding;
-                break;
-            case 2: // Bottom left inside
-                pillX = rect.x + padding;
-                pillY = rect.y + rect.height - pillHeight - padding;
-                break;
-            case 3: // Bottom right inside
-                pillX = rect.x + rect.width - pillWidth - padding;
-                pillY = rect.y + rect.height - pillHeight - padding;
-                break;
-            case 4: // Top right outside
-                pillX = rect.x + rect.width + padding;
-                pillY = rect.y - pillHeight - padding;
-                break;
-            case 5: // Top left outside
-                pillX = rect.x - pillWidth - padding;
-                pillY = rect.y - pillHeight - padding;
-                break;
-            case 6: // Bottom left outside
-                pillX = rect.x - pillWidth - padding;
-                pillY = rect.y + rect.height + padding;
-                break;
-            case 7: // Bottom right outside
-                pillX = rect.x + rect.width + padding;
-                pillY = rect.y + rect.height + padding;
-                break;
-            default:
-                pillX = rect.x + rect.width - pillWidth - padding;
-                pillY = rect.y + padding;
-        }
-        
-        return new Rectangle(pillX, pillY, pillWidth, pillHeight).contains(point);
-    }
-
-    public Point panelToImageCoordinates(Point panelPoint) {
-        if (originalImageRef == null || getWidth() == 0 || getHeight() == 0) {
-            return new Point(0,0);
-        }
-        
-        // Calculate image position to center it
-        int imageX = (getWidth() - originalImageRef.getWidth()) / 2;
-        int imageY = (getHeight() - originalImageRef.getHeight()) / 2;
-        
-        // Adjust panel coordinates to account for centered image
-        int adjustedX = panelPoint.x - imageX;
-        int adjustedY = panelPoint.y - imageY;
-        
-        // Clamp coordinates to image bounds
-        adjustedX = Math.max(0, Math.min(adjustedX, originalImageRef.getWidth() - 1));
-        adjustedY = Math.max(0, Math.min(adjustedY, originalImageRef.getHeight() - 1));
-        
-        return new Point(adjustedX, adjustedY);
-    }
-
-    private Rectangle imageToPanelCoordinates(Rectangle imageRect) {
-        if (originalImageRef == null || getWidth() == 0 || getHeight() == 0) {
-            return new Rectangle(0,0,0,0);
-        }
-        
-        // Calculate image position to center it
-        int imageX = (getWidth() - originalImageRef.getWidth()) / 2;
-        int imageY = (getHeight() - originalImageRef.getHeight()) / 2;
-        
-        // Adjust coordinates to account for centered image
-        return new Rectangle(
-            imageRect.x + imageX,
-            imageRect.y + imageY,
-            imageRect.width,
-            imageRect.height
-        );
-    }
-
-    // Add these methods to save and restore pill positions
-    public Map<Integer, Integer> getPillPositions() {
-        return new HashMap<>(pillPositions);
-    }
-
-    public void setPillPositions(Map<Integer, Integer> positions) {
-        this.pillPositions = new HashMap<>(positions);
-        repaint();
-    }
-
-    public String getShapeForSelection(int index) {
-        return selectionShapes.getOrDefault(index, currentShape);
-    }
-
-    public String getBorderStyleForSelection(int index) {
-        return selectionBorderStyles.getOrDefault(index, currentBorderStyle);
-    }
-
-    public String getBorderColorForSelection(int index) {
-        return selectionBorderColors.getOrDefault(index, currentBorderColor);
-    }
-
-    public String getPillStyleForSelection(int index) {
-        return selectionPillStyles.getOrDefault(index, currentPillStyle);
-    }
-
-    public void deleteSelectedShape() {
-        if (selectedShapeIndex >= 0 && selectedShapeIndex < selections.size()) {
-            selections.remove(selectedShapeIndex);
-            selectionShapes.remove(selectedShapeIndex);
-            selectionBorderStyles.remove(selectedShapeIndex);
-            selectionBorderColors.remove(selectedShapeIndex);
-            selectionPillStyles.remove(selectedShapeIndex);
-            pillPositions.remove(selectedShapeIndex);
-            
-            // Update indices for remaining shapes
-            Map<Integer, String> newShapes = new HashMap<>();
-            Map<Integer, String> newBorderStyles = new HashMap<>();
-            Map<Integer, String> newBorderColors = new HashMap<>();
-            Map<Integer, String> newPillStyles = new HashMap<>();
-            Map<Integer, Integer> newPillPositions = new HashMap<>();
-            
-            for (int i = 0; i < selections.size(); i++) {
-                if (i < selectedShapeIndex) {
-                    newShapes.put(i, selectionShapes.get(i));
-                    newBorderStyles.put(i, selectionBorderStyles.get(i));
-                    newBorderColors.put(i, selectionBorderColors.get(i));
-                    newPillStyles.put(i, selectionPillStyles.get(i));
-                    newPillPositions.put(i, pillPositions.get(i));
-                } else {
-                    newShapes.put(i, selectionShapes.get(i + 1));
-                    newBorderStyles.put(i, selectionBorderStyles.get(i + 1));
-                    newBorderColors.put(i, selectionBorderColors.get(i + 1));
-                    newPillStyles.put(i, selectionPillStyles.get(i + 1));
-                    newPillPositions.put(i, pillPositions.get(i + 1));
-                }
-            }
-            
-            selectionShapes = newShapes;
-            selectionBorderStyles = newBorderStyles;
-            selectionBorderColors = newBorderColors;
-            selectionPillStyles = newPillStyles;
-            pillPositions = newPillPositions;
-            
-            selectedShapeIndex = -1;
-            repaint();
-        }
-    }
-
-    // Add methods to get all properties for saving
-    public Map<Integer, String> getAllShapes() {
-        return new HashMap<>(selectionShapes);
-    }
-
-    public Map<Integer, String> getAllBorderStyles() {
-        return new HashMap<>(selectionBorderStyles);
-    }
-
-    public Map<Integer, String> getAllBorderColors() {
-        return new HashMap<>(selectionBorderColors);
-    }
-
-    public Map<Integer, String> getAllPillStyles() {
-        return new HashMap<>(selectionPillStyles);
-    }
-
-    public Map<Integer, Integer> getAllPillPositions() {
-        return new HashMap<>(pillPositions);
-    }
-
-    // Add methods to set all properties when loading
-    public void setAllShapes(Map<Integer, String> shapes) {
-        this.selectionShapes = new HashMap<>(shapes);
-    }
-
-    public void setAllBorderStyles(Map<Integer, String> styles) {
-        this.selectionBorderStyles = new HashMap<>(styles);
-    }
-
-    public void setAllBorderColors(Map<Integer, String> colors) {
-        this.selectionBorderColors = new HashMap<>(colors);
-    }
-
-    public void setAllPillStyles(Map<Integer, String> styles) {
-        this.selectionPillStyles = new HashMap<>(styles);
-    }
-
-    public void setAllPillPositions(Map<Integer, Integer> positions) {
-        this.pillPositions = new HashMap<>(positions);
-    }
-
-    public List<Rectangle> getSelections() {
-        return new ArrayList<>(selections);
     }
 }
