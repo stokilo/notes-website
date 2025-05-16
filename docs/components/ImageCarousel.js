@@ -8,11 +8,7 @@ const ImageCarousel = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isGif, setIsGif] = useState(false);
-  const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
-
-  // Minimum swipe distance (in px)
-  const minSwipeDistance = 50;
+  const [isLoading, setIsLoading] = useState(true);
 
   const nextImage = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
@@ -28,30 +24,12 @@ const ImageCarousel = ({
   useEffect(() => {
     // Check if the current image is a GIF
     setIsGif(currentImage.toLowerCase().endsWith('.gif'));
+    // Reset loading state when image changes
+    setIsLoading(true);
   }, [currentImage]);
 
-  const onTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      nextImage();
-    }
-    if (isRightSwipe) {
-      previousImage();
-    }
+  const handleImageLoad = () => {
+    setIsLoading(false);
   };
 
   const enterFullScreen = () => {
@@ -100,6 +78,15 @@ const ImageCarousel = ({
     padding: "4px 8px",
   };
 
+  const loadingStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    color: "#666",
+    fontSize: "16px",
+  };
+
   return (
     <>
       {!isFullScreen ? (
@@ -113,16 +100,13 @@ const ImageCarousel = ({
             display: "inline-block",
             maxWidth: "100%",
           }}>
-            <div 
-              style={imageContainerStyle}
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-            >
+            <div style={imageContainerStyle}>
+              {isLoading && <div style={loadingStyle}>Loading...</div>}
               <img
                 src={currentImage}
                 alt={`Image ${currentIndex + 1}`}
                 onClick={enterFullScreen}
+                onLoad={handleImageLoad}
                 style={{
                   maxWidth: "100%",
                   height: "auto",
@@ -130,7 +114,8 @@ const ImageCarousel = ({
                   margin: "0 auto",
                   cursor: "pointer",
                   userSelect: "none",
-                  touchAction: "pan-y pinch-zoom",
+                  opacity: isLoading ? 0 : 1,
+                  transition: "opacity 0.3s ease",
                 }}
                 {...(isGif && { autoPlay: true, loop: true })}
               />
@@ -195,14 +180,13 @@ const ImageCarousel = ({
               justifyContent: "center",
               alignItems: "center",
             }}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
           >
+            {isLoading && <div style={{...loadingStyle, color: "white"}}>Loading...</div>}
             <img
               src={currentImage}
               alt={`Full Screen Image ${currentIndex + 1}`}
               onClick={exitFullScreen}
+              onLoad={handleImageLoad}
               style={{
                 maxHeight: "85vh",
                 maxWidth: "100%",
@@ -214,7 +198,8 @@ const ImageCarousel = ({
                 borderRadius: "8px",
                 boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
                 userSelect: "none",
-                touchAction: "pan-y pinch-zoom",
+                opacity: isLoading ? 0 : 1,
+                transition: "opacity 0.3s ease",
               }}
               {...(isGif && { autoPlay: true, loop: true })}
             />
