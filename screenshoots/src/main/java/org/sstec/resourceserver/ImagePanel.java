@@ -35,8 +35,10 @@ class ImagePanel extends JPanel {
     private static final Color PILL_BACKGROUND = new Color(255, 59, 48, 230);
     private static final Color PILL_TEXT_COLOR = Color.WHITE;
     public static final double PILL_SIZE_RATIO = 0.10; // 10% of rectangle size
-    public static final int MIN_PILL_SIZE = 30; // Increased minimum size
-    public static final int MAX_PILL_SIZE = 60; // Increased maximum size
+    public static final double PILL_SIZE_RATIO_SMALL = 0.07; // 7% of rectangle size
+    public static final double PILL_SIZE_RATIO_TINY = 0.05; // 5% of rectangle size
+    public static final int MIN_PILL_SIZE = 20; // Decreased minimum size
+    public static final int MAX_PILL_SIZE = 60; // Maximum size
     private final float[] SELECTION_DASH = {5.0f, 5.0f}; // Dashed border pattern
     private String currentShape = "Rounded Rectangle";
     private String currentBorderStyle = "Dashed";
@@ -81,18 +83,20 @@ class ImagePanel extends JPanel {
                         // If right click, cycle pill size
                         if (SwingUtilities.isRightMouseButton(e)) {
                             double currentSize = pillSizes.getOrDefault(i, PILL_SIZE_RATIO);
-                            double newSize = currentSize + 0.05; // Increase by 5%
-                            if (newSize > 0.3) newSize = 0.1; // Reset to 10% if over 30%
+                            double newSize;
+                            if (currentSize == PILL_SIZE_RATIO) {
+                                newSize = PILL_SIZE_RATIO_SMALL;
+                            } else if (currentSize == PILL_SIZE_RATIO_SMALL) {
+                                newSize = PILL_SIZE_RATIO_TINY;
+                            } else {
+                                newSize = PILL_SIZE_RATIO;
+                            }
                             pillSizes.put(i, newSize);
-                            System.out.println("Pill size changed to: " + newSize);
                         } else {
                             // Left click cycles position
                             int newPosition = (currentPosition + 1) % PILL_POSITION_COUNT;
-                            System.out.println("Changing pill position from " + currentPosition + " to " + newPosition);
                             pillPositions.put(i, newPosition);
-                            System.out.println("Current pill positions map: " + pillPositions);
                         }
-                        System.out.println("Triggering repaint after pill change");
                         repaint();
                         return;
                     }
@@ -591,8 +595,6 @@ class ImagePanel extends JPanel {
         // Ensure position is within valid range
         position = position % PILL_POSITION_COUNT;
         
-        System.out.println("Drawing pill for index " + index + " at position " + position);
-        
         switch (position) {
             case 0: // Top right inside
                 pillX = rect.x + rect.width - pillWidth - padding;
@@ -630,8 +632,6 @@ class ImagePanel extends JPanel {
                 pillX = rect.x + rect.width - pillWidth - padding;
                 pillY = rect.y + padding;
         }
-        
-        System.out.println("Pill coordinates: (" + pillX + ", " + pillY + ")");
         
         // Draw pill based on style
         switch (pillStyle) {
@@ -759,12 +759,6 @@ class ImagePanel extends JPanel {
         
         // Create pill rectangle
         Rectangle pillRect = new Rectangle(pillX, pillY, pillWidth, pillHeight);
-        
-        // Debug logging
-        System.out.println("Position " + position);
-        System.out.println("Click point: " + point);
-        System.out.println("Pill rect: " + pillRect);
-        System.out.println("Contains: " + pillRect.contains(point));
         
         // Check if point is inside pill
         return pillRect.contains(point);
