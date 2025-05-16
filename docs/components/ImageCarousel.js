@@ -224,56 +224,64 @@ const ImageCarouselInner = ({
         >
           <div 
             style={{
-              ...imageContainerStyle,
-              width: "100%",
               display: "flex",
-              justifyContent: "center",
+              flexDirection: "column",
               alignItems: "center",
-              flex: 1,
+              gap: "20px",
+              maxHeight: "90vh",
             }}
           >
-            <img
-              ref={imageRef}
-              src={currentImage}
-              alt={`Full Screen Image ${currentIndex + 1}`}
-              onClick={exitFullScreen}
-              onLoad={handleImageLoad}
-              style={getImageStyle(true)}
-              {...(isGif && { autoPlay: true, loop: true })}
-              loading="eager"
-            />
-          </div>
-          <div style={{
-            ...filenameStyle,
-            color: "white",
-            marginTop: "0",
-          }}>
-            {currentFileName}
-          </div>
-          <div style={{ marginTop: "0" }}>
-            <button
-              onClick={previousImage}
-              disabled={currentIndex === 0}
+            <div 
               style={{
-                ...buttonStyle,
-                ...(currentIndex === 0 ? buttonStyle["&:disabled"] : {}),
+                ...imageContainerStyle,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
               }}
             >
-              {buttonTextLeft}
-            </button>
-            <button
-              onClick={nextImage}
-              disabled={currentIndex === images.length - 1}
-              style={{
-                ...buttonStyle,
-                ...(currentIndex === images.length - 1 ? buttonStyle["&:disabled"] : {}),
-              }}
-            >
-              {buttonTextRight}
-            </button>
-            <button onClick={exitFullScreen} style={buttonStyle}>
-              Exit Zoom
-            </button>
+              <img
+                ref={imageRef}
+                src={currentImage}
+                alt={`Full Screen Image ${currentIndex + 1}`}
+                onClick={exitFullScreen}
+                onLoad={handleImageLoad}
+                style={getImageStyle(true)}
+                {...(isGif && { autoPlay: true, loop: true })}
+                loading="eager"
+              />
+            </div>
+            <div style={{
+              ...filenameStyle,
+              color: "white",
+              marginTop: "0",
+            }}>
+              {currentFileName}
+            </div>
+            <div style={{ marginTop: "0" }}>
+              <button
+                onClick={previousImage}
+                disabled={currentIndex === 0}
+                style={{
+                  ...buttonStyle,
+                  ...(currentIndex === 0 ? buttonStyle["&:disabled"] : {}),
+                }}
+              >
+                {buttonTextLeft}
+              </button>
+              <button
+                onClick={nextImage}
+                disabled={currentIndex === images.length - 1}
+                style={{
+                  ...buttonStyle,
+                  ...(currentIndex === images.length - 1 ? buttonStyle["&:disabled"] : {}),
+                }}
+              >
+                {buttonTextRight}
+              </button>
+              <button onClick={exitFullScreen} style={buttonStyle}>
+                Exit Zoom
+              </button>
+            </div>
           </div>
         </div>
       )}
