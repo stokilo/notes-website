@@ -23,6 +23,7 @@
     "clsx": "^2.0.0",
     "prism-react-renderer": "^2.3.0",
     "prismjs": "^1.30.0",
+    "prop-types": "^15.8.1",
     "react": "^19.0.0",
     "react-before-after-slider-component": "^1.1.8",
     "react-dom": "^19.0.0",
@@ -30,7 +31,8 @@
     "react-image-gallery": "^1.4.0",
     "react-reveal-slides": "github:bouzidanas/react-reveal-slides",
     "reveal.js": "^5.2.1",
-    "shiki": "^3.4.0"
+    "shiki": "^3.4.0",
+    "swiper": "^11.2.6"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "3.7.0",

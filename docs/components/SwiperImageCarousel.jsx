@@ -1,0 +1,185 @@
+import React, { useState } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination } from 'swiper/modules';
+import PropTypes from 'prop-types';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import { FaExpand, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+
+const SwiperImageCarousel = ({ images = [] }) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenIndex, setFullscreenIndex] = useState(0);
+
+  const openFullscreen = (idx) => {
+    setFullscreenIndex(idx);
+    setIsFullscreen(true);
+  };
+
+  const closeFullscreen = (e) => {
+    e.stopPropagation();
+    setIsFullscreen(false);
+  };
+
+  const navigateFullscreen = (direction) => {
+    if (direction === 'next') {
+      setFullscreenIndex((prev) => (prev + 1) % images.length);
+    } else {
+      setFullscreenIndex((prev) => (prev - 1 + images.length) % images.length);
+    }
+  };
+
+  return (
+    <div style={{ width: '100%', maxWidth: 800, margin: '0 auto' }}>
+      <Swiper
+        modules={[Navigation, Pagination]}
+        navigation
+        pagination={{ clickable: true }}
+        spaceBetween={20}
+        slidesPerView={1}
+        style={{ borderRadius: 12, overflow: 'hidden' }}
+      >
+        {images.map((img, idx) => (
+          <SwiperSlide key={img.src} style={{ position: 'relative', background: '#000' }}>
+            <img
+              src={img.src}
+              alt={img.alt}
+              style={{ width: '100%', height: 400, objectFit: 'contain', background: '#000' }}
+            />
+            <button
+              onClick={() => openFullscreen(idx)}
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                background: 'rgba(0,0,0,0.5)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                padding: 10,
+                cursor: 'pointer',
+                zIndex: 10,
+              }}
+              aria-label="Full screen"
+            >
+              <FaExpand size={18} />
+            </button>
+          </SwiperSlide>
+        ))}
+      </Swiper>
+      {isFullscreen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.97)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={closeFullscreen}
+        >
+          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img
+              src={images[fullscreenIndex].src}
+              alt={images[fullscreenIndex].alt}
+              style={{
+                maxWidth: '95vw',
+                maxHeight: '95vh',
+                objectFit: 'contain',
+                boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
+                background: '#000',
+              }}
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateFullscreen('prev');
+              }}
+              style={{
+                position: 'absolute',
+                left: 20,
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                padding: 14,
+                cursor: 'pointer',
+                zIndex: 10000,
+              }}
+              aria-label="Previous image"
+            >
+              <FaChevronLeft size={24} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateFullscreen('next');
+              }}
+              style={{
+                position: 'absolute',
+                right: 20,
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                padding: 14,
+                cursor: 'pointer',
+                zIndex: 10000,
+              }}
+              aria-label="Next image"
+            >
+              <FaChevronRight size={24} />
+            </button>
+            <button
+              onClick={closeFullscreen}
+              style={{
+                position: 'fixed',
+                top: 32,
+                right: 32,
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                padding: 14,
+                cursor: 'pointer',
+                zIndex: 10000,
+              }}
+              aria-label="Close full screen"
+            >
+              <FaTimes size={22} />
+            </button>
+            <div style={{
+              position: 'absolute',
+              bottom: 20,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              color: 'white',
+              background: 'rgba(0,0,0,0.7)',
+              padding: '8px 16px',
+              borderRadius: 20,
+              fontSize: '14px',
+            }}>
+              {fullscreenIndex + 1} / {images.length}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+SwiperImageCarousel.propTypes = {
+  images: PropTypes.arrayOf(
+    PropTypes.shape({
+      src: PropTypes.string.isRequired,
+      alt: PropTypes.string.isRequired,
+    })
+  ),
+};
+
+export default SwiperImageCarousel; 
