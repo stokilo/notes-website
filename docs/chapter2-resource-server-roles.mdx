@@ -120,10 +120,17 @@ After the change, this fix Spring JwtAuthenticationConverter claims mapping.
 Note **prefix** from Spring configuration, **ROLE_** is appended to the authorities.
 This allows standard spring role checks mechanism work in standard way.
 
-<ImageCarousel
-  images={[
-    { imageUrl: '/img/chapter2/screenshot_11MFlJjydq.png'},
-  ]} />
+import ImageGallery from 'react-image-gallery'
+import "react-image-gallery/styles/css/image-gallery.css"
+
+<ImageGallery items={
+  [
+    { original: "/img/chapter2/screenshot_11MFlJjydq.png" },
+    { original: "/img/chapter2/screenshot_33rfDZwKH.png" },
+    { original: "/img/chapter2/screenshot_11ztoo2hl.png" },
+  ]
+} />
+
 
 
 
