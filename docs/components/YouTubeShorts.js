@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
-const YouTubeShorts = ({ videoId, width = '100%', height = '100%' }) => {
+const YouTubeShorts = ({ videoId }) => {
   const playerRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -69,15 +69,18 @@ const YouTubeShorts = ({ videoId, width = '100%', height = '100%' }) => {
 
   const containerStyle = {
     position: 'relative',
-    width: width,
-    height: height,
-    maxWidth: '100%',
-    margin: '0 auto',
+    width: '100%',
+    height: '100%',
+    minHeight: '100%',
+    display: 'flex',
+    flexDirection: 'column',
   };
 
   const playerStyle = {
     width: '100%',
     height: '100%',
+    minHeight: '100%',
+    flex: 1,
     aspectRatio: '9/16', // YouTube Shorts aspect ratio
   };
 
@@ -110,8 +113,6 @@ const YouTubeShorts = ({ videoId, width = '100%', height = '100%' }) => {
 
 YouTubeShorts.propTypes = {
   videoId: PropTypes.string.isRequired,
-  width: PropTypes.string,
-  height: PropTypes.string,
 };
 
 export default YouTubeShorts; 
