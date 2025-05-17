@@ -84,6 +84,28 @@ Keycloak is now configured to **issue tokens that include realm roles**.
 <ShikiCodeBlock language="properties" theme="catppuccin-frappe"
                 source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/chapter2-resource-server-roles/src/main/resources/application.properties" />
 
+**Failed attempt to get authorities from claim**
+
+With current configuration when you attempt to call public endpoint you fill get empty array with authorities.
+
+<ImageCarousel
+  images={[
+    { imageUrl: '/img/chapter2/screenshot_11vJgxQRb.png'},
+    { imageUrl: '/img/chapter2/screenshot_223OAzyEu.png'},
+    { imageUrl: '/img/chapter2/screenshot_33QEsh8BBm.png'},
+  ]} />
+
+This is caused by the nested structure of the claim **realm_access.roles**
+Spring will parse this as a LinkedList with key **realm_access** and **roles** as value.
+However, **grantedAuthoritiesConverter.setAuthoritiesClaimName("realm_access.roles");** is expecting
+claim with key **realm_access.roles**
+
+Keycloak allows to send claim with **realm_access.roles** but you need to set value of the claim to **realm_access\\.roles**
+
+<ImageCarousel
+  images={[
+    { imageUrl: '/img/chapter2/screenshot_11ztoo2hl.png'},
+  ]} />
 
 
 
