@@ -90,8 +90,11 @@ Once this is updated, you can acquire 'access_token'
 
 **Aud claim**
 
-In the application.properties we have **spring.security.oauth2.resourceserver.jwt.audiences=spring-resource-server**
-But when you check the claim 'aud' in access_token you will notice is set to 'account'. In order to fix it you need to
+In the application.properties we have
+
+**spring.security.oauth2.resourceserver.jwt.audiences=spring-resource-server**
+
+But when you check the claim 'aud' in access_token you will notice is set to **account**. In order to fix it you need to
 add Dedicated Client Scope with token mapper to Audience claim
 
 
@@ -100,12 +103,13 @@ Understanding the aud (Audience) Claim:
    * A Resource Server (your Spring Boot app) should validate that it is an intended audience for any token it accepts. This prevents a token issued for one service from being replayed against another.
    * The aud claim can be a single string or an array of strings if the token is intended for multiple audiences.
 
-** Why is account value for aud claim?**
+**Why is account value for aud claim?**
 
 When you used the password grant (grant_type=password) with client_id=spring-resource-server and scope=openid, Keycloak, by default for this flow and client configuration, issued a token whose primary audience is the account client.
 
 Imagine you go to a ticket counter (Keycloak's token endpoint) and say, "I'm spring-resource-server (the client), and here's testuser's ID and password. I want an openid ticket (scope)."
 Keycloak's default thought process for this specific scenario is something like: "Okay, spring-resource-server wants to help testuser do something related to their account (because of openid). The main place for account stuff is the account service. So, this ticket is primarily for the account service."
+
 It doesn't automatically assume the ticket is only for spring-resource-server to use for its own protected resources unless you explicitly state that spring-resource-server is the intended audience.
 This behavior encourages more explicit configuration for resource server audience validation, which is a good security practice. It forces you to define which resource servers are meant to consume which tokens.
 
