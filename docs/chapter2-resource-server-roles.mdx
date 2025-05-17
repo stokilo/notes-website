@@ -102,9 +102,20 @@ claim with key **realm_access.roles**
 
 Keycloak allows to send claim with **realm_access.roles** but you need to set value of the claim to **realm_access\\.roles**
 
+What it does is really **duplicating** claim and you will have two claims with same values
+
+| Claim name   | Value |
+| -------- | -------- |
+| role_access.roles  | ["APP_ADMIN", "APP_USER", ....] |
+| role_access  | roles: ["APP_ADMIN", "APP_USER"] |
+
+However, this fix Spring JwtAuthenticationConverter claims mapping.
+
+
 <ImageCarousel
   images={[
     { imageUrl: '/img/chapter2/screenshot_11ztoo2hl.png'},
+    { imageUrl: '/img/chapter2/screenshot_33rfDZwKH.png'},
   ]} />
 
 
