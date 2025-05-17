@@ -121,10 +121,22 @@ Note **prefix** from Spring configuration, **ROLE_** is appended to the authorit
 This allows standard spring role checks mechanism work in standard way.
 
 
+**Success scenario**
 
+You can get admin and user endpoint data with this approach.
 
+<SwiperImageCarousel
+  images={[
+    { src: '/img/chapter2/screenshot_11kklRb4k.png', alt: 'Screenshot 1'},
+    { src: '/img/chapter2/screenshot_22Rn3lbDb.png', alt: 'Screenshot 2'},
+  ]} />
 
+you can notice scope claim in the JWT
 
-
+| Scope     | Description                                                                                                                                                                                                                                                                                                                                           |
+|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `openid`  | Required for OpenID Connect flows. Signals to the resource server that the token conforms to the OIDC specification. Indicates the token contains information about the authenticated user. Without `openid`, the resource server wouldn't know it's dealing with an OIDC token and wouldn't know where to find user-related information. |
+| `profile` | Grants access to the user's basic profile information. The exact attributes included depend on the Keycloak configuration but typically includes `name` (full name), `given_name` (first name), `family_name` (last name), `nickname`, `picture`, `website`, and other standard profile fields as defined in the OpenID Connect specification.    |
+| `email`   | Grants access to the user's email address. Usually returned in the `email` claim of the JWT (or accessible via the OIDC UserInfo endpoint). The Keycloak user record must have an email address for this scope to be effective.                                                                                                                  |
 
 
