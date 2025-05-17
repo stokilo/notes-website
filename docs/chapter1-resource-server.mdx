@@ -3,7 +3,7 @@ sidebar_label: 'Resource Server'
 sidebar_position: 101
 ---
 
-import ImageCarousel from './components/ImageCarousel';
+import SwiperImageCarousel from './components/SwiperImageCarousel';
 import ShikiCodeBlock from './components/ShikiCodeBlock';
 import Highlight from './components/Highlight';
 
@@ -23,15 +23,15 @@ Realm config details: [Realm](Realm.html)
 | Realm name  | my-spring-realm   |
 | Client ID  | spring-resource-server  |
 
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter1/screenshot_1YjGmo5BZ.png' },
-    { imageUrl: '/img/chapter1/screenshot_25ph2hZD.png'},
-    { imageUrl: '/img/chapter1/screenshot_3sY4Fyvp.png'},
-    { imageUrl: '/img/chapter1/screenshot_4sKWbEZG.png'},
-    { imageUrl: '/img/chapter1/screenshot_5BHOyiYq.png'},
-    { imageUrl: '/img/chapter1/screenshot_6YSXwngq.png'},
-    { imageUrl: '/img/chapter1/screenshot_7JtNbPRT.png'}
+    { src: '/img/chapter1/screenshot_1YjGmo5BZ.png', alt: 'Screenshot 1' },
+    { src: '/img/chapter1/screenshot_25ph2hZD.png', alt: 'Screenshot 2'},
+    { src: '/img/chapter1/screenshot_3sY4Fyvp.png', alt: 'Screenshot 3'},
+    { src: '/img/chapter1/screenshot_4sKWbEZG.png', alt: 'Screenshot 4'},
+    { src: '/img/chapter1/screenshot_5BHOyiYq.png', alt: 'Screenshot 5'},
+    { src: '/img/chapter1/screenshot_6YSXwngq.png', alt: 'Screenshot 6'},
+    { src: '/img/chapter1/screenshot_7JtNbPRT.png', alt: 'Screenshot 7'}
   ]} />
 
 **User Creation**
@@ -43,23 +43,21 @@ User config:
 | Username | testuser |
 | Password | password |
 
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter1/screenshot_11xB0UU10.png' },
-    { imageUrl: '/img/chapter1/screenshot_22TJvsZ5L.png' },
-    { imageUrl: '/img/chapter1/screenshot_33CvqNiNB.png' },
-    { imageUrl: '/img/chapter1/screenshot_44jdqTRaC.png' }
-
+    { src: '/img/chapter1/screenshot_11xB0UU10.png', alt: 'Screenshot 1' },
+    { src: '/img/chapter1/screenshot_22TJvsZ5L.png', alt: 'Screenshot 2' },
+    { src: '/img/chapter1/screenshot_33CvqNiNB.png', alt: 'Screenshot 3' },
+    { src: '/img/chapter1/screenshot_44jdqTRaC.png', alt: 'Screenshot 4' }
   ]} />
 
 **Get Keycloak Issuer URL and JWKS URI:**
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter1/screenshot_11wHO3uI8.png' },
-    { imageUrl: '/img/chapter1/screenshot_22tsArqLB.png' },
-    { imageUrl: '/img/chapter1/screenshot_33j4B1kt2.png' }
-
-    ]} />
+    { src: '/img/chapter1/screenshot_11wHO3uI8.png', alt: 'Screenshot 1' },
+    { src: '/img/chapter1/screenshot_22tsArqLB.png', alt: 'Screenshot 2' },
+    { src: '/img/chapter1/screenshot_33j4B1kt2.png', alt: 'Screenshot 3' }
+  ]} />
 
 **Web Security Config**
 
@@ -79,13 +77,12 @@ User config:
 Postman parameters are ok, however you will get 'Account not fully setup' error. This is because password for user was set as 'Temporary'.
 Once this is updated, you can acquire 'access_token'
 
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter1/screenshot_11taxd6nh.png' },
-    { imageUrl: '/img/chapter1/screenshot_221toYigy.png' },
-    { imageUrl: '/img/chapter1/screenshot_33mLFBTOo.png' }
-
-    ]} />
+    { src: '/img/chapter1/screenshot_11taxd6nh.png', alt: 'Screenshot 1' },
+    { src: '/img/chapter1/screenshot_221toYigy.png', alt: 'Screenshot 2' },
+    { src: '/img/chapter1/screenshot_33mLFBTOo.png', alt: 'Screenshot 3' }
+  ]} />
 
 
 **Aud claim**
@@ -114,15 +111,14 @@ It doesn't automatically assume the ticket is only for spring-resource-server to
 This behavior encourages more explicit configuration for resource server audience validation, which is a good security practice. It forces you to define which resource servers are meant to consume which tokens.
 
 
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter1/screenshot_11Vqeamit.png'},
-    { imageUrl: '/img/chapter1/screenshot_22FsB2xg5U.png'},
-    { imageUrl: '/img/chapter1/screenshot_33J9bAgXC.png'},
-    { imageUrl: '/img/chapter1/screenshot_44acNr2Jwe.png'},
-    { imageUrl: '/img/chapter1/screenshot_55NbA2v2hG.png'},
-    { imageUrl: '/img/chapter1/screenshot_66HOSPvmRB.png'},
-    { imageUrl: '/img/chapter1/screenshot_77sPCu4cdn.png'},
-
-    ]} />
+    { src: '/img/chapter1/screenshot_11Vqeamit.png', alt: 'Screenshot 1'},
+    { src: '/img/chapter1/screenshot_22FsB2xg5U.png', alt: 'Screenshot 2'},
+    { src: '/img/chapter1/screenshot_33J9bAgXC.png', alt: 'Screenshot 3'},
+    { src: '/img/chapter1/screenshot_44acNr2Jwe.png', alt: 'Screenshot 4'},
+    { src: '/img/chapter1/screenshot_55NbA2v2hG.png', alt: 'Screenshot 5'},
+    { src: '/img/chapter1/screenshot_66HOSPvmRB.png', alt: 'Screenshot 6'},
+    { src: '/img/chapter1/screenshot_77sPCu4cdn.png', alt: 'Screenshot 7'}
+  ]} />
 

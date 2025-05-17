@@ -3,7 +3,7 @@ sidebar_label: 'Resource Server Roles'
 sidebar_position: 102
 ---
 
-import ImageCarousel from './components/ImageCarousel';
+import SwiperImageCarousel from './components/SwiperImageCarousel';
 import ShikiCodeBlock from './components/ShikiCodeBlock';
 import Highlight from './components/Highlight';
 
@@ -28,35 +28,35 @@ Realm roles are **global to the realm** and **can be assigned to any user**.
 | APP_USER   |
 | APP_ADMIN  |
 
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter2/screenshot_112n7cPJ5.png' },
-    { imageUrl: '/img/chapter2/screenshot_229oH2ud3.png' },
-    { imageUrl: '/img/chapter2/screenshot_33VkrSUSs.png' },
+    { src: '/img/chapter2/screenshot_112n7cPJ5.png', alt: 'Screenshot 1' },
+    { src: '/img/chapter2/screenshot_229oH2ud3.png', alt: 'Screenshot 2' },
+    { src: '/img/chapter2/screenshot_33VkrSUSs.png', alt: 'Screenshot 3' },
   ]} />
 
 Add assign to the existing **testuser**
 
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter2/screenshot_11WBpbtsMc.png'},
-    { imageUrl: '/img/chapter2/screenshot_22U7QmO3Yb.png' },
-    { imageUrl: '/img/chapter2/screenshot_33LlQEZnuh.png' },
-    { imageUrl: '/img/chapter2/screenshot_44E64SYD6V.png' },
+    { src: '/img/chapter2/screenshot_11WBpbtsMc.png', alt: 'Screenshot 1'},
+    { src: '/img/chapter2/screenshot_22U7QmO3Yb.png', alt: 'Screenshot 2' },
+    { src: '/img/chapter2/screenshot_33LlQEZnuh.png', alt: 'Screenshot 3' },
+    { src: '/img/chapter2/screenshot_44E64SYD6V.png', alt: 'Screenshot 4' },
   ]} />
 
 **Map Realm Roles into the Access Token**
 
 By default, realm roles are not automatically included in the access token. We need to add a mapper to our client or a client scope.
 
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter2/screenshot_11ofhTmq3.png'},
-    { imageUrl: '/img/chapter2/screenshot_22wBE7B2q.png'},
-    { imageUrl: '/img/chapter2/screenshot_33GFXL3rh.png'},
-    { imageUrl: '/img/chapter2/screenshot_447hGyxz0.png'},
-    { imageUrl: '/img/chapter2/screenshot_551LlMYaB.png'},
-    { imageUrl: '/img/chapter2/screenshot_66ah4Bcul.png'},
+    { src: '/img/chapter2/screenshot_11ofhTmq3.png', alt: 'Screenshot 1'},
+    { src: '/img/chapter2/screenshot_22wBE7B2q.png', alt: 'Screenshot 2'},
+    { src: '/img/chapter2/screenshot_33GFXL3rh.png', alt: 'Screenshot 3'},
+    { src: '/img/chapter2/screenshot_447hGyxz0.png', alt: 'Screenshot 4'},
+    { src: '/img/chapter2/screenshot_551LlMYaB.png', alt: 'Screenshot 5'},
+    { src: '/img/chapter2/screenshot_66ah4Bcul.png', alt: 'Screenshot 6'},
   ]} />
 
 | Setting                | Value / Description                                                                                                                                      |
@@ -88,11 +88,11 @@ Keycloak is now configured to **issue tokens that include realm roles**.
 
 With current configuration when you attempt to call public endpoint you fill get empty array with authorities.
 
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter2/screenshot_11vJgxQRb.png'},
-    { imageUrl: '/img/chapter2/screenshot_223OAzyEu.png'},
-    { imageUrl: '/img/chapter2/screenshot_33QEsh8BBm.png'},
+    { src: '/img/chapter2/screenshot_11vJgxQRb.png', alt: 'Screenshot 1'},
+    { src: '/img/chapter2/screenshot_223OAzyEu.png', alt: 'Screenshot 2'},
+    { src: '/img/chapter2/screenshot_33QEsh8BBm.png', alt: 'Screenshot 3'},
   ]} />
 
 This is caused by the nested structure of the claim **realm_access.roles**
@@ -109,25 +109,16 @@ What it does is really **duplicating** claim and you will have two claims with s
 | role_access.roles  | ["APP_ADMIN", "APP_USER", ....] |
 | role_access  | roles: ["APP_ADMIN", "APP_USER"] |
 
-<ImageCarousel
+<SwiperImageCarousel
   images={[
-    { imageUrl: '/img/chapter2/screenshot_11ztoo2hl.png'},
-    { imageUrl: '/img/chapter2/screenshot_33rfDZwKH.png'},
+    { src: '/img/chapter2/screenshot_11ztoo2hl.png', alt: 'Screenshot 1'},
+    { src: '/img/chapter2/screenshot_33rfDZwKH.png', alt: 'Screenshot 2'},
   ]} />
 
 After the change, this fix Spring JwtAuthenticationConverter claims mapping.
 
 Note **prefix** from Spring configuration, **ROLE_** is appended to the authorities.
 This allows standard spring role checks mechanism work in standard way.
-
-
-import SwiperImageCarousel from "./components/SwiperImageCarousel";
-
-<SwiperImageCarousel images={[
-  { src: "/img/chapter2/screenshot_11MFlJjydq.png", alt: "Screenshot 1" },
-  { src: "/img/chapter2/screenshot_33rfDZwKH.png", alt: "Screenshot 2" },
-  { src: "/img/chapter2/screenshot_11ztoo2hl.png", alt: "Screenshot 3" },
-]} />
 
 
 
