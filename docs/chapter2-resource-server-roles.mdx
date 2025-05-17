@@ -109,16 +109,21 @@ What it does is really **duplicating** claim and you will have two claims with s
 | role_access.roles  | ["APP_ADMIN", "APP_USER", ....] |
 | role_access  | roles: ["APP_ADMIN", "APP_USER"] |
 
-However, this fix Spring JwtAuthenticationConverter claims mapping.
-
-
 <ImageCarousel
   images={[
     { imageUrl: '/img/chapter2/screenshot_11ztoo2hl.png'},
     { imageUrl: '/img/chapter2/screenshot_33rfDZwKH.png'},
   ]} />
 
+After the change, this fix Spring JwtAuthenticationConverter claims mapping.
 
+Note **prefix** from Spring configuration, **ROLE_** is appended to the authorities.
+This allows standard spring role checks mechanism work in standard way.
+
+<ImageCarousel
+  images={[
+    { imageUrl: '/img/chapter2/screenshot_11MFlJjydq.png'},
+  ]} />
 
 
 
