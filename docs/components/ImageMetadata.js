@@ -6,6 +6,65 @@ const ImageMetadata = ({ imageUrl }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Helper function to parse PNG chunks
+  const parsePNGChunks = (view) => {
+    const chunks = {};
+    let offset = 8; // Skip PNG signature
+
+    while (offset < view.byteLength) {
+      const length = view.getUint32(offset);
+      const type = String.fromCharCode(
+        view.getUint8(offset + 4),
+        view.getUint8(offset + 5),
+        view.getUint8(offset + 6),
+        view.getUint8(offset + 7)
+      );
+
+      // Parse different chunk types
+      switch (type) {
+        case 'tEXt':
+        case 'iTXt':
+          const textData = new TextDecoder().decode(
+            view.buffer.slice(offset + 8, offset + 8 + length)
+          );
+          const [keyword, text] = textData.split('\0');
+          chunks[keyword] = text;
+          break;
+        case 'tIME':
+          const year = view.getUint16(offset + 8);
+          const month = view.getUint8(offset + 10);
+          const day = view.getUint8(offset + 11);
+          const hour = view.getUint8(offset + 12);
+          const minute = view.getUint8(offset + 13);
+          const second = view.getUint8(offset + 14);
+          chunks.lastModified = new Date(year, month - 1, day, hour, minute, second).toISOString();
+          break;
+        case 'pHYs':
+          chunks.pixelsPerUnitX = view.getUint32(offset + 8);
+          chunks.pixelsPerUnitY = view.getUint32(offset + 12);
+          chunks.unitSpecifier = view.getUint8(offset + 16);
+          break;
+        case 'gAMA':
+          chunks.gamma = view.getUint32(offset + 8) / 100000;
+          break;
+        case 'cHRM':
+          chunks.whitePointX = view.getUint32(offset + 8) / 100000;
+          chunks.whitePointY = view.getUint32(offset + 12) / 100000;
+          chunks.redX = view.getUint32(offset + 16) / 100000;
+          chunks.redY = view.getUint32(offset + 20) / 100000;
+          chunks.greenX = view.getUint32(offset + 24) / 100000;
+          chunks.greenY = view.getUint32(offset + 28) / 100000;
+          chunks.blueX = view.getUint32(offset + 32) / 100000;
+          chunks.blueY = view.getUint32(offset + 36) / 100000;
+          break;
+      }
+
+      offset += 12 + length; // Move to next chunk (length + type + data + CRC)
+    }
+
+    return chunks;
+  };
+
   useEffect(() => {
     const loadImageMetadata = async () => {
       try {
@@ -36,7 +95,7 @@ const ImageMetadata = ({ imageUrl }) => {
           loadingTime: new Date().toISOString(),
         };
 
-        // Try to get EXIF data if available
+        // Try to get image-specific metadata
         try {
           const response = await fetch(imageUrl);
           const blob = await response.blob();
@@ -47,48 +106,17 @@ const ImageMetadata = ({ imageUrl }) => {
           reader.onload = function(e) {
             const view = new DataView(e.target.result);
             
-            // Check for JPEG EXIF data
+            // Check file type and parse accordingly
             if (view.getUint16(0, false) === 0xFFD8) {
-              const exifData = {};
-              let offset = 2;
-              
-              while (offset < view.byteLength) {
-                if (view.getUint16(offset, false) === 0xFFE1) {
-                  const exifLength = view.getUint16(offset + 2, false);
-                  const exifStart = offset + 10;
-                  
-                  // Extract some basic EXIF data
-                  try {
-                    const tiffOffset = exifStart;
-                    const littleEndian = view.getUint16(tiffOffset, false) === 0x4949;
-                    
-                    // Extract date taken if available
-                    const dateTimeOffset = findEXIFTag(view, tiffOffset, littleEndian, 0x9003);
-                    if (dateTimeOffset) {
-                      exifData.dateTime = getStringFromDB(view, dateTimeOffset, 20);
-                    }
-                    
-                    // Extract camera make if available
-                    const makeOffset = findEXIFTag(view, tiffOffset, littleEndian, 0x010F);
-                    if (makeOffset) {
-                      exifData.make = getStringFromDB(view, makeOffset, 20);
-                    }
-                    
-                    // Extract camera model if available
-                    const modelOffset = findEXIFTag(view, tiffOffset, littleEndian, 0x0110);
-                    if (modelOffset) {
-                      exifData.model = getStringFromDB(view, modelOffset, 20);
-                    }
-                  } catch (e) {
-                    console.warn('Error parsing EXIF data:', e);
-                  }
-                  
-                  break;
-                }
-                offset += 2 + view.getUint16(offset + 2, false);
-              }
-              
-              setMetadata({ ...basicMetadata, exif: exifData });
+              // JPEG EXIF parsing (existing code)
+              // ... existing code ...
+            } else if (
+              view.getUint32(0, false) === 0x89504E47 &&
+              view.getUint32(4, false) === 0x0D0A1A0A
+            ) {
+              // PNG file
+              const pngMetadata = parsePNGChunks(view);
+              setMetadata({ ...basicMetadata, png: pngMetadata });
             } else {
               setMetadata(basicMetadata);
             }
@@ -96,7 +124,7 @@ const ImageMetadata = ({ imageUrl }) => {
           
           reader.readAsArrayBuffer(blob);
         } catch (e) {
-          console.warn('Error reading EXIF data:', e);
+          console.warn('Error reading image metadata:', e);
           setMetadata(basicMetadata);
         }
 
@@ -196,6 +224,39 @@ const ImageMetadata = ({ imageUrl }) => {
               <span style={labelStyle}>Loading Time:</span>
               <span style={valueStyle}>{metadata.loadingTime}</span>
             </div>
+            {metadata.png && (
+              <>
+                {metadata.png.lastModified && (
+                  <div style={metadataItemStyle}>
+                    <span style={labelStyle}>Last Modified:</span>
+                    <span style={valueStyle}>{metadata.png.lastModified}</span>
+                  </div>
+                )}
+                {metadata.png.pixelsPerUnitX && (
+                  <div style={metadataItemStyle}>
+                    <span style={labelStyle}>Resolution:</span>
+                    <span style={valueStyle}>
+                      {metadata.png.pixelsPerUnitX} x {metadata.png.pixelsPerUnitY} pixels per unit
+                      ({metadata.png.unitSpecifier === 1 ? 'meters' : 'unknown'})
+                    </span>
+                  </div>
+                )}
+                {metadata.png.gamma && (
+                  <div style={metadataItemStyle}>
+                    <span style={labelStyle}>Gamma:</span>
+                    <span style={valueStyle}>{metadata.png.gamma}</span>
+                  </div>
+                )}
+                {Object.entries(metadata.png)
+                  .filter(([key]) => !['lastModified', 'pixelsPerUnitX', 'pixelsPerUnitY', 'unitSpecifier', 'gamma'].includes(key))
+                  .map(([key, value]) => (
+                    <div key={key} style={metadataItemStyle}>
+                      <span style={labelStyle}>{key}:</span>
+                      <span style={valueStyle}>{value}</span>
+                    </div>
+                  ))}
+              </>
+            )}
             {metadata.exif && (
               <>
                 {metadata.exif.dateTime && (

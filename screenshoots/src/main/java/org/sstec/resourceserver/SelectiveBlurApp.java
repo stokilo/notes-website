@@ -1597,13 +1597,74 @@ public class SelectiveBlurApp extends JFrame {
                 imagePanel.paint(g2d);
                 g2d.dispose();
 
-                // Save the captured image
-                boolean success = ImageIO.write(capture, "png", selectedFile);
-                if (success) {
-                    showNotification("Image saved successfully!");
-                } else {
-                    showNotification("Failed to save image", true);
+                // Create metadata for shapes
+                StringBuilder metadataBuilder = new StringBuilder();
+                metadataBuilder.append("{");
+                metadataBuilder.append("\"shapes\":[");
+                
+                List<SelectionShape> shapes = imagePanel.getShapes();
+                for (int i = 0; i < shapes.size(); i++) {
+                    SelectionShape shape = shapes.get(i);
+                    Rectangle bounds = shape.getBounds();
+                    if (i > 0) metadataBuilder.append(",");
+                    metadataBuilder.append("{");
+                    metadataBuilder.append("\"x\":").append(bounds.x).append(",");
+                    metadataBuilder.append("\"y\":").append(bounds.y).append(",");
+                    metadataBuilder.append("\"width\":").append(bounds.width).append(",");
+                    metadataBuilder.append("\"height\":").append(bounds.height).append(",");
+                    metadataBuilder.append("\"type\":\"").append(shape.getShape()).append("\",");
+                    metadataBuilder.append("\"borderStyle\":\"").append(shape.getBorderStyle()).append("\",");
+                    metadataBuilder.append("\"borderColor\":\"").append(shape.getBorderColor()).append("\",");
+                    metadataBuilder.append("\"pillStyle\":\"").append(shape.getPillStyle()).append("\",");
+                    metadataBuilder.append("\"pillPosition\":").append(shape.getPillPosition()).append(",");
+                    metadataBuilder.append("\"pillSize\":").append(shape.getPillSize());
+                    metadataBuilder.append("}");
                 }
+                metadataBuilder.append("]}");
+                
+                String shapeMetadata = metadataBuilder.toString();
+
+                // Get PNG writer
+                ImageWriter writer = ImageIO.getImageWritersByFormatName("png").next();
+                ImageWriteParam writeParam = writer.getDefaultWriteParam();
+                ImageTypeSpecifier typeSpecifier = ImageTypeSpecifier.createFromBufferedImageType(BufferedImage.TYPE_INT_ARGB);
+
+                // Create output stream
+                ImageOutputStream output = ImageIO.createImageOutputStream(selectedFile);
+                writer.setOutput(output);
+
+                // Create metadata
+                IIOMetadata metadata = writer.getDefaultImageMetadata(typeSpecifier, writeParam);
+                String metaFormatName = metadata.getNativeMetadataFormatName();
+                IIOMetadataNode root = (IIOMetadataNode) metadata.getAsTree(metaFormatName);
+
+                // Find or create the tEXt node
+                IIOMetadataNode textNode = null;
+                for (int i = 0; i < root.getLength(); i++) {
+                    if (root.item(i).getNodeName().equals("tEXt")) {
+                        textNode = (IIOMetadataNode) root.item(i);
+                        break;
+                    }
+                }
+                if (textNode == null) {
+                    textNode = new IIOMetadataNode("tEXt");
+                    root.appendChild(textNode);
+                }
+
+                // Add text chunk for shape metadata
+                IIOMetadataNode textEntry = new IIOMetadataNode("tEXtEntry");
+                textEntry.setAttribute("keyword", "Shapes");
+                textEntry.setAttribute("value", shapeMetadata);
+                textNode.appendChild(textEntry);
+
+                metadata.setFromTree(metaFormatName, root);
+
+                // Write the image with metadata
+                writer.write(null, new IIOImage(capture, null, metadata), writeParam);
+                writer.dispose();
+                output.close();
+
+                showNotification("Image saved successfully!");
             } catch (IOException ex) {
                 showNotification("Error saving image: " + ex.getMessage(), true);
             }
