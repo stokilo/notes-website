@@ -9,6 +9,8 @@ sidebar_position: 1
 
 **Running Keycloak docker container**
 
+import ShikiCodeBlock from "./components/ShikiCodeBlock";
+
 <ShikiCodeBlock language="shell" theme="catppuccin-frappe"
                 code={"docker run -p 8180:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:latest start-dev"} />
 
@@ -19,3 +21,7 @@ sidebar_position: 1
 username: admin
 
 password: admin
+
+import ImageMetadata from "./components/ImageMetadata";
+
+<ImageMetadata imageUrl="/img/chapter2/screenshot_22Rn3lbDb.png" />
