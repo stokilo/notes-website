@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import PropTypes from 'prop-types';
@@ -10,6 +10,19 @@ import { FaExpand, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa
 const SwiperImageCarousel = ({ images = [] }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isFullscreen]);
 
   const openFullscreen = (idx) => {
     setFullscreenIndex(idx);
