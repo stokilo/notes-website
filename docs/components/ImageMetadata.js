@@ -1,12 +1,80 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 
 const ImageMetadata = ({ imageUrl }) => {
-  const [metadata, setMetadata] = useState(null);
+  const [currentShapeIndex, setCurrentShapeIndex] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [shapes, setShapes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const imageRef = useRef(null);
+  const containerRef = useRef(null);
 
-  // Helper function to parse PNG chunks
+  // Function to extract shapes from image metadata
+  const extractShapesFromMetadata = (metadata) => {
+    const extractedShapes = [];
+    
+    // Check for EXIF data
+    if (metadata.exif) {
+      // Extract shapes from EXIF UserComment or other relevant fields
+      if (metadata.exif.UserComment) {
+        try {
+          const userComment = metadata.exif.UserComment;
+          console.log('Found EXIF UserComment:', userComment);
+          // Try to parse JSON from UserComment
+          const parsedData = JSON.parse(userComment);
+          if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+            console.log('Extracted shapes from EXIF:', parsedData.shapes);
+            extractedShapes.push(...parsedData.shapes);
+          }
+        } catch (e) {
+          console.warn('Could not parse shapes from EXIF UserComment:', e);
+        }
+      }
+    }
+
+    // Check for PNG text chunks
+    if (metadata.png) {
+      console.log('Found PNG chunks:', metadata.png);
+      // Look for shapes in PNG text chunks
+      Object.entries(metadata.png).forEach(([key, value]) => {
+        if (key.toLowerCase().includes('shape') || key.toLowerCase().includes('region')) {
+          try {
+            const parsedData = JSON.parse(value);
+            if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+              console.log(`Extracted shapes from PNG chunk ${key}:`, parsedData.shapes);
+              extractedShapes.push(...parsedData.shapes);
+            }
+          } catch (e) {
+            console.warn(`Could not parse shapes from PNG chunk: ${key}`, e);
+          }
+        }
+      });
+    }
+
+    // Check for XMP metadata
+    if (metadata.xmp) {
+      console.log('Found XMP metadata:', metadata.xmp);
+      // Extract shapes from XMP metadata
+      if (metadata.xmp.Regions) {
+        try {
+          const regions = JSON.parse(metadata.xmp.Regions);
+          if (regions.shapes && Array.isArray(regions.shapes)) {
+            console.log('Extracted shapes from XMP:', regions.shapes);
+            extractedShapes.push(...regions.shapes);
+          }
+        } catch (e) {
+          console.warn('Could not parse shapes from XMP Regions:', e);
+        }
+      }
+    }
+
+    console.log('All extracted shapes:', extractedShapes);
+    return extractedShapes;
+  };
+
+  // Function to parse PNG chunks
   const parsePNGChunks = (view) => {
     const chunks = {};
     let offset = 8; // Skip PNG signature
@@ -39,24 +107,6 @@ const ImageMetadata = ({ imageUrl }) => {
           const second = view.getUint8(offset + 14);
           chunks.lastModified = new Date(year, month - 1, day, hour, minute, second).toISOString();
           break;
-        case 'pHYs':
-          chunks.pixelsPerUnitX = view.getUint32(offset + 8);
-          chunks.pixelsPerUnitY = view.getUint32(offset + 12);
-          chunks.unitSpecifier = view.getUint8(offset + 16);
-          break;
-        case 'gAMA':
-          chunks.gamma = view.getUint32(offset + 8) / 100000;
-          break;
-        case 'cHRM':
-          chunks.whitePointX = view.getUint32(offset + 8) / 100000;
-          chunks.whitePointY = view.getUint32(offset + 12) / 100000;
-          chunks.redX = view.getUint32(offset + 16) / 100000;
-          chunks.redY = view.getUint32(offset + 20) / 100000;
-          chunks.greenX = view.getUint32(offset + 24) / 100000;
-          chunks.greenY = view.getUint32(offset + 28) / 100000;
-          chunks.blueX = view.getUint32(offset + 32) / 100000;
-          chunks.blueY = view.getUint32(offset + 36) / 100000;
-          break;
       }
 
       offset += 12 + length; // Move to next chunk (length + type + data + CRC)
@@ -65,71 +115,134 @@ const ImageMetadata = ({ imageUrl }) => {
     return chunks;
   };
 
+  // Function to parse EXIF data
+  const parseEXIF = (view, start, littleEndian) => {
+    const exif = {};
+    const entries = view.getUint16(start, littleEndian);
+    let entryOffset = start + 2;
+
+    for (let i = 0; i < entries; i++) {
+      const tag = view.getUint16(entryOffset, littleEndian);
+      const type = view.getUint16(entryOffset + 2, littleEndian);
+      const count = view.getUint32(entryOffset + 4, littleEndian);
+      const valueOffset = entryOffset + 8;
+
+      // Parse different EXIF tags
+      switch (tag) {
+        case 0x9286: // UserComment
+          exif.UserComment = new TextDecoder().decode(
+            view.buffer.slice(valueOffset, valueOffset + count)
+          );
+          break;
+        case 0x9003: // DateTimeOriginal
+          exif.dateTimeOriginal = new TextDecoder().decode(
+            view.buffer.slice(valueOffset, valueOffset + count)
+          );
+          break;
+      }
+
+      entryOffset += 12;
+    }
+
+    return exif;
+  };
+
   useEffect(() => {
     const loadImageMetadata = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Create a new image element
+        // Create a temporary image to get dimensions
         const img = new Image();
-        
-        // Create a promise to handle the image load
-        const imageLoadPromise = new Promise((resolve, reject) => {
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error('Failed to load image'));
-        });
-
-        // Set the image source
+        img.onload = () => {
+          console.log('Image loaded with dimensions:', {
+            width: img.naturalWidth,
+            height: img.naturalHeight
+          });
+        };
         img.src = imageUrl;
 
-        // Wait for the image to load
-        const loadedImage = await imageLoadPromise;
-
-        // Extract basic metadata
-        const basicMetadata = {
-          width: loadedImage.naturalWidth,
-          height: loadedImage.naturalHeight,
-          src: loadedImage.src,
-          complete: loadedImage.complete,
-          loadingTime: new Date().toISOString(),
-        };
-
-        // Try to get image-specific metadata
-        try {
-          const response = await fetch(imageUrl);
-          const blob = await response.blob();
-          
-          // Create a FileReader to read the image data
-          const reader = new FileReader();
-          
-          reader.onload = function(e) {
-            const view = new DataView(e.target.result);
-            
-            // Check file type and parse accordingly
-            if (view.getUint16(0, false) === 0xFFD8) {
-              // JPEG EXIF parsing (existing code)
-              // ... existing code ...
-            } else if (
-              view.getUint32(0, false) === 0x89504E47 &&
-              view.getUint32(4, false) === 0x0D0A1A0A
-            ) {
-              // PNG file
-              const pngMetadata = parsePNGChunks(view);
-              setMetadata({ ...basicMetadata, png: pngMetadata });
-            } else {
-              setMetadata(basicMetadata);
-            }
+        // Fetch the image
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        
+        // Create a FileReader to read the image data
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          const view = new DataView(e.target.result);
+          const metadata = {
+            width: 0,
+            height: 0,
+            exif: null,
+            png: null,
+            xmp: null
           };
-          
-          reader.readAsArrayBuffer(blob);
-        } catch (e) {
-          console.warn('Error reading image metadata:', e);
-          setMetadata(basicMetadata);
-        }
 
-        setLoading(false);
+          // Check file type and parse accordingly
+          if (view.getUint16(0, false) === 0xFFD8) {
+            console.log('Processing JPEG file');
+            // JPEG file
+            let offset = 2;
+            while (offset < view.byteLength) {
+              if (view.getUint16(offset, false) === 0xFFE1) {
+                // EXIF marker found
+                const exifLength = view.getUint16(offset + 2, false);
+                const exifData = parseEXIF(view, offset + 10, true);
+                metadata.exif = exifData;
+                console.log('Found EXIF data:', exifData);
+              }
+              offset += 2 + view.getUint16(offset + 2, false);
+            }
+          } else if (
+            view.getUint32(0, false) === 0x89504E47 &&
+            view.getUint32(4, false) === 0x0D0A1A0A
+          ) {
+            console.log('Processing PNG file');
+            // PNG file
+            metadata.png = parsePNGChunks(view);
+          }
+
+          // Extract shapes from metadata
+          const extractedShapes = extractShapesFromMetadata(metadata);
+          console.log('Setting shapes state:', extractedShapes);
+          setShapes(extractedShapes);
+
+          // If no shapes found in metadata, try to detect shapes using image analysis
+          if (extractedShapes.length === 0) {
+            console.log('No shapes found in metadata, creating default shape');
+            // Create a temporary image to get dimensions
+            const img = new Image();
+            img.onload = () => {
+              metadata.width = img.naturalWidth;
+              metadata.height = img.naturalHeight;
+              
+              // Create a default shape with the new format
+              const defaultShape = {
+                x: 0,
+                y: 0,
+                width: metadata.width,
+                height: metadata.height,
+                type: 'Rounded Rectangle',
+                borderStyle: 'Solid',
+                borderColor: 'Red',
+                pillStyle: 'Modern',
+                pillPosition: 0,
+                pillSize: 0.1
+              };
+              console.log('Created default shape:', defaultShape);
+              setShapes([defaultShape]);
+            };
+            img.src = imageUrl;
+          }
+
+          setLoading(false);
+        };
+        
+        reader.readAsArrayBuffer(blob);
       } catch (err) {
+        console.error('Error loading image metadata:', err);
         setError(err.message);
         setLoading(false);
       }
@@ -138,27 +251,57 @@ const ImageMetadata = ({ imageUrl }) => {
     loadImageMetadata();
   }, [imageUrl]);
 
-  // Helper function to find EXIF tags
-  const findEXIFTag = (view, start, littleEndian, tag) => {
-    const entries = view.getUint16(start, littleEndian);
-    let entryOffset = start + 2;
-    
-    for (let i = 0; i < entries; i++) {
-      if (view.getUint16(entryOffset, littleEndian) === tag) {
-        return entryOffset + 8;
-      }
-      entryOffset += 12;
+  const handleNextShape = () => {
+    if (shapes && shapes.length > 0) {
+      const nextIndex = (currentShapeIndex + 1) % shapes.length;
+      console.log('Navigating to next shape:', shapes[nextIndex]);
+      setCurrentShapeIndex(nextIndex);
+      zoomToShape(shapes[nextIndex]);
     }
-    return null;
   };
 
-  // Helper function to get string from DataView
-  const getStringFromDB = (view, start, length) => {
-    let str = '';
-    for (let i = start; i < start + length; i++) {
-      str += String.fromCharCode(view.getUint8(i));
+  const handlePreviousShape = () => {
+    if (shapes && shapes.length > 0) {
+      const prevIndex = (currentShapeIndex - 1 + shapes.length) % shapes.length;
+      console.log('Navigating to previous shape:', shapes[prevIndex]);
+      setCurrentShapeIndex(prevIndex);
+      zoomToShape(shapes[prevIndex]);
     }
-    return str.replace(/\0/g, '');
+  };
+
+  const zoomToShape = (shape) => {
+    if (!imageRef.current || !containerRef.current) return;
+
+    const containerWidth = containerRef.current.offsetWidth;
+    const containerHeight = containerRef.current.offsetHeight;
+
+    // Calculate zoom level to fit the shape in the container
+    const zoomX = containerWidth / (shape.width * 1.2); // Add 20% padding
+    const zoomY = containerHeight / (shape.height * 1.2);
+    const newZoom = Math.min(zoomX, zoomY);
+
+    // Calculate center position of the shape
+    const centerX = shape.x + shape.width / 2;
+    const centerY = shape.y + shape.height / 2;
+
+    // Calculate new position to center the shape
+    const newX = (containerWidth / 2) - (centerX * newZoom);
+    const newY = (containerHeight / 2) - (centerY * newZoom);
+
+    setZoom(newZoom);
+    setPosition({ x: newX, y: newY });
+  };
+
+  useEffect(() => {
+    if (shapes && shapes.length > 0) {
+      zoomToShape(shapes[0]);
+    }
+  }, [shapes]);
+
+  // Add function to show original image
+  const showOriginalImage = () => {
+    setZoom(1);
+    setPosition({ x: 0, y: 0 });
   };
 
   const containerStyle = {
@@ -168,33 +311,90 @@ const ImageMetadata = ({ imageUrl }) => {
     fontFamily: 'Arial, sans-serif',
   };
 
-  const imageStyle = {
+  const imageContainerStyle = {
+    position: 'relative',
     width: '100%',
-    height: 'auto',
-    borderRadius: '8px',
+    height: '400px',
+    overflow: 'hidden',
     marginBottom: '20px',
-  };
-
-  const metadataStyle = {
-    backgroundColor: '#f5f5f5',
-    padding: '20px',
+    backgroundColor: '#f0f0f0',
     borderRadius: '8px',
+  };
+
+  const imageStyle = {
+    position: 'absolute',
+    transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+    transformOrigin: '0 0',
+    transition: 'transform 0.3s ease-out',
+    maxWidth: 'none',
+  };
+
+  const shapeOverlayStyle = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    pointerEvents: 'none',
+    transform: `scale(${1/zoom})`,
+    transformOrigin: '0 0',
+  };
+
+  const shapeStyle = (shape, isCurrent) => ({
+    position: 'absolute',
+    left: `${shape.x}px`,
+    top: `${shape.y}px`,
+    width: `${shape.width}px`,
+    height: `${shape.height}px`,
+    border: `${isCurrent ? '3px' : '2px'} ${shape.borderStyle?.toLowerCase() || 'solid'} ${shape.borderColor?.toLowerCase() || '#ff0000'}`,
+    borderRadius: shape.pillStyle === 'Modern' ? `${shape.pillSize * 100}%` : '0',
+    pointerEvents: 'none',
+    boxShadow: isCurrent ? '0 0 10px rgba(255, 0, 0, 0.5)' : 'none',
+  });
+
+  const buttonStyle = {
+    padding: '8px 16px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
     fontSize: '14px',
-  };
-
-  const metadataItemStyle = {
-    marginBottom: '10px',
+    minWidth: '60px',
+    height: '40px',
     display: 'flex',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center'
   };
 
-  const labelStyle = {
-    fontWeight: 'bold',
-    color: '#333',
+  const buttonDisabledStyle = {
+    ...buttonStyle,
+    backgroundColor: '#cccccc',
+    cursor: 'not-allowed',
+    opacity: 0.7
   };
 
-  const valueStyle = {
-    color: '#666',
+  const middleButtonStyle = {
+    ...buttonStyle,
+    backgroundColor: '#28a745',
+    minWidth: '120px'
+  };
+
+  const middleButtonDisabledStyle = {
+    ...middleButtonStyle,
+    backgroundColor: '#cccccc',
+    cursor: 'not-allowed',
+    opacity: 0.7
+  };
+
+  const controlsStyle = {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '10px',
+    marginBottom: '20px',
+    padding: '10px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '8px',
   };
 
   if (loading) {
@@ -207,81 +407,49 @@ const ImageMetadata = ({ imageUrl }) => {
 
   return (
     <div style={containerStyle}>
-      <img src={imageUrl} alt="Image with metadata" style={imageStyle} />
-      <div style={metadataStyle}>
-        <h3>Image Metadata</h3>
-        {metadata && (
-          <>
-            <div style={metadataItemStyle}>
-              <span style={labelStyle}>Dimensions:</span>
-              <span style={valueStyle}>{metadata.width} x {metadata.height} pixels</span>
-            </div>
-            <div style={metadataItemStyle}>
-              <span style={labelStyle}>Source:</span>
-              <span style={valueStyle}>{metadata.src}</span>
-            </div>
-            <div style={metadataItemStyle}>
-              <span style={labelStyle}>Loading Time:</span>
-              <span style={valueStyle}>{metadata.loadingTime}</span>
-            </div>
-            {metadata.png && (
-              <>
-                {metadata.png.lastModified && (
-                  <div style={metadataItemStyle}>
-                    <span style={labelStyle}>Last Modified:</span>
-                    <span style={valueStyle}>{metadata.png.lastModified}</span>
-                  </div>
-                )}
-                {metadata.png.pixelsPerUnitX && (
-                  <div style={metadataItemStyle}>
-                    <span style={labelStyle}>Resolution:</span>
-                    <span style={valueStyle}>
-                      {metadata.png.pixelsPerUnitX} x {metadata.png.pixelsPerUnitY} pixels per unit
-                      ({metadata.png.unitSpecifier === 1 ? 'meters' : 'unknown'})
-                    </span>
-                  </div>
-                )}
-                {metadata.png.gamma && (
-                  <div style={metadataItemStyle}>
-                    <span style={labelStyle}>Gamma:</span>
-                    <span style={valueStyle}>{metadata.png.gamma}</span>
-                  </div>
-                )}
-                {Object.entries(metadata.png)
-                  .filter(([key]) => !['lastModified', 'pixelsPerUnitX', 'pixelsPerUnitY', 'unitSpecifier', 'gamma'].includes(key))
-                  .map(([key, value]) => (
-                    <div key={key} style={metadataItemStyle}>
-                      <span style={labelStyle}>{key}:</span>
-                      <span style={valueStyle}>{value}</span>
-                    </div>
-                  ))}
-              </>
-            )}
-            {metadata.exif && (
-              <>
-                {metadata.exif.dateTime && (
-                  <div style={metadataItemStyle}>
-                    <span style={labelStyle}>Date Taken:</span>
-                    <span style={valueStyle}>{metadata.exif.dateTime}</span>
-                  </div>
-                )}
-                {metadata.exif.make && (
-                  <div style={metadataItemStyle}>
-                    <span style={labelStyle}>Camera Make:</span>
-                    <span style={valueStyle}>{metadata.exif.make}</span>
-                  </div>
-                )}
-                {metadata.exif.model && (
-                  <div style={metadataItemStyle}>
-                    <span style={labelStyle}>Camera Model:</span>
-                    <span style={valueStyle}>{metadata.exif.model}</span>
-                  </div>
-                )}
-              </>
-            )}
-          </>
+      <div ref={containerRef} style={imageContainerStyle}>
+        <img
+          ref={imageRef}
+          src={imageUrl}
+          alt="Image with shapes"
+          style={imageStyle}
+        />
+        {shapes && shapes.length > 0 && (
+          <div style={shapeOverlayStyle}>
+            {shapes.map((shape, index) => (
+              <div
+                key={index}
+                style={shapeStyle(shape, index === currentShapeIndex)}
+              />
+            ))}
+          </div>
         )}
       </div>
+      
+      {shapes && shapes.length > 0 && (
+        <div style={controlsStyle}>
+          <button
+            style={currentShapeIndex === 0 ? buttonDisabledStyle : buttonStyle}
+            onClick={handlePreviousShape}
+            disabled={currentShapeIndex === 0}
+          >
+            {currentShapeIndex + 1}
+          </button>
+          <button
+            style={middleButtonStyle}
+            onClick={showOriginalImage}
+          >
+            Show Original
+          </button>
+          <button
+            style={currentShapeIndex === shapes.length - 1 ? buttonDisabledStyle : buttonStyle}
+            onClick={handleNextShape}
+            disabled={currentShapeIndex === shapes.length - 1}
+          >
+            {currentShapeIndex + 2}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
