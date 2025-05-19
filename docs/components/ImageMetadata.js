@@ -289,9 +289,17 @@ const ImageMetadata = ({ imageUrl }) => {
     const containerWidth = containerRef.current.offsetWidth;
     const containerHeight = containerRef.current.offsetHeight;
 
-    // Calculate zoom level to fit the shape in the container
-    const zoomX = containerWidth / (shape.width * 1.2); // Add 20% padding
-    const zoomY = containerHeight / (shape.height * 1.2);
+    // Minimum dimensions for the shape
+    const minWidth = 100;
+    const minHeight = 200;
+
+    // Add padding to small shapes
+    const paddedWidth = Math.max(shape.width, minWidth);
+    const paddedHeight = Math.max(shape.height, minHeight);
+
+    // Calculate zoom level to fit the padded shape in the container
+    const zoomX = containerWidth / (paddedWidth * 1.2); // Add 20% padding
+    const zoomY = containerHeight / (paddedHeight * 1.2);
     const newZoom = Math.min(zoomX, zoomY);
 
     // Calculate center position of the shape
