@@ -5,11 +5,14 @@ import PropTypes from 'prop-types';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import { FaExpand, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaExpand, FaTimes, FaChevronLeft, FaChevronRight, FaInfoCircle, FaImages } from 'react-icons/fa';
+import ImageMetadata from './ImageMetadata';
 
 const SwiperImageCarousel = ({ images = [] }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
+  const [showMetadata, setShowMetadata] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     const handleEscape = (e) => {
@@ -42,6 +45,40 @@ const SwiperImageCarousel = ({ images = [] }) => {
     }
   };
 
+  const toggleView = () => {
+    setShowMetadata(!showMetadata);
+  };
+
+  const handleSlideChange = (swiper) => {
+    setCurrentImageIndex(swiper.activeIndex);
+  };
+
+  if (showMetadata) {
+    return (
+      <div style={{ width: '100%', maxWidth: 800, margin: '0 auto', position: 'relative' }}>
+        <button
+          onClick={toggleView}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            background: 'rgba(0,0,0,0.5)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '50%',
+            padding: 10,
+            cursor: 'pointer',
+            zIndex: 10,
+          }}
+          aria-label="Switch to carousel view"
+        >
+          <FaImages size={18} />
+        </button>
+        <ImageMetadata imageUrl={images[currentImageIndex].src} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: '100%', maxWidth: 800, margin: '0 auto' }}>
       <Swiper
@@ -51,6 +88,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
         spaceBetween={20}
         slidesPerView={1}
         style={{ borderRadius: 12, overflow: 'hidden' }}
+        onSlideChange={handleSlideChange}
       >
         {images.map((img, idx) => (
           <SwiperSlide key={img.src} style={{ position: 'relative', background: '#000' }}>
@@ -59,24 +97,38 @@ const SwiperImageCarousel = ({ images = [] }) => {
               alt={img.alt}
               style={{ width: '100%', height: 400, objectFit: 'contain', background: '#000' }}
             />
-            <button
-              onClick={() => openFullscreen(idx)}
-              style={{
-                position: 'absolute',
-                top: 16,
-                right: 16,
-                background: 'rgba(0,0,0,0.5)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                padding: 10,
-                cursor: 'pointer',
-                zIndex: 10,
-              }}
-              aria-label="Full screen"
-            >
-              <FaExpand size={18} />
-            </button>
+            <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => openFullscreen(idx)}
+                style={{
+                  background: 'rgba(0,0,0,0.5)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  padding: 10,
+                  cursor: 'pointer',
+                  zIndex: 10,
+                }}
+                aria-label="Full screen"
+              >
+                <FaExpand size={18} />
+              </button>
+              <button
+                onClick={toggleView}
+                style={{
+                  background: 'rgba(0,0,0,0.5)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  padding: 10,
+                  cursor: 'pointer',
+                  zIndex: 10,
+                }}
+                aria-label="View image metadata"
+              >
+                <FaInfoCircle size={18} />
+              </button>
+            </div>
           </SwiperSlide>
         ))}
       </Swiper>

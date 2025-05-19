@@ -23,5 +23,14 @@ username: admin
 password: admin
 
 import ImageMetadata from "./components/ImageMetadata";
+import SwiperImageCarousel from "./components/SwiperImageCarousel";
 
-<ImageMetadata imageUrl="/img/screenshot_bjO8o6gf.png"  />
+[//]: # (<ImageMetadata imageUrl="/img/screenshot_bjO8o6gf.png"  />)
+
+
+<SwiperImageCarousel
+  images={[
+    { src: '/img/screenshot_bjO8o6gf.png', alt: 'Screenshot 1' },
+    { src: '/img/screenshot_bjO8o6gf.png', alt: 'Screenshot 2' },
+  ]} />
+
