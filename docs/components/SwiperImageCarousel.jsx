@@ -51,7 +51,9 @@ const SwiperImageCarousel = ({ images = [] }) => {
     setTimeout(() => {
       const input = document.querySelector('[data-focus-input]');
       if (input) {
+        const scrollY = window.scrollY;
         input.focus();
+        window.scrollTo(0, scrollY);
       }
     }, 100);
   };
@@ -353,7 +355,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
         type="text"
         data-focus-input
         style={{
-          position: 'absolute',
+          position: 'fixed',
           opacity: 0,
           pointerEvents: 'none',
           height: 0,
@@ -361,6 +363,8 @@ const SwiperImageCarousel = ({ images = [] }) => {
           padding: 0,
           border: 'none',
           margin: 0,
+          top: 0,
+          left: 0,
         }}
         aria-hidden="true"
         tabIndex={0}
