@@ -396,14 +396,8 @@ const ImageMetadata = ({ imageUrl }) => {
     opacity: 0.7
   };
 
-  const middleButtonStyle = {
-    ...buttonStyle,
-    backgroundColor: '#28a745',
-    minWidth: '120px'
-  };
 
   const middleButtonDisabledStyle = {
-    ...middleButtonStyle,
     backgroundColor: '#cccccc',
     cursor: 'not-allowed',
     opacity: 0.7
@@ -446,12 +440,6 @@ const ImageMetadata = ({ imageUrl }) => {
             disabled={!shapes.length || currentShapeIndex === -1}
           >
             {"<"}
-          </button>
-          <button
-            style={middleButtonStyle}
-            onClick={showOriginalImage}
-          >
-            Show Original
           </button>
           <button
             style={!shapes.length || currentShapeIndex === shapes.length - 1 ? buttonDisabledStyle : buttonStyle}
