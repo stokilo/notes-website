@@ -1,0 +1,87 @@
+---
+sidebar_label: 'Flows'
+sidebar_position: 4
+---
+
+# Client flows
+
+Okay, here's a summary of each flow with a short, memorable example to serve as a refresher:
+
+Okay, here's a summary of each flow with a short, memorable example to serve as a refresher:
+
+**1. Standard Flow (Authorization Code Grant)**
+
+*   **Summary:** The most common and secure flow for web and mobile apps where a user is present. Involves redirecting the user to the auth server, getting an authorization code, and then exchanging that code for tokens.
+*   **Refresher Example:**
+*   **You want to log in to `CoolWebApp.com`.**
+1.  `CoolWebApp.com` redirects you to `AuthServer.com/login`.
+2.  You log in on `AuthServer.com`.
+3.  `AuthServer.com` redirects you back to `CoolWebApp.com` with a temporary `code`.
+4.  `CoolWebApp.com` (backend) secretly gives the `code` to `AuthServer.com` and gets back your `access token`.
+*   **Analogy:** Getting a claim ticket at a coat check, then exchanging the ticket for your coat.
+
+**2. Direct Access Grants (Resource Owner Password Credentials - ROPC)**
+
+*   **Summary:** The client application collects the user's username and password directly and sends them to the auth server to get tokens. **Highly discouraged due to security risks.**
+*   **Refresher Example:**
+*   **An old `LegacyDesktopApp` needs to access your data.**
+1.  `LegacyDesktopApp` shows its own login form.
+2.  You type your `username` and `password` directly into `LegacyDesktopApp`.
+3.  `LegacyDesktopApp` sends your `username/password` to `AuthServer.com` and gets an `access token`.
+*   **Analogy:** Giving your house key directly to a handyman instead of letting them in yourself. (Risky!)
+
+**3. Implicit Flow**
+
+*   **Summary:** A simplified flow (historically for SPAs) where the access token is returned directly to the client in the URL fragment after user authentication. **Largely deprecated in favor of Auth Code + PKCE.**
+*   **Refresher Example:**
+*   **(Older) `SimpleSPA.com` wants to show your name.**
+1.  `SimpleSPA.com` redirects you to `AuthServer.com/login`.
+2.  You log in on `AuthServer.com`.
+3.  `AuthServer.com` redirects you back to `SimpleSPA.com#access_token=YOUR_TOKEN`.
+4.  `SimpleSPA.com` (JavaScript) reads the `access token` from the URL.
+*   **Analogy:** The auth server shouts your secret password (access token) across the room (URL) for everyone nearby to potentially hear.
+
+**4. Service Accounts Roles (Client Credentials Grant)**
+
+*   **Summary:** Used for machine-to-machine (M2M) communication where a client application (not a user) authenticates itself using its own credentials (client ID & secret) to get an access token.
+*   **Refresher Example:**
+*   **`NightlyBackupService` needs to access `DataStorageAPI`.**
+1.  `NightlyBackupService` uses its pre-configured `client_id` and `client_secret`.
+2.  It sends these to `AuthServer.com` and gets an `access token` for itself.
+3.  It uses this token to talk to `DataStorageAPI`.
+*   **Analogy:** A registered robot showing its ID badge to enter a restricted anufacturing area.
+
+**5. Standard Token Exchange (OAuth 2.0 Token Exchange)**
+
+*   **Summary:** Allows a client to exchange one type of security token for another, often to act on behalf of a user or another service, or to change the token's audience/scope.
+*   **Refresher Example:**
+*   **`MicroserviceA` (acting as you, UserX) needs to call `MicroserviceB`.**
+1.  `MicroserviceA` has a token for UserX valid for itself.
+2.  `MicroserviceA` goes to `AuthServer.com` and says: "Here's UserX's token for me, please give me a new token for UserX that `MicroserviceB` will accept."
+3.  `AuthServer.com` (if allowed by policy) issues a new token for UserX with `MicroserviceB` as the audience.
+*   **Analogy:** Exchanging your local currency for foreign currency when traveling to another country.
+
+**6. OAuth 2.0 Device Authorization Grant**
+
+*   **Summary:** For devices with limited input capabilities (like Smart TVs). The device displays a code, and the user authorizes the device on a separate, browser-equipped device (like a phone or PC).
+*   **Refresher Example:**
+*   **Logging into `StreamingApp` on your `SmartTV`.**
+1.  `SmartTV` shows: "Go to `tv.auth.com` and enter code `XYZ-123`."
+2.  On your phone, you go to `tv.auth.com`, log in, and enter `XYZ-123`.
+3.  You approve.
+4.  `SmartTV` (which has been polling `AuthServer.com`) gets an `access token`.
+*   **Analogy:** Your Smart TV gives you a note with a code; you take the note to your computer, get approval, and the computer tells the TV it's okay.
+
+**7. OIDC CIBA Grant (Client Initiated Backchannel Authentication)**
+
+*   **Summary:** A "decoupled" flow where a client (e.g., a POS terminal) initiates authentication, and the user completes it on a separate authentication device (e.g., their mobile phone) without the initiating client being directly involved in the authentication interaction.
+*   **Refresher Example:**
+*   **Paying at a `PointOfSaleTerminal` with your banking app.**
+1.  `PointOfSaleTerminal` asks `AuthServer.com` to start login for you (e.g., using your loyalty card ID).
+2.  You get a push notification on your `BankingApp` on your phone: "Approve payment of $50 at Store X?"
+3.  You approve in your `BankingApp`.
+4.  `BankingApp` tells `AuthServer.com`.
+5.  `PointOfSaleTerminal` (which has been polling or gets a notification) receives confirmation/token.
+*   **Analogy:** A shop assistant sends a request to your bank; your bank calls your mobile to confirm; your mobile tells the bank "yes"; the bank tells the shop assistant the payment is approved.
+
+These short examples should help you quickly recall the essence of each flow!
