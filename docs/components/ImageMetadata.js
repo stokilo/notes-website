@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 
 const ImageMetadata = ({ imageUrl }) => {
-  const [currentShapeIndex, setCurrentShapeIndex] = useState(0);
+  const [currentShapeIndex, setCurrentShapeIndex] = useState(-1);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [shapes, setShapes] = useState([]);
@@ -152,6 +152,7 @@ const ImageMetadata = ({ imageUrl }) => {
       try {
         setLoading(true);
         setError(null);
+        setCurrentShapeIndex(-1);
 
         // Create a temporary image to get dimensions
         const img = new Image();
@@ -208,34 +209,8 @@ const ImageMetadata = ({ imageUrl }) => {
           const extractedShapes = extractShapesFromMetadata(metadata);
           console.log('Setting shapes state:', extractedShapes);
           setShapes(extractedShapes);
-
-          // If no shapes found in metadata, try to detect shapes using image analysis
-          if (extractedShapes.length === 0) {
-            console.log('No shapes found in metadata, creating default shape');
-            // Create a temporary image to get dimensions
-            const img = new Image();
-            img.onload = () => {
-              metadata.width = img.naturalWidth;
-              metadata.height = img.naturalHeight;
-              
-              // Create a default shape with the new format
-              const defaultShape = {
-                x: 0,
-                y: 0,
-                width: metadata.width,
-                height: metadata.height,
-                type: 'Rounded Rectangle',
-                borderStyle: 'Solid',
-                borderColor: 'Red',
-                pillStyle: 'Modern',
-                pillPosition: 0,
-                pillSize: 0.1
-              };
-              console.log('Created default shape:', defaultShape);
-              setShapes([defaultShape]);
-            };
-            img.src = imageUrl;
-          }
+          
+          // Don't automatically zoom to first shape - wait for user to click button
 
           setLoading(false);
         };
@@ -253,19 +228,23 @@ const ImageMetadata = ({ imageUrl }) => {
 
   const handleNextShape = () => {
     if (shapes && shapes.length > 0) {
-      const nextIndex = (currentShapeIndex + 1) % shapes.length;
-      console.log('Navigating to next shape:', shapes[nextIndex]);
-      setCurrentShapeIndex(nextIndex);
-      zoomToShape(shapes[nextIndex]);
+      const nextIndex = currentShapeIndex + 1;
+      if (nextIndex < shapes.length) {
+        console.log('Navigating to next shape:', shapes[nextIndex]);
+        setCurrentShapeIndex(nextIndex);
+        zoomToShape(shapes[nextIndex]);
+      }
     }
   };
 
   const handlePreviousShape = () => {
     if (shapes && shapes.length > 0) {
-      const prevIndex = (currentShapeIndex - 1 + shapes.length) % shapes.length;
-      console.log('Navigating to previous shape:', shapes[prevIndex]);
-      setCurrentShapeIndex(prevIndex);
-      zoomToShape(shapes[prevIndex]);
+      const prevIndex = currentShapeIndex - 1;
+      if (prevIndex >= 0) {
+        console.log('Navigating to previous shape:', shapes[prevIndex]);
+        setCurrentShapeIndex(prevIndex);
+        zoomToShape(shapes[prevIndex]);
+      }
     }
   };
 
@@ -313,6 +292,9 @@ const ImageMetadata = ({ imageUrl }) => {
     marginBottom: '20px',
     backgroundColor: '#f0f0f0',
     borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   };
 
   const imageStyle = {
@@ -321,6 +303,9 @@ const ImageMetadata = ({ imageUrl }) => {
     transformOrigin: '0 0',
     transition: 'transform 0.3s ease-out',
     maxWidth: 'none',
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover'
   };
 
   const shapeOverlayStyle = {
@@ -332,19 +317,39 @@ const ImageMetadata = ({ imageUrl }) => {
     pointerEvents: 'none',
     transform: `scale(${1/zoom})`,
     transformOrigin: '0 0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   };
 
-  const shapeStyle = (shape, isCurrent) => ({
-    position: 'absolute',
-    left: `${shape.x}px`,
-    top: `${shape.y}px`,
-    width: `${shape.width}px`,
-    height: `${shape.height}px`,
-    border: `${isCurrent ? '3px' : '2px'} ${shape.borderStyle?.toLowerCase() || 'solid'} ${shape.borderColor?.toLowerCase() || '#ff0000'}`,
-    borderRadius: shape.pillStyle === 'Modern' ? `${shape.pillSize * 100}%` : '0',
-    pointerEvents: 'none',
-    boxShadow: isCurrent ? '0 0 10px rgba(255, 0, 0, 0.5)' : 'none',
-  });
+  const shapeStyle = (shape, isCurrent) => {
+    const imageElement = imageRef.current;
+    if (!imageElement) return {};
+
+    const containerWidth = containerRef.current.offsetWidth;
+    const containerHeight = containerRef.current.offsetHeight;
+    
+    // Calculate scaling factors
+    const scaleX = containerWidth / imageElement.naturalWidth;
+    const scaleY = containerHeight / imageElement.naturalHeight;
+    const scale = Math.max(scaleX, scaleY);
+
+    // Calculate offsets to center the image
+    const offsetX = (containerWidth - (imageElement.naturalWidth * scale)) / 2;
+    const offsetY = (containerHeight - (imageElement.naturalHeight * scale)) / 2;
+
+    return {
+      position: 'absolute',
+      left: `${(shape.x * scale) + offsetX}px`,
+      top: `${(shape.y * scale) + offsetY}px`,
+      width: `${shape.width * scale}px`,
+      height: `${shape.height * scale}px`,
+      border: `${isCurrent ? '3px' : '2px'} ${shape.borderStyle?.toLowerCase() || 'solid'} ${shape.borderColor?.toLowerCase() || '#ff0000'}`,
+      borderRadius: shape.pillStyle === 'Modern' ? `${shape.pillSize * 100}%` : '0',
+      pointerEvents: 'none',
+      boxShadow: isCurrent ? '0 0 10px rgba(255, 0, 0, 0.5)' : 'none',
+    };
+  };
 
   const buttonStyle = {
     padding: '8px 16px',
@@ -423,11 +428,11 @@ const ImageMetadata = ({ imageUrl }) => {
       {shapes && shapes.length > 0 && (
         <div style={controlsStyle}>
           <button
-            style={currentShapeIndex === 0 ? buttonDisabledStyle : buttonStyle}
+            style={currentShapeIndex <= 0 ? buttonDisabledStyle : buttonStyle}
             onClick={handlePreviousShape}
-            disabled={currentShapeIndex === 0}
+            disabled={currentShapeIndex <= 0}
           >
-            {currentShapeIndex === 0 ? '' : currentShapeIndex}
+            {currentShapeIndex <= 0 ? '' : currentShapeIndex + 1}
           </button>
           <button
             style={middleButtonStyle}
@@ -436,11 +441,11 @@ const ImageMetadata = ({ imageUrl }) => {
             Show Original
           </button>
           <button
-            style={currentShapeIndex === shapes.length - 1 ? buttonDisabledStyle : buttonStyle}
+            style={currentShapeIndex >= shapes.length - 1 ? buttonDisabledStyle : buttonStyle}
             onClick={handleNextShape}
-            disabled={currentShapeIndex === shapes.length - 1}
+            disabled={currentShapeIndex >= shapes.length - 1}
           >
-            {currentShapeIndex === shapes.length - 1 ? '' : currentShapeIndex + 2}
+            {currentShapeIndex === -1 ? '1' : currentShapeIndex >= shapes.length - 1 ? '' : currentShapeIndex + 2}
           </button>
         </div>
       )}
