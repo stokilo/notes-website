@@ -79,25 +79,76 @@ const SwiperImageCarousel = ({ images = [] }) => {
         tabIndex={-1}
         style={{ width: '100%', maxWidth: 800, margin: '0 auto', position: 'relative' }}
       >
-        <button
-          onClick={toggleView}
-          style={{
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            background: 'rgba(0,0,0,0.5)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '50%',
-            padding: 10,
-            cursor: 'pointer',
-            zIndex: 10,
-          }}
-          aria-label="Switch to carousel view"
-        >
-          <FaImages size={18} />
-        </button>
-        <ImageMetadata imageUrl={images[currentImageIndex].src} />
+        <div style={{ 
+          position: 'absolute', 
+          top: 16, 
+          right: 16, 
+          display: 'flex', 
+          gap: '8px',
+          zIndex: 10 
+        }}>
+          <button
+            onClick={() => setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)}
+            style={{
+              background: 'rgba(0,0,0,0.5)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              padding: 10,
+              cursor: 'pointer',
+            }}
+            aria-label="Previous image"
+          >
+            <FaChevronLeft size={18} />
+          </button>
+          <button
+            onClick={() => setCurrentImageIndex((prev) => (prev + 1) % images.length)}
+            style={{
+              background: 'rgba(0,0,0,0.5)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              padding: 10,
+              cursor: 'pointer',
+            }}
+            aria-label="Next image"
+          >
+            <FaChevronRight size={18} />
+          </button>
+          <button
+            onClick={toggleView}
+            style={{
+              background: 'rgba(0,0,0,0.5)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              padding: 10,
+              cursor: 'pointer',
+            }}
+            aria-label="Switch to carousel view"
+          >
+            <FaImages size={18} />
+          </button>
+        </div>
+        <div style={{ marginTop: '60px' }}>
+          <ImageMetadata 
+            key={currentImageIndex}
+            imageUrl={images[currentImageIndex].src} 
+          />
+        </div>
+        <div style={{
+          position: 'absolute',
+          bottom: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          color: 'white',
+          background: 'rgba(0,0,0,0.7)',
+          padding: '8px 16px',
+          borderRadius: 20,
+          fontSize: '14px',
+        }}>
+          {currentImageIndex + 1} / {images.length}
+        </div>
       </div>
     );
   }
