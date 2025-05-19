@@ -49,9 +49,9 @@ const SwiperImageCarousel = ({ images = [] }) => {
 
   const focusImage = () => {
     setTimeout(() => {
-      const image = document.querySelector('[data-image-element]');
-      if (image) {
-        image.focus();
+      const input = document.querySelector('[data-focus-input]');
+      if (input) {
+        input.focus();
       }
     }, 100);
   };
@@ -146,210 +146,226 @@ const SwiperImageCarousel = ({ images = [] }) => {
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: 800, margin: '0 auto' }}>
-      <Swiper
-        modules={[Navigation, Pagination]}
-        navigation
-        pagination={{ clickable: true }}
-        spaceBetween={20}
-        slidesPerView={1}
-        style={{ borderRadius: 12, overflow: 'hidden' }}
-        onSlideChange={handleSlideChange}
-        initialSlide={currentImageIndex}
-      >
-        {images.map((img, idx) => (
-          <SwiperSlide key={img.src} style={{ position: 'relative', background: '#000' }}>
-            <img
-              ref={imageRef}
-              data-image-element
-              src={img.src}
-              alt={img.alt}
-              style={{ width: '100%', height: 400, objectFit: 'contain', background: '#000' }}
-              tabIndex={0}
-            />
-            <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: '8px' }}>
+    <>
+      <div style={{ width: '100%', maxWidth: 800, margin: '0 auto' }}>
+        <Swiper
+          modules={[Navigation, Pagination]}
+          navigation
+          pagination={{ clickable: true }}
+          spaceBetween={20}
+          slidesPerView={1}
+          style={{ borderRadius: 12, overflow: 'hidden' }}
+          onSlideChange={handleSlideChange}
+          initialSlide={currentImageIndex}
+        >
+          {images.map((img, idx) => (
+            <SwiperSlide key={img.src} style={{ position: 'relative', background: '#000' }}>
+              <img
+                ref={imageRef}
+                src={img.src}
+                alt={img.alt}
+                style={{ width: '100%', height: 400, objectFit: 'contain', background: '#000' }}
+              />
+              <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => openFullscreen(idx)}
+                  style={{
+                    background: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    padding: 10,
+                    cursor: 'pointer',
+                    zIndex: 10,
+                  }}
+                  aria-label="Full screen"
+                >
+                  <FaExpand size={18} />
+                </button>
+                <button
+                  onClick={toggleView}
+                  style={{
+                    background: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    padding: 10,
+                    cursor: 'pointer',
+                    zIndex: 10,
+                  }}
+                  aria-label="View image metadata"
+                >
+                  <FaSearch size={18} />
+                </button>
+              </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+        {isFullscreen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(0,0,0,0.97)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onClick={closeFullscreen}
+          >
+            <div 
+              style={{ 
+                position: 'relative', 
+                width: '100%', 
+                height: '100%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                padding: '20px'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {showFullscreenMetadata ? (
+                <div style={{ 
+                  width: '100%',
+                  height: '100%',
+                  maxWidth: '1200px',
+                  maxHeight: '90vh',
+                  overflow: 'auto',
+                  background: '#000',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
+                  color: 'white'
+                }}>
+                  <ImageMetadata imageUrl={images[fullscreenIndex].src} />
+                </div>
+              ) : (
+                <img
+                  data-image-element
+                  src={images[fullscreenIndex].src}
+                  alt={images[fullscreenIndex].alt}
+                  style={{
+                    maxWidth: '95vw',
+                    maxHeight: '95vh',
+                    objectFit: 'contain',
+                    boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
+                    background: '#000',
+                  }}
+                  tabIndex={0}
+                />
+              )}
               <button
-                onClick={() => openFullscreen(idx)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateFullscreen('prev');
+                  focusImage();
+                }}
                 style={{
-                  background: 'rgba(0,0,0,0.5)',
+                  position: 'absolute',
+                  left: 20,
+                  background: 'rgba(0,0,0,0.7)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '50%',
-                  padding: 10,
+                  padding: 14,
                   cursor: 'pointer',
-                  zIndex: 10,
+                  zIndex: 10000,
                 }}
-                aria-label="Full screen"
+                aria-label="Previous image"
               >
-                <FaExpand size={18} />
+                <FaChevronLeft size={24} />
               </button>
               <button
-                onClick={toggleView}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateFullscreen('next');
+                  focusImage();
+                }}
                 style={{
-                  background: 'rgba(0,0,0,0.5)',
+                  position: 'absolute',
+                  right: 20,
+                  background: 'rgba(0,0,0,0.7)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '50%',
-                  padding: 10,
+                  padding: 14,
                   cursor: 'pointer',
-                  zIndex: 10,
+                  zIndex: 10000,
                 }}
-                aria-label="View image metadata"
+                aria-label="Next image"
               >
-                <FaSearch size={18} />
+                <FaChevronRight size={24} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeFullscreen(e);
+                  focusImage();
+                }}
+                style={{
+                  position: 'fixed',
+                  top: 32,
+                  right: 32,
+                  background: 'rgba(0,0,0,0.7)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  padding: 14,
+                  cursor: 'pointer',
+                  zIndex: 10000,
+                }}
+                aria-label="Close full screen"
+              >
+                <FaTimes size={22} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFullscreenView(e);
+                  focusImage();
+                }}
+                style={{
+                  position: 'fixed',
+                  top: 32,
+                  right: 100,
+                  background: 'rgba(0,0,0,0.7)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  padding: 14,
+                  cursor: 'pointer',
+                  zIndex: 10000,
+                }}
+                aria-label={showFullscreenMetadata ? "Switch to image view" : "View image metadata"}
+              >
+                {showFullscreenMetadata ? <FaImages size={22} /> : <FaSearch size={22} />}
               </button>
             </div>
-          </SwiperSlide>
-        ))}
-      </Swiper>
-      {isFullscreen && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(0,0,0,0.97)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          onClick={closeFullscreen}
-        >
-          <div 
-            style={{ 
-              position: 'relative', 
-              width: '100%', 
-              height: '100%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              padding: '20px'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {showFullscreenMetadata ? (
-              <div style={{ 
-                width: '100%',
-                height: '100%',
-                maxWidth: '1200px',
-                maxHeight: '90vh',
-                overflow: 'auto',
-                background: '#000',
-                padding: '20px',
-                borderRadius: '8px',
-                boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
-                color: 'white'
-              }}>
-                <ImageMetadata imageUrl={images[fullscreenIndex].src} />
-              </div>
-            ) : (
-              <img
-                data-image-element
-                src={images[fullscreenIndex].src}
-                alt={images[fullscreenIndex].alt}
-                style={{
-                  maxWidth: '95vw',
-                  maxHeight: '95vh',
-                  objectFit: 'contain',
-                  boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
-                  background: '#000',
-                }}
-                tabIndex={0}
-              />
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigateFullscreen('prev');
-                focusImage();
-              }}
-              style={{
-                position: 'absolute',
-                left: 20,
-                background: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                padding: 14,
-                cursor: 'pointer',
-                zIndex: 10000,
-              }}
-              aria-label="Previous image"
-            >
-              <FaChevronLeft size={24} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigateFullscreen('next');
-                focusImage();
-              }}
-              style={{
-                position: 'absolute',
-                right: 20,
-                background: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                padding: 14,
-                cursor: 'pointer',
-                zIndex: 10000,
-              }}
-              aria-label="Next image"
-            >
-              <FaChevronRight size={24} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                closeFullscreen(e);
-                focusImage();
-              }}
-              style={{
-                position: 'fixed',
-                top: 32,
-                right: 32,
-                background: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                padding: 14,
-                cursor: 'pointer',
-                zIndex: 10000,
-              }}
-              aria-label="Close full screen"
-            >
-              <FaTimes size={22} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleFullscreenView(e);
-                focusImage();
-              }}
-              style={{
-                position: 'fixed',
-                top: 32,
-                right: 100,
-                background: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                padding: 14,
-                cursor: 'pointer',
-                zIndex: 10000,
-              }}
-              aria-label={showFullscreenMetadata ? "Switch to image view" : "View image metadata"}
-            >
-              {showFullscreenMetadata ? <FaImages size={22} /> : <FaSearch size={22} />}
-            </button>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+      <input
+        type="text"
+        data-focus-input
+        style={{
+          position: 'absolute',
+          opacity: 0,
+          pointerEvents: 'none',
+          height: 0,
+          width: 0,
+          padding: 0,
+          border: 'none',
+          margin: 0,
+        }}
+        aria-hidden="true"
+        tabIndex={0}
+      />
+    </>
   );
 };
 
