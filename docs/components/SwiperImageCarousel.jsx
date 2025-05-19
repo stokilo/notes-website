@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import PropTypes from 'prop-types';
@@ -14,6 +14,8 @@ const SwiperImageCarousel = ({ images = [] }) => {
   const [showMetadata, setShowMetadata] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showFullscreenMetadata, setShowFullscreenMetadata] = useState(false);
+  const prevButtonRef = useRef(null);
+  const nextButtonRef = useRef(null);
 
   useEffect(() => {
     const handleEscape = (e) => {
@@ -48,6 +50,15 @@ const SwiperImageCarousel = ({ images = [] }) => {
 
   const toggleView = () => {
     setShowMetadata(!showMetadata);
+    setTimeout(() => {
+      if (currentImageIndex === 0) {
+        nextButtonRef.current?.focus();
+      } else if (currentImageIndex === images.length - 1) {
+        prevButtonRef.current?.focus();
+      } else {
+        prevButtonRef.current?.focus();
+      }
+    }, 100);
   };
 
   const handleSlideChange = (swiper) => {
@@ -80,6 +91,42 @@ const SwiperImageCarousel = ({ images = [] }) => {
         >
           <FaImages size={18} />
         </button>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px' }}>
+          <button
+            ref={prevButtonRef}
+            onClick={() => {
+              setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+            }}
+            disabled={currentImageIndex === 0}
+            style={{
+              padding: '8px 16px',
+              background: currentImageIndex === 0 ? '#ccc' : '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: currentImageIndex === 0 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Previous
+          </button>
+          <button
+            ref={nextButtonRef}
+            onClick={() => {
+              setCurrentImageIndex((prev) => (prev + 1) % images.length);
+            }}
+            disabled={currentImageIndex === images.length - 1}
+            style={{
+              padding: '8px 16px',
+              background: currentImageIndex === images.length - 1 ? '#ccc' : '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: currentImageIndex === images.length - 1 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Next
+          </button>
+        </div>
         <ImageMetadata imageUrl={images[currentImageIndex].src} />
       </div>
     );
