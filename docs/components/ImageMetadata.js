@@ -251,21 +251,35 @@ const ImageMetadata = ({ imageUrl }) => {
     loadImageMetadata();
   }, [imageUrl]);
 
+  useEffect(() => {
+    if (shapes && shapes.length > 0) {
+      showOriginalImage();
+    }
+  }, [shapes]);
+
   const handleNextShape = () => {
     if (shapes && shapes.length > 0) {
-      const nextIndex = (currentShapeIndex + 1) % shapes.length;
-      console.log('Navigating to next shape:', shapes[nextIndex]);
-      setCurrentShapeIndex(nextIndex);
-      zoomToShape(shapes[nextIndex]);
+      const nextIndex = currentShapeIndex + 1;
+      if (nextIndex < shapes.length) {
+        console.log('Navigating to next shape:', shapes[nextIndex]);
+        setCurrentShapeIndex(nextIndex);
+        zoomToShape(shapes[nextIndex]);
+      }
     }
   };
 
   const handlePreviousShape = () => {
     if (shapes && shapes.length > 0) {
-      const prevIndex = (currentShapeIndex - 1 + shapes.length) % shapes.length;
-      console.log('Navigating to previous shape:', shapes[prevIndex]);
-      setCurrentShapeIndex(prevIndex);
-      zoomToShape(shapes[prevIndex]);
+      const prevIndex = currentShapeIndex - 1;
+      if (prevIndex >= 0) {
+        console.log('Navigating to previous shape:', shapes[prevIndex]);
+        setCurrentShapeIndex(prevIndex);
+        zoomToShape(shapes[prevIndex]);
+      } else if (prevIndex === -1) {
+        // Special case: when going from original view to first shape
+        setCurrentShapeIndex(0);
+        zoomToShape(shapes[0]);
+      }
     }
   };
 
@@ -291,12 +305,6 @@ const ImageMetadata = ({ imageUrl }) => {
     setZoom(newZoom);
     setPosition({ x: newX, y: newY });
   };
-
-  useEffect(() => {
-    if (shapes && shapes.length > 0) {
-      zoomToShape(shapes[0]);
-    }
-  }, [shapes]);
 
   // Add function to show original image
   const showOriginalImage = () => {
@@ -426,14 +434,14 @@ const ImageMetadata = ({ imageUrl }) => {
         )}
       </div>
       
-      {shapes && shapes.length > 0 && (
+      {shapes && (
         <div style={controlsStyle}>
           <button
-            style={currentShapeIndex === 0 ? buttonDisabledStyle : buttonStyle}
+            style={!shapes.length ? buttonDisabledStyle : buttonStyle}
             onClick={handlePreviousShape}
-            disabled={currentShapeIndex === 0}
+            disabled={!shapes.length}
           >
-            {currentShapeIndex + 1}
+            {shapes.length > 0 ? (currentShapeIndex === 0 ? "1" : currentShapeIndex + 1) : ""}
           </button>
           <button
             style={middleButtonStyle}
@@ -442,11 +450,11 @@ const ImageMetadata = ({ imageUrl }) => {
             Show Original
           </button>
           <button
-            style={currentShapeIndex === shapes.length - 1 ? buttonDisabledStyle : buttonStyle}
+            style={!shapes.length || currentShapeIndex === shapes.length - 1 ? buttonDisabledStyle : buttonStyle}
             onClick={handleNextShape}
-            disabled={currentShapeIndex === shapes.length - 1}
+            disabled={!shapes.length || currentShapeIndex === shapes.length - 1}
           >
-            {currentShapeIndex + 2}
+            {shapes.length > 0 && currentShapeIndex < shapes.length - 1 ? currentShapeIndex + 2 : ""}
           </button>
         </div>
       )}
