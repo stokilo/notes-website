@@ -89,6 +89,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
         slidesPerView={1}
         style={{ borderRadius: 12, overflow: 'hidden' }}
         onSlideChange={handleSlideChange}
+        initialSlide={currentImageIndex}
       >
         {images.map((img, idx) => (
           <SwiperSlide key={img.src} style={{ position: 'relative', background: '#000' }}>
