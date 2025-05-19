@@ -45,7 +45,7 @@ Realm config details: [Realm](Realm.html)
 **Spring Security**
 
 <ShikiCodeBlock language="java" theme="catppuccin-frappe"
-                source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/SecurityConfig.java" />
+                source="https://raw.githubusercontent.com/stokilo/notes-website/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/SecurityConfig.java" />
 
 It looks for the realm_access.roles claim and scope claim (which is a space-separated string).
 
@@ -56,12 +56,12 @@ It also extracts client-specific roles from resource_access.client_id.roles and 
 **Application properties**
 
 <ShikiCodeBlock language="properties" theme="catppuccin-frappe"
-                source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/resources/application.properties" />
+                source="https://raw.githubusercontent.com/stokilo/notes-website/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/resources/application.properties" />
 
 
 **Controller**
 <ShikiCodeBlock language="java" theme="catppuccin-frappe"
-                source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/HelloController.java" />
+                source="https://raw.githubusercontent.com/stokilo/notes-website/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/HelloController.java" />
 
 
 **Testing**
