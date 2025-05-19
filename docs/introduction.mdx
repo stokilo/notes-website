@@ -22,16 +22,28 @@ username: admin
 
 password: admin
 
-import ImageMetadata from "./components/ImageMetadata";
-import SwiperImageCarousel from "./components/SwiperImageCarousel";
+**Key Concepts Refresher:**
 
-[//]: # (<ImageMetadata imageUrl="/img/screenshot_bjO8o6gf.png"  />)
+| Component              | Description                                                                                                                       |
+|------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| **Authorization Server (AS)** | **Keycloak** itself. Manages users, clients, roles, and issues tokens.                                                             |
+| **Resource Server (RS)**      | An API or service that protects resources and requires a valid access token to grant access.                                     |
+| **Client**                    | An application that requests access tokens from the Authorization Server (Keycloak) to access resources on a Resource Server, often on behalf of a user. |
+| **Resource Owner**            | The user who grants permission to the client.                                                                                  |
 
 
-<SwiperImageCarousel
-  images={[
-    { src: '/img/screenshot_11GNc5dw9C.png', alt: 'Screenshot 1' },
-    { src: '/img/screenshot_22wMguZW.png', alt: 'Screenshot 2' },
-    { src: '/img/screenshot_OSlqm4BB.png', alt: 'Screenshot 2' },
-  ]} />
+[//]: # (import SwiperImageCarousel from "./components/SwiperImageCarousel";)
+
+[//]: # ()
+[//]: # (<SwiperImageCarousel)
+
+[//]: # (  images={[)
+
+[//]: # (    { src: '/img/screenshot_11GNc5dw9C.png', alt: 'Screenshot 1' },)
+
+[//]: # (    { src: '/img/screenshot_22wMguZW.png', alt: 'Screenshot 2' },)
+
+[//]: # (    { src: '/img/screenshot_OSlqm4BB.png', alt: 'Screenshot 2' },)
+
+[//]: # (  ]} />)
 
