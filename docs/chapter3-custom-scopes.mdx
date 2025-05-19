@@ -80,3 +80,8 @@ It also extracts client-specific roles from resource_access.client_id.roles and 
 **product:read** is a "Default client scope" for spring-boot-app in Keycloak and will be added to the token automatically.
 
 **product:write** must be requested explicitly.
+
+
+**Default Client Scopes:** These scopes are always included in the access token issued for this client, regardless of whether the client explicitly requests them in the /auth request's scope parameter. However, they are still subject to user consent if consent is required. openid is typically a mandatory default.
+
+**Optional Client Scopes:** These scopes are only included in the access token if the client explicitly requests them using the scope parameter during the authorization flow AND the user consents (if consent is required).
