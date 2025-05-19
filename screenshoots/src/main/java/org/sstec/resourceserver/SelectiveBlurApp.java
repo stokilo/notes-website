@@ -1486,12 +1486,8 @@ public class SelectiveBlurApp extends JFrame {
             saveSelectedOnlyButton.setEnabled(!selections.isEmpty());
             updateButtonStates();
             
-            // Set window size based on image
-            Dimension newSize = new Dimension(
-                Math.max(800, originalImage.getWidth() + 50),
-                Math.max(600, originalImage.getHeight() + 100)
-            );
-            setSize(newSize);
+            // Maximize the window
+            setExtendedState(JFrame.MAXIMIZED_BOTH);
             setLocationRelativeTo(null);
         }
     }
