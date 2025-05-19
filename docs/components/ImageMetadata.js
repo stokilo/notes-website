@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 
 const ImageMetadata = ({ imageUrl }) => {
-  const [currentShapeIndex, setCurrentShapeIndex] = useState(0);
+  const [currentShapeIndex, setCurrentShapeIndex] = useState(-1);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [shapes, setShapes] = useState([]);
@@ -422,16 +422,6 @@ const ImageMetadata = ({ imageUrl }) => {
           alt="Image with shapes"
           style={imageStyle}
         />
-        {shapes && shapes.length > 0 && (
-          <div style={shapeOverlayStyle}>
-            {shapes.map((shape, index) => (
-              <div
-                key={index}
-                style={shapeStyle(shape, index === currentShapeIndex)}
-              />
-            ))}
-          </div>
-        )}
       </div>
       
       {shapes && (
