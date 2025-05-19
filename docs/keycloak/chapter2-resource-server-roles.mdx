@@ -3,9 +3,9 @@ sidebar_label: 'Resource Server Roles'
 sidebar_position: 102
 ---
 
-import SwiperImageCarousel from './components/SwiperImageCarousel';
-import ShikiCodeBlock from './components/ShikiCodeBlock';
-import Highlight from './components/Highlight';
+import SwiperImageCarousel from './../components/SwiperImageCarousel';
+import ShikiCodeBlock from './../components/ShikiCodeBlock';
+import Highlight from './../components/Highlight';
 
 # Resouce Server With Roles
 
@@ -30,19 +30,19 @@ Realm roles are **global to the realm** and **can be assigned to any user**.
 
 <SwiperImageCarousel
   images={[
-    { src: '/img/chapter2/screenshot_112n7cPJ5.png', alt: 'Screenshot 1' },
-    { src: '/img/chapter2/screenshot_229oH2ud3.png', alt: 'Screenshot 2' },
-    { src: '/img/chapter2/screenshot_33VkrSUSs.png', alt: 'Screenshot 3' },
+    { src: '/img/keycloak/chapter2/screenshot_112n7cPJ5.png', alt: 'Screenshot 1' },
+    { src: '/img/keycloak/chapter2/screenshot_229oH2ud3.png', alt: 'Screenshot 2' },
+    { src: '/img/keycloak/chapter2/screenshot_33VkrSUSs.png', alt: 'Screenshot 3' },
   ]} />
 
 Add assign to the existing **testuser**
 
 <SwiperImageCarousel
   images={[
-    { src: '/img/chapter2/screenshot_11WBpbtsMc.png', alt: 'Screenshot 1'},
-    { src: '/img/chapter2/screenshot_22U7QmO3Yb.png', alt: 'Screenshot 2' },
-    { src: '/img/chapter2/screenshot_33LlQEZnuh.png', alt: 'Screenshot 3' },
-    { src: '/img/chapter2/screenshot_44E64SYD6V.png', alt: 'Screenshot 4' },
+    { src: '/img/keycloak/chapter2/screenshot_11WBpbtsMc.png', alt: 'Screenshot 1'},
+    { src: '/img/keycloak/chapter2/screenshot_22U7QmO3Yb.png', alt: 'Screenshot 2' },
+    { src: '/img/keycloak/chapter2/screenshot_33LlQEZnuh.png', alt: 'Screenshot 3' },
+    { src: '/img/keycloak/chapter2/screenshot_44E64SYD6V.png', alt: 'Screenshot 4' },
   ]} />
 
 **Map Realm Roles into the Access Token**
@@ -51,12 +51,12 @@ By default, realm roles are not automatically included in the access token. We n
 
 <SwiperImageCarousel
   images={[
-    { src: '/img/chapter2/screenshot_11ofhTmq3.png', alt: 'Screenshot 1'},
-    { src: '/img/chapter2/screenshot_22wBE7B2q.png', alt: 'Screenshot 2'},
-    { src: '/img/chapter2/screenshot_33GFXL3rh.png', alt: 'Screenshot 3'},
-    { src: '/img/chapter2/screenshot_447hGyxz0.png', alt: 'Screenshot 4'},
-    { src: '/img/chapter2/screenshot_551LlMYaB.png', alt: 'Screenshot 5'},
-    { src: '/img/chapter2/screenshot_66ah4Bcul.png', alt: 'Screenshot 6'},
+    { src: '/img/keycloak/chapter2/screenshot_11ofhTmq3.png', alt: 'Screenshot 1'},
+    { src: '/img/keycloak/chapter2/screenshot_22wBE7B2q.png', alt: 'Screenshot 2'},
+    { src: '/img/keycloak/chapter2/screenshot_33GFXL3rh.png', alt: 'Screenshot 3'},
+    { src: '/img/keycloak/chapter2/screenshot_447hGyxz0.png', alt: 'Screenshot 4'},
+    { src: '/img/keycloak/chapter2/screenshot_551LlMYaB.png', alt: 'Screenshot 5'},
+    { src: '/img/keycloak/chapter2/screenshot_66ah4Bcul.png', alt: 'Screenshot 6'},
   ]} />
 
 | Setting                | Value / Description                                                                                                                                      |
@@ -90,9 +90,9 @@ With current configuration when you attempt to call public endpoint you fill get
 
 <SwiperImageCarousel
   images={[
-    { src: '/img/chapter2/screenshot_11vJgxQRb.png', alt: 'Screenshot 1'},
-    { src: '/img/chapter2/screenshot_223OAzyEu.png', alt: 'Screenshot 2'},
-    { src: '/img/chapter2/screenshot_33QEsh8BBm.png', alt: 'Screenshot 3'},
+    { src: '/img/keycloak/chapter2/screenshot_11vJgxQRb.png', alt: 'Screenshot 1'},
+    { src: '/img/keycloak/chapter2/screenshot_223OAzyEu.png', alt: 'Screenshot 2'},
+    { src: '/img/keycloak/chapter2/screenshot_33QEsh8BBm.png', alt: 'Screenshot 3'},
   ]} />
 
 This is caused by the nested structure of the claim **realm_access.roles**
@@ -111,8 +111,8 @@ What it does is really **duplicating** claim and you will have two claims with s
 
 <SwiperImageCarousel
   images={[
-    { src: '/img/chapter2/screenshot_11ztoo2hl.png', alt: 'Screenshot 1'},
-    { src: '/img/chapter2/screenshot_33rfDZwKH.png', alt: 'Screenshot 2'},
+    { src: '/img/keycloak/chapter2/screenshot_11ztoo2hl.png', alt: 'Screenshot 1'},
+    { src: '/img/keycloak/chapter2/screenshot_33rfDZwKH.png', alt: 'Screenshot 2'},
   ]} />
 
 After the change, this fix Spring JwtAuthenticationConverter claims mapping.
@@ -127,8 +127,8 @@ You can get admin and user endpoint data with this approach.
 
 <SwiperImageCarousel
   images={[
-    { src: '/img/chapter2/screenshot_11kklRb4k.png', alt: 'Screenshot 1'},
-    { src: '/img/chapter2/screenshot_22Rn3lbDb.png', alt: 'Screenshot 2'},
+    { src: '/img/keycloak/chapter2/screenshot_11kklRb4k.png', alt: 'Screenshot 1'},
+    { src: '/img/keycloak/chapter2/screenshot_22Rn3lbDb.png', alt: 'Screenshot 2'},
   ]} />
 
 you can notice scope claim in the JWT

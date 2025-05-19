@@ -11,7 +11,7 @@ sidebar_position: 1
 
 **Running Keycloak docker container**
 
-import ShikiCodeBlock from "./components/ShikiCodeBlock";
+import ShikiCodeBlock from "./../components/ShikiCodeBlock";
 
 <ShikiCodeBlock language="shell" theme="catppuccin-frappe"
                 code={"docker run -p 8180:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:latest start-dev"} />
@@ -43,11 +43,11 @@ password: admin
 | **Bearer-only**  | For clients that only act as **Resource Servers**. They never initiate login flows themselves but only verify bearer tokens. Useful for securing APIs. Disables all options for obtaining tokens.                            |
 | **Note**         | If your Spring Boot app is only a **Resource Server**, its corresponding client in Keycloak should be set to **bearer-only**.                                                                                   |
 
-import SwiperImageCarousel from "./components/SwiperImageCarousel";
+import SwiperImageCarousel from "./../components/SwiperImageCarousel";
 
 <SwiperImageCarousel
   images={[
-    { src: '/img/screenshot_11GNc5dw9C.png', alt: 'Screenshot 1' },
-    { src: '/img/screenshot_22wMguZW.png', alt: 'Screenshot 2' },
-    { src: '/img/screenshot_OSlqm4BB.png', alt: 'Screenshot 2' },
+    { src: '/img/keycloak/screenshot_11GNc5dw9C.png', alt: 'Screenshot 1' },
+    { src: '/img/keycloak/screenshot_22wMguZW.png', alt: 'Screenshot 2' },
+    { src: '/img/keycloak/screenshot_OSlqm4BB.png', alt: 'Screenshot 2' },
   ]} />
