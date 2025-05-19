@@ -44,14 +44,22 @@ Realm config details: [Realm](Realm.html)
 
 **Spring Security**
 
-
 <ShikiCodeBlock language="java" theme="catppuccin-frappe"
                 source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/SecurityConfig.java" />
 
+It looks for the realm_access.roles claim and scope claim (which is a space-separated string).
 
+It prefixes realm roles with ROLE_ and scopes with SCOPE_. This is a common convention for Spring Security.
+
+It also extracts client-specific roles from resource_access.client_id.roles and prefixes them (e.g., ROLE_CLIENT_). You might need to adjust the clientId if it's different or make it configurable.
 
 **Application properties**
 
 <ShikiCodeBlock language="properties" theme="catppuccin-frappe"
                 source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/chapter3-custom-scopes/src/main/resources/application.properties" />
+
+
+**Controller**
+<ShikiCodeBlock language="java" theme="catppuccin-frappe"
+                source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/HelloController.java" />
 
