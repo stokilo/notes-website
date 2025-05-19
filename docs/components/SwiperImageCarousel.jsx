@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import { FaExpand, FaTimes, FaChevronLeft, FaChevronRight, FaInfoCircle, FaImages } from 'react-icons/fa';
+import { FaExpand, FaTimes, FaChevronLeft, FaChevronRight, FaCode, FaImages } from 'react-icons/fa';
 import ImageMetadata from './ImageMetadata';
 
 const SwiperImageCarousel = ({ images = [] }) => {
@@ -127,7 +127,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
                 }}
                 aria-label="View image metadata"
               >
-                <FaInfoCircle size={18} />
+                <FaCode size={18} />
               </button>
             </div>
           </SwiperSlide>
