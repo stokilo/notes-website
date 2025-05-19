@@ -1585,16 +1585,38 @@ public class SelectiveBlurApp extends JFrame {
             }
 
             try {
-                // Create a buffered image of the panel's size
+                // Create a buffered image of the original image size
                 BufferedImage capture = new BufferedImage(
-                    imagePanel.getWidth(),
-                    imagePanel.getHeight(),
+                    originalImage.getWidth(),
+                    originalImage.getHeight(),
                     BufferedImage.TYPE_INT_ARGB
                 );
                 
-                // Paint the panel to the buffered image
+                // Paint the processed image to the buffered image
                 Graphics2D g2d = capture.createGraphics();
-                imagePanel.paint(g2d);
+                
+                // Enable high-quality rendering
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+                
+                // Draw the processed image
+                g2d.drawImage(processedImage, 0, 0, null);
+                
+                // Draw shapes on top of the processed image
+                for (int i = 0; i < selections.size(); i++) {
+                    Rectangle rect = selections.get(i);
+                    String shape = imagePanel.getShapeForSelection(i);
+                    String borderStyle = imagePanel.getBorderStyleForSelection(i);
+                    String borderColor = imagePanel.getBorderColorForSelection(i);
+                    drawShapeWithStyle(g2d, rect, shape, borderStyle, borderColor);
+                    
+                    // Draw pill
+                    int position = imagePanel.getPillPositions().getOrDefault(i, 0);
+                    String pillStyle = imagePanel.getPillStyleForSelection(i);
+                    drawPillWithStyle(g2d, rect, i, position, pillStyle);
+                }
+                
                 g2d.dispose();
 
                 // Create metadata for shapes
