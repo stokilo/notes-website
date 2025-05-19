@@ -27,7 +27,7 @@ import ShikiCodeBlock from "./components/ShikiCodeBlock";
   `
                 }
 />
-<ShikiCodeBlock language="properties" theme="catppuccin-frappe"
+<ShikiCodeBlock language="java" theme="catppuccin-frappe"
                 code={
                   `
 http.oauth2Login(Customizer.withDefaults());
@@ -37,7 +37,7 @@ http.oauth2Login(Customizer.withDefaults());
 />
 
 
-How it reflects in security: Authentication is delegated to Keycloak. Spring Security handles the OIDC flow, creates a SecurityContext with an **OAuth2AuthenticationToken** (containing an OidcUser), and manages the session.
+**How it reflects in security**: Authentication is delegated to Keycloak. Spring Security handles the OIDC flow, creates a SecurityContext with an **OAuth2AuthenticationToken** (containing an OidcUser), and manages the session.
 
 Authorization can then use roles extracted from the token.
 
@@ -64,7 +64,7 @@ spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:8080/realm
                 }
 />
 
-  <ShikiCodeBlock language="properties" theme="catppuccin-frappe"
+  <ShikiCodeBlock language="java" theme="catppuccin-frappe"
                 code={
   `
 http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
@@ -73,7 +73,126 @@ http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
   }
   />
 
-How it reflects in security: Spring Security sets up a filter to intercept incoming requests, extract the Bearer token, validate its signature against Keycloak's public keys (fetched from JWKS URI), check issuer, expiration, and optionally audience.
+**How it reflects in security**: Spring Security sets up a filter to intercept incoming requests, extract the Bearer token, validate its signature against Keycloak's public keys (fetched from JWKS URI), check issuer, expiration, and optionally audience.
 
 If valid, it creates a SecurityContext with a **JwtAuthenticationToken**. No session is created by default for these requests; it's stateless.
 
+**Scenario 3: Spring Boot as Both OAuth2 Client and Resource Server**
+
+| Item                   | Description                                                                                                                                                                                                 |
+|------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Description**        | Your Spring Boot application has both a user-facing web part (requiring login via Keycloak, like Scenario 1) **and** exposes APIs that can be called with a Bearer token (like Scenario 2).               |
+| **Keycloak's Role**    | Authorization Server                                                                                                                                                                                        |
+| **Spring Boot's Role** | Both OAuth2 Client and Resource Server                                                                                                                                                                      |
+| **Use Case**           | A monolithic application that serves a UI and also has an API for a mobile app or SPA frontend.                                                                                                             |
+
+<ShikiCodeBlock language="properties" theme="catppuccin-frappe"
+                code={
+                  `
+# For oauth2Login (Client part)
+spring.security.oauth2.client.registration.keycloak.client-id=my-spring-client
+spring.security.oauth2.client.registration.keycloak.client-secret=...
+spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email,roles
+spring.security.oauth2.client.provider.keycloak.issuer-uri=http://localhost:8080/realms/my-spring-app-realm
+
+# For oauth2ResourceServer (Resource Server part)
+spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:8080/realms/my-spring-app-realm
+# spring.security.oauth2.resourceserver.jwt.audiences=my-spring-client # or other audience
+`
+                }
+/>
+
+<ShikiCodeBlock language="java" theme="catppuccin-frappe"
+                code={
+                  `
+// Example: API paths use JWT, web paths use session after OIDC login
+@Bean
+public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+  http
+      .securityMatcher("/api/!**") // Apply this filter chain only to /api/!** paths
+      .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+      .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+  return http.build();
+}
+
+@Bean
+public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
+  http
+     .authorizeHttpRequests(authorize -> authorize
+              .requestMatchers("/","/login","/public/!**").permitAll()
+              .anyRequest().authenticated()
+          )
+          .oauth2Login(Customizer.withDefaults());
+      return http.build();
+  }
+`
+                }
+/>
+
+
+**How it reflects in security**: Two distinct security mechanisms co-exist. /api/** paths expect Bearer tokens and are stateless. Other paths might use session-based security after an OIDC login.
+
+
+**Scenario 4: Spring Boot as a Client for Service-to-Service Communication (Client Credentials Grant)**
+
+| Item                           | Description                                                                                                                                                                                                                  |
+|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Description**                | Your Spring Boot application is a backend service that needs to call another Resource Server (which could be another Spring Boot app or any API secured by Keycloak). It authenticates itself to Keycloak using its own credentials (client ID and secret), not on behalf of a user. |
+| **Keycloak's Role**            | Authorization Server                                                                                                                                                                                                        |
+| **Spring Boot's Role (this app)** | Client using **Client Credentials Grant**                                                                                                                                                                                     |
+| **Spring Boot's Role (called app)** | Resource Server (like Scenario 2)                                                                                                                                                                                              |
+| **Use Case**                   | Microservice-to-microservice communication where no user context is involved in the direct call.                                                                                                                            |
+
+<ShikiCodeBlock language="properties" theme="catppuccin-frappe"
+                code={
+                  `
+spring.security.oauth2.client.registration.keycloak-service.provider=keycloak-provider-cc
+spring.security.oauth2.client.registration.keycloak-service.client-id=my-backend-service
+spring.security.oauth2.client.registration.keycloak-service.client-secret=YOUR_SERVICE_CLIENT_SECRET
+spring.security.oauth2.client.registration.keycloak-service.authorization-grant-type=client_credentials
+# Optional: if you need to specify scopes for the token
+# spring.security.oauth2.client.registration.keycloak-service.scope=api_access
+
+spring.security.oauth2.client.provider.keycloak-provider-cc.token-uri=\${spring.security.oauth2.client.provider.keycloak.issuer-uri}/protocol/openid-connect/token
+# The issuer-uri might be defined elsewhere for other client registrations
+# spring.security.oauth2.client.provider.keycloak.issuer-uri=http://localhost:8080/realms/my-spring-app-realm
+`
+                }
+/>
+
+<ShikiCodeBlock language="java" theme="catppuccin-frappe"
+                code={
+                  `
+@Bean
+public OAuth2AuthorizedClientManager authorizedClientManager(
+        ClientRegistrationRepository clientRegistrationRepository,
+        OAuth2AuthorizedClientRepository authorizedClientRepository) {
+
+        OAuth2AuthorizedClientProvider authorizedClientProvider =
+                OAuth2AuthorizedClientProviderBuilder.builder()
+                        .clientCredentials()
+                        .build();
+
+        DefaultOAuth2AuthorizedClientManager authorizedClientManager =
+                new DefaultOAuth2AuthorizedClientManager(
+                        clientRegistrationRepository, authorizedClientRepository);
+        authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
+
+        return authorizedClientManager;
+    }
+
+    // You would then inject OAuth2AuthorizedClientManager and use it to get tokens
+    // Example in a service:
+    // OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest
+    //         .withClientRegistrationId("keycloak-service")
+    //         .principal("my-backend-service") // Can be any string for client_credentials
+    //         .build();
+    // OAuth2AuthorizedClient authorizedClient = this.authorizedClientManager.authorize(authorizeRequest);
+    // String tokenValue = authorizedClient.getAccessToken().getTokenValue();
+    // // Use this token to call the other resource server
+`
+                }
+/>
+
+
+**How it reflects in security**: This Spring Boot app acts as a client, programmatically fetching tokens from Keycloak using its own identity. The target Resource Server would validate this token (as in Scenario 2).
