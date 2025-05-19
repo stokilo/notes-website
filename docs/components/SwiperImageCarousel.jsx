@@ -49,9 +49,16 @@ const SwiperImageCarousel = ({ images = [] }) => {
   const toggleView = () => {
     setShowMetadata(!showMetadata);
     setTimeout(() => {
-      const leftButton = document.querySelector('.swiper-button-prev');
-      if (leftButton) {
-        leftButton.focus();
+      if (showMetadata) {
+        const leftButton = document.querySelector('.swiper-button-prev');
+        if (leftButton) {
+          leftButton.focus();
+        }
+      } else {
+        const metadataContainer = document.querySelector('[data-metadata-container]');
+        if (metadataContainer) {
+          metadataContainer.focus();
+        }
       }
     }, 100);
   };
@@ -67,7 +74,11 @@ const SwiperImageCarousel = ({ images = [] }) => {
 
   if (showMetadata) {
     return (
-      <div style={{ width: '100%', maxWidth: 800, margin: '0 auto', position: 'relative' }}>
+      <div 
+        data-metadata-container
+        tabIndex={-1}
+        style={{ width: '100%', maxWidth: 800, margin: '0 auto', position: 'relative' }}
+      >
         <button
           onClick={toggleView}
           style={{
