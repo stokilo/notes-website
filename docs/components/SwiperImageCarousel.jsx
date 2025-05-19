@@ -48,6 +48,12 @@ const SwiperImageCarousel = ({ images = [] }) => {
 
   const toggleView = () => {
     setShowMetadata(!showMetadata);
+    setTimeout(() => {
+      const leftButton = document.querySelector('.swiper-button-prev');
+      if (leftButton) {
+        leftButton.focus();
+      }
+    }, 100);
   };
 
   const handleSlideChange = (swiper) => {
