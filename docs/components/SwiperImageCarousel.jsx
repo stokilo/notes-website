@@ -88,7 +88,15 @@ const SwiperImageCarousel = ({ images = [] }) => {
           zIndex: 10 
         }}>
           <button
-            onClick={() => setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)}
+            onClick={() => {
+              setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+              setTimeout(() => {
+                const metadataContainer = document.querySelector('[data-metadata-container]');
+                if (metadataContainer) {
+                  metadataContainer.focus();
+                }
+              }, 100);
+            }}
             style={{
               background: 'rgba(0,0,0,0.5)',
               color: 'white',
@@ -102,7 +110,15 @@ const SwiperImageCarousel = ({ images = [] }) => {
             <FaChevronLeft size={18} />
           </button>
           <button
-            onClick={() => setCurrentImageIndex((prev) => (prev + 1) % images.length)}
+            onClick={() => {
+              setCurrentImageIndex((prev) => (prev + 1) % images.length);
+              setTimeout(() => {
+                const metadataContainer = document.querySelector('[data-metadata-container]');
+                if (metadataContainer) {
+                  metadataContainer.focus();
+                }
+              }, 100);
+            }}
             style={{
               background: 'rgba(0,0,0,0.5)',
               color: 'white',
