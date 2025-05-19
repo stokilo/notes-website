@@ -1,0 +1,546 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		6B03FF582DDB9666005557D6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6B03FF412DDB9664005557D6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6B03FF482DDB9664005557D6;
+			remoteInfo = barmac;
+		};
+		6B03FF622DDB9666005557D6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6B03FF412DDB9664005557D6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6B03FF482DDB9664005557D6;
+			remoteInfo = barmac;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		6B03FF492DDB9664005557D6 /* barmac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = barmac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6B03FF572DDB9666005557D6 /* barmacTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = barmacTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6B03FF612DDB9666005557D6 /* barmacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = barmacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		6B03FF4B2DDB9664005557D6 /* barmac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = barmac;
+			sourceTree = "<group>";
+		};
+		6B03FF5A2DDB9666005557D6 /* barmacTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = barmacTests;
+			sourceTree = "<group>";
+		};
+		6B03FF642DDB9666005557D6 /* barmacUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = barmacUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6B03FF462DDB9664005557D6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6B03FF542DDB9666005557D6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6B03FF5E2DDB9666005557D6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		6B03FF402DDB9664005557D6 = {
+			isa = PBXGroup;
+			children = (
+				6B03FF4B2DDB9664005557D6 /* barmac */,
+				6B03FF5A2DDB9666005557D6 /* barmacTests */,
+				6B03FF642DDB9666005557D6 /* barmacUITests */,
+				6B03FF4A2DDB9664005557D6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6B03FF4A2DDB9664005557D6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6B03FF492DDB9664005557D6 /* barmac.app */,
+				6B03FF572DDB9666005557D6 /* barmacTests.xctest */,
+				6B03FF612DDB9666005557D6 /* barmacUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6B03FF482DDB9664005557D6 /* barmac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6B03FF6B2DDB9666005557D6 /* Build configuration list for PBXNativeTarget "barmac" */;
+			buildPhases = (
+				6B03FF452DDB9664005557D6 /* Sources */,
+				6B03FF462DDB9664005557D6 /* Frameworks */,
+				6B03FF472DDB9664005557D6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6B03FF4B2DDB9664005557D6 /* barmac */,
+			);
+			name = barmac;
+			packageProductDependencies = (
+			);
+			productName = barmac;
+			productReference = 6B03FF492DDB9664005557D6 /* barmac.app */;
+			productType = "com.apple.product-type.application";
+		};
+		6B03FF562DDB9666005557D6 /* barmacTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6B03FF6E2DDB9666005557D6 /* Build configuration list for PBXNativeTarget "barmacTests" */;
+			buildPhases = (
+				6B03FF532DDB9666005557D6 /* Sources */,
+				6B03FF542DDB9666005557D6 /* Frameworks */,
+				6B03FF552DDB9666005557D6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6B03FF592DDB9666005557D6 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6B03FF5A2DDB9666005557D6 /* barmacTests */,
+			);
+			name = barmacTests;
+			packageProductDependencies = (
+			);
+			productName = barmacTests;
+			productReference = 6B03FF572DDB9666005557D6 /* barmacTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		6B03FF602DDB9666005557D6 /* barmacUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6B03FF712DDB9666005557D6 /* Build configuration list for PBXNativeTarget "barmacUITests" */;
+			buildPhases = (
+				6B03FF5D2DDB9666005557D6 /* Sources */,
+				6B03FF5E2DDB9666005557D6 /* Frameworks */,
+				6B03FF5F2DDB9666005557D6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6B03FF632DDB9666005557D6 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6B03FF642DDB9666005557D6 /* barmacUITests */,
+			);
+			name = barmacUITests;
+			packageProductDependencies = (
+			);
+			productName = barmacUITests;
+			productReference = 6B03FF612DDB9666005557D6 /* barmacUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6B03FF412DDB9664005557D6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1630;
+				LastUpgradeCheck = 1630;
+				TargetAttributes = {
+					6B03FF482DDB9664005557D6 = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					6B03FF562DDB9666005557D6 = {
+						CreatedOnToolsVersion = 16.3;
+						TestTargetID = 6B03FF482DDB9664005557D6;
+					};
+					6B03FF602DDB9666005557D6 = {
+						CreatedOnToolsVersion = 16.3;
+						TestTargetID = 6B03FF482DDB9664005557D6;
+					};
+				};
+			};
+			buildConfigurationList = 6B03FF442DDB9664005557D6 /* Build configuration list for PBXProject "barmac" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 6B03FF402DDB9664005557D6;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 6B03FF4A2DDB9664005557D6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				6B03FF482DDB9664005557D6 /* barmac */,
+				6B03FF562DDB9666005557D6 /* barmacTests */,
+				6B03FF602DDB9666005557D6 /* barmacUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6B03FF472DDB9664005557D6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6B03FF552DDB9666005557D6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6B03FF5F2DDB9666005557D6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6B03FF452DDB9664005557D6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6B03FF532DDB9666005557D6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6B03FF5D2DDB9666005557D6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6B03FF592DDB9666005557D6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6B03FF482DDB9664005557D6 /* barmac */;
+			targetProxy = 6B03FF582DDB9666005557D6 /* PBXContainerItemProxy */;
+		};
+		6B03FF632DDB9666005557D6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6B03FF482DDB9664005557D6 /* barmac */;
+			targetProxy = 6B03FF622DDB9666005557D6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		6B03FF692DDB9666005557D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		6B03FF6A2DDB9666005557D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		6B03FF6C2DDB9666005557D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = barmac/barmac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sstec.barmac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		6B03FF6D2DDB9666005557D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = barmac/barmac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sstec.barmac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		6B03FF6F2DDB9666005557D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sstec.barmacTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/barmac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/barmac";
+			};
+			name = Debug;
+		};
+		6B03FF702DDB9666005557D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sstec.barmacTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/barmac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/barmac";
+			};
+			name = Release;
+		};
+		6B03FF722DDB9666005557D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sstec.barmacUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = barmac;
+			};
+			name = Debug;
+		};
+		6B03FF732DDB9666005557D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sstec.barmacUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = barmac;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6B03FF442DDB9664005557D6 /* Build configuration list for PBXProject "barmac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6B03FF692DDB9666005557D6 /* Debug */,
+				6B03FF6A2DDB9666005557D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6B03FF6B2DDB9666005557D6 /* Build configuration list for PBXNativeTarget "barmac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6B03FF6C2DDB9666005557D6 /* Debug */,
+				6B03FF6D2DDB9666005557D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6B03FF6E2DDB9666005557D6 /* Build configuration list for PBXNativeTarget "barmacTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6B03FF6F2DDB9666005557D6 /* Debug */,
+				6B03FF702DDB9666005557D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6B03FF712DDB9666005557D6 /* Build configuration list for PBXNativeTarget "barmacUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6B03FF722DDB9666005557D6 /* Debug */,
+				6B03FF732DDB9666005557D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 6B03FF412DDB9664005557D6 /* Project object */;
+}
