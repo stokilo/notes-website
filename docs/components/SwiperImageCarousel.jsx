@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import PropTypes from 'prop-types';
@@ -14,6 +14,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
   const [showMetadata, setShowMetadata] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showFullscreenMetadata, setShowFullscreenMetadata] = useState(false);
+  const imageRef = useRef(null);
 
   useEffect(() => {
     const handleEscape = (e) => {
@@ -46,25 +47,23 @@ const SwiperImageCarousel = ({ images = [] }) => {
     }
   };
 
-  const toggleView = () => {
-    setShowMetadata(!showMetadata);
+  const focusImage = () => {
     setTimeout(() => {
-      if (showMetadata) {
-        const leftButton = document.querySelector('.swiper-button-prev');
-        if (leftButton) {
-          leftButton.focus();
-        }
-      } else {
-        const metadataContainer = document.querySelector('[data-metadata-container]');
-        if (metadataContainer) {
-          metadataContainer.focus();
-        }
+      const image = document.querySelector('[data-image-element]');
+      if (image) {
+        image.focus();
       }
     }, 100);
   };
 
+  const toggleView = () => {
+    setShowMetadata(!showMetadata);
+    focusImage();
+  };
+
   const handleSlideChange = (swiper) => {
     setCurrentImageIndex(swiper.activeIndex);
+    focusImage();
   };
 
   const toggleFullscreenView = (e) => {
@@ -90,12 +89,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
           <button
             onClick={() => {
               setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
-              setTimeout(() => {
-                const metadataContainer = document.querySelector('[data-metadata-container]');
-                if (metadataContainer) {
-                  metadataContainer.focus();
-                }
-              }, 100);
+              focusImage();
             }}
             style={{
               background: 'rgba(0,0,0,0.5)',
@@ -112,12 +106,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
           <button
             onClick={() => {
               setCurrentImageIndex((prev) => (prev + 1) % images.length);
-              setTimeout(() => {
-                const metadataContainer = document.querySelector('[data-metadata-container]');
-                if (metadataContainer) {
-                  metadataContainer.focus();
-                }
-              }, 100);
+              focusImage();
             }}
             style={{
               background: 'rgba(0,0,0,0.5)',
@@ -171,9 +160,12 @@ const SwiperImageCarousel = ({ images = [] }) => {
         {images.map((img, idx) => (
           <SwiperSlide key={img.src} style={{ position: 'relative', background: '#000' }}>
             <img
+              ref={imageRef}
+              data-image-element
               src={img.src}
               alt={img.alt}
               style={{ width: '100%', height: 400, objectFit: 'contain', background: '#000' }}
+              tabIndex={0}
             />
             <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: '8px' }}>
               <button
@@ -255,6 +247,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
               </div>
             ) : (
               <img
+                data-image-element
                 src={images[fullscreenIndex].src}
                 alt={images[fullscreenIndex].alt}
                 style={{
@@ -264,12 +257,14 @@ const SwiperImageCarousel = ({ images = [] }) => {
                   boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
                   background: '#000',
                 }}
+                tabIndex={0}
               />
             )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 navigateFullscreen('prev');
+                focusImage();
               }}
               style={{
                 position: 'absolute',
@@ -290,6 +285,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
               onClick={(e) => {
                 e.stopPropagation();
                 navigateFullscreen('next');
+                focusImage();
               }}
               style={{
                 position: 'absolute',
@@ -310,6 +306,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
               onClick={(e) => {
                 e.stopPropagation();
                 closeFullscreen(e);
+                focusImage();
               }}
               style={{
                 position: 'fixed',
@@ -331,6 +328,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
               onClick={(e) => {
                 e.stopPropagation();
                 toggleFullscreenView(e);
+                focusImage();
               }}
               style={{
                 position: 'fixed',
