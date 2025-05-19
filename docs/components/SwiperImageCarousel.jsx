@@ -48,24 +48,20 @@ const SwiperImageCarousel = ({ images = [] }) => {
   };
 
   const focusImage = () => {
-    setTimeout(() => {
-      const input = document.querySelector('[data-focus-input]');
-      if (input) {
-        const scrollY = window.scrollY;
-        input.focus();
-        window.scrollTo(0, scrollY);
+    if (isFullscreen) {
+      const imageElement = document.querySelector('[data-image-element]');
+      if (imageElement) {
+        imageElement.focus();
       }
-    }, 100);
+    }
   };
 
   const toggleView = () => {
     setShowMetadata(!showMetadata);
-    focusImage();
   };
 
   const handleSlideChange = (swiper) => {
     setCurrentImageIndex(swiper.activeIndex);
-    focusImage();
   };
 
   const toggleFullscreenView = (e) => {
@@ -167,6 +163,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
                 src={img.src}
                 alt={img.alt}
                 style={{ width: '100%', height: 400, objectFit: 'contain', background: '#000' }}
+                tabIndex={0}
               />
               <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: '8px' }}>
                 <button
@@ -351,24 +348,6 @@ const SwiperImageCarousel = ({ images = [] }) => {
           </div>
         )}
       </div>
-      <input
-        type="text"
-        data-focus-input
-        style={{
-          position: 'fixed',
-          opacity: 0,
-          pointerEvents: 'none',
-          height: 0,
-          width: 0,
-          padding: 0,
-          border: 'none',
-          margin: 0,
-          top: 0,
-          left: 0,
-        }}
-        aria-hidden="true"
-        tabIndex={0}
-      />
     </>
   );
 };
