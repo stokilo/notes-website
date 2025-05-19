@@ -96,3 +96,38 @@ Consent screen is disabled by defualt in client setting for Login UI. You must e
     { src: '/img/chapter3/screenshot_22a781mY.png', alt: 'Screenshot 2' },
     { src: '/img/chapter3/screenshot_33DQw1Ef9.png', alt: 'Screenshot 3' },
   ]} />
+
+**What are client scope mappers and scopes?**
+
+**Mappers (within a Client Scope):**
+
+Focus: Adding data claims (user attributes, properties, hardcoded values) to tokens.
+
+"What information about the user should be in the token if this scope is granted?"
+
+Example: The profile scope uses mappers to add given_name, family_name, etc.
+
+**Scope Tab (within a Client Scope):**
+
+Focus: Associating permission constructs (Realm Roles, Client Roles) with the client scope.
+
+"If this client scope is granted, what roles should also be considered granted to the user for the purpose of token claims?"
+
+Example: A custom scope document-editor might have the realm role editor assigned to it via its "Scope" tab.
+
+Example, lets say we have 3 roles in system
+
+article-reader
+
+article-writer
+
+article-publisher
+
+You can create client scope: editor-privileges and assign scope (roles)
+
+article-writer
+
+article-publisher
+
+Your cms-frontend now wants to perform an action that requires editing and publishing. **Instead of requesting individual roles**, it requests the editor-privileges scope:
+scope=openid profile email **editor-privilege**
