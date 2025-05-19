@@ -136,19 +136,6 @@ const SwiperImageCarousel = ({ images = [] }) => {
             imageUrl={images[currentImageIndex].src} 
           />
         </div>
-        <div style={{
-          position: 'absolute',
-          bottom: 20,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          color: 'white',
-          background: 'rgba(0,0,0,0.7)',
-          padding: '8px 16px',
-          borderRadius: 20,
-          fontSize: '14px',
-        }}>
-          {currentImageIndex + 1} / {images.length}
-        </div>
       </div>
     );
   }
@@ -345,19 +332,6 @@ const SwiperImageCarousel = ({ images = [] }) => {
             >
               {showFullscreenMetadata ? <FaImages size={22} /> : <FaSearch size={22} />}
             </button>
-            <div style={{
-              position: 'absolute',
-              bottom: 20,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              color: 'white',
-              background: 'rgba(0,0,0,0.7)',
-              padding: '8px 16px',
-              borderRadius: 20,
-              fontSize: '14px',
-            }}>
-              {fullscreenIndex + 1} / {images.length}
-            </div>
           </div>
         </div>
       )}
