@@ -292,12 +292,6 @@ const ImageMetadata = ({ imageUrl }) => {
     setPosition({ x: newX, y: newY });
   };
 
-  useEffect(() => {
-    if (shapes && shapes.length > 0) {
-      zoomToShape(shapes[0]);
-    }
-  }, [shapes]);
-
   // Add function to show original image
   const showOriginalImage = () => {
     setZoom(1);
@@ -433,7 +427,7 @@ const ImageMetadata = ({ imageUrl }) => {
             onClick={handlePreviousShape}
             disabled={currentShapeIndex === 0}
           >
-            {currentShapeIndex + 1}
+            {currentShapeIndex === 0 ? '' : currentShapeIndex}
           </button>
           <button
             style={middleButtonStyle}
@@ -446,7 +440,7 @@ const ImageMetadata = ({ imageUrl }) => {
             onClick={handleNextShape}
             disabled={currentShapeIndex === shapes.length - 1}
           >
-            {currentShapeIndex + 2}
+            {currentShapeIndex === shapes.length - 1 ? '' : currentShapeIndex + 2}
           </button>
         </div>
       )}
