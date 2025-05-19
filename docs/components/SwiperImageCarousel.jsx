@@ -13,6 +13,7 @@ const SwiperImageCarousel = ({ images = [] }) => {
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
   const [showMetadata, setShowMetadata] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showFullscreenMetadata, setShowFullscreenMetadata] = useState(false);
 
   useEffect(() => {
     const handleEscape = (e) => {
@@ -51,6 +52,11 @@ const SwiperImageCarousel = ({ images = [] }) => {
 
   const handleSlideChange = (swiper) => {
     setCurrentImageIndex(swiper.activeIndex);
+  };
+
+  const toggleFullscreenView = (e) => {
+    e.stopPropagation();
+    setShowFullscreenMetadata(!showFullscreenMetadata);
   };
 
   if (showMetadata) {
@@ -149,18 +155,46 @@ const SwiperImageCarousel = ({ images = [] }) => {
           }}
           onClick={closeFullscreen}
         >
-          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img
-              src={images[fullscreenIndex].src}
-              alt={images[fullscreenIndex].alt}
-              style={{
-                maxWidth: '95vw',
-                maxHeight: '95vh',
-                objectFit: 'contain',
-                boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
+          <div 
+            style={{ 
+              position: 'relative', 
+              width: '100%', 
+              height: '100%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '20px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {showFullscreenMetadata ? (
+              <div style={{ 
+                width: '100%',
+                height: '100%',
+                maxWidth: '1200px',
+                maxHeight: '90vh',
+                overflow: 'auto',
                 background: '#000',
-              }}
-            />
+                padding: '20px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
+                color: 'white'
+              }}>
+                <ImageMetadata imageUrl={images[fullscreenIndex].src} />
+              </div>
+            ) : (
+              <img
+                src={images[fullscreenIndex].src}
+                alt={images[fullscreenIndex].alt}
+                style={{
+                  maxWidth: '95vw',
+                  maxHeight: '95vh',
+                  objectFit: 'contain',
+                  boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
+                  background: '#000',
+                }}
+              />
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -202,7 +236,10 @@ const SwiperImageCarousel = ({ images = [] }) => {
               <FaChevronRight size={24} />
             </button>
             <button
-              onClick={closeFullscreen}
+              onClick={(e) => {
+                e.stopPropagation();
+                closeFullscreen(e);
+              }}
               style={{
                 position: 'fixed',
                 top: 32,
@@ -218,6 +255,27 @@ const SwiperImageCarousel = ({ images = [] }) => {
               aria-label="Close full screen"
             >
               <FaTimes size={22} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFullscreenView(e);
+              }}
+              style={{
+                position: 'fixed',
+                top: 32,
+                right: 100,
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                padding: 14,
+                cursor: 'pointer',
+                zIndex: 10000,
+              }}
+              aria-label={showFullscreenMetadata ? "Switch to image view" : "View image metadata"}
+            >
+              {showFullscreenMetadata ? <FaImages size={22} /> : <FaCode size={22} />}
             </button>
             <div style={{
               position: 'absolute',
