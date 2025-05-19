@@ -63,3 +63,20 @@ It also extracts client-specific roles from resource_access.client_id.roles and 
 <ShikiCodeBlock language="java" theme="catppuccin-frappe"
                 source="https://raw.githubusercontent.com/stokilo/keycloack-docs/refs/heads/main/chapters/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/HelloController.java" />
 
+
+**Testing**
+
+<SwiperImageCarousel
+  images={[
+    { src: '/img/chapter3/screenshot_11AVpccxe.png', alt: 'Screenshot 1' },
+    { src: '/img/chapter3/screenshot_22drbxW3d.png', alt: 'Screenshot 2' },
+    { src: '/img/chapter3/screenshot_33dqlvpvg.png', alt: 'Screenshot 3' },
+    { src: '/img/chapter3/screenshot_44j7Yih0s.png', alt: 'Screenshot 4' },
+    { src: '/img/chapter3/screenshot_55QFQ2VyC.png', alt: 'Screenshot 5' },
+    { src: '/img/chapter3/screenshot_66ZU4ESKz.png', alt: 'Screenshot 6' },
+    { src: '/img/chapter3/screenshot_77yQvHtUh.png', alt: 'Screenshot 7' },
+  ]} />
+
+**product:read** is a "Default client scope" for spring-boot-app in Keycloak and will be added to the token automatically.
+
+**product:write** must be requested explicitly.
