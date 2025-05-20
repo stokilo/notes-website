@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var searchState: SearchState
     @FocusState private var isSearchFocused: Bool
+    @State private var showSettings = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -43,11 +44,9 @@ struct ContentView: View {
         }
         .frame(width: 600)
         .background(.ultraThinMaterial)
-        .sheet(isPresented: Binding(
-            get: { searchState.fileIndex.showSettings },
-            set: { if $0 { searchState.fileIndex.showSettingsPanel() } else { searchState.fileIndex.hideSettingsPanel() } }
-        )) {
+        .sheet(isPresented: $showSettings) {
             SettingsView()
+                .environmentObject(searchState)
         }
         .onAppear {
             isSearchFocused = true
@@ -96,7 +95,7 @@ struct ContentView: View {
             .disabled(searchState.isIndexing)
             
             Button(action: {
-                searchState.fileIndex.showSettingsPanel()
+                showSettings = true
             }) {
                 Image(systemName: "gear")
                     .foregroundColor(.gray)

@@ -5,6 +5,7 @@ import HotKey
 struct MacBarApp: App {
     @StateObject private var searchState = SearchState()
     @State private var isWindowVisible = false
+    @State private var showSettings = false
     
     var body: some Scene {
         WindowGroup {
@@ -14,11 +15,21 @@ struct MacBarApp: App {
                     setupGlobalShortcut()
                     setupWindow()
                 }
+                .sheet(isPresented: $showSettings) {
+                    SettingsView()
+                        .environmentObject(searchState)
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .newItem) { }
+            CommandGroup(after: .appSettings) {
+                Button("Settings...") {
+                    showSettings = true
+                }
+                .keyboardShortcut(",", modifiers: [.command])
+            }
         }
     }
     
