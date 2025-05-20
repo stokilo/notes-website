@@ -4,6 +4,7 @@ import AppKit
 
 class FileSearchIndex: ObservableObject {
     private var fileIndex: [String: [String]] = [:] // Maps file names to their full paths
+    private var pathIndex: [String: String] = [:] // Maps full paths to their file names
     private let fileManager = FileManager.default
     private var targetDirectory = "/Users/slawomirstec/Documents/projects"
     private var progressTimer: Timer?
@@ -157,6 +158,7 @@ class FileSearchIndex: ObservableObject {
                                 self.fileIndex[fileName] = []
                             }
                             self.fileIndex[fileName]?.append(filePath)
+                            self.pathIndex[filePath] = fileName
                         }
                         
                         DispatchQueue.main.async {
@@ -202,24 +204,51 @@ class FileSearchIndex: ObservableObject {
     func search(query: String) -> [(name: String, path: String)] {
         guard query.count >= 3 else { return [] }
         
-        let lowercasedQuery = query.lowercased()
-        var results: [(name: String, path: String)] = []
+        let searchWords = query.lowercased().split(separator: " ")
+        var results: Set<String> = [] // Use Set to avoid duplicates
+        var finalResults: [(name: String, path: String)] = []
         
-        for (fileName, paths) in fileIndex {
-            if fileName.lowercased().contains(lowercasedQuery) {
-                for path in paths {
-                    results.append((name: fileName, path: path))
+        // First pass: Find all paths that match any word
+        for word in searchWords {
+            // Search in filenames
+            for (fileName, paths) in fileIndex {
+                if fileName.lowercased().contains(word) {
+                    results.formUnion(paths)
+                }
+            }
+            
+            // Search in paths
+            for (path, _) in pathIndex {
+                if path.lowercased().contains(word) {
+                    results.insert(path)
                 }
             }
         }
         
+        // Second pass: Filter paths that match all words
+        for path in results {
+            let lowercasedPath = path.lowercased()
+            let fileName = pathIndex[path] ?? ""
+            let lowercasedFileName = fileName.lowercased()
+            
+            // Check if all search words match either the filename or the path
+            let allWordsMatch = searchWords.allSatisfy { word in
+                lowercasedFileName.contains(word) || lowercasedPath.contains(word)
+            }
+            
+            if allWordsMatch {
+                finalResults.append((name: fileName, path: path))
+            }
+        }
+        
         // Sort results by filename
-        return results.sorted { $0.name < $1.name }
+        return finalResults.sorted { $0.name < $1.name }
     }
     
     // Refresh the index
     func refreshIndex() {
         fileIndex.removeAll()
+        pathIndex.removeAll()
         buildIndex()
     }
     
