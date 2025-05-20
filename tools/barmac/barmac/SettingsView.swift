@@ -10,34 +10,44 @@ struct SettingsView: View {
                 Text("Indexed Directories")
                     .font(.headline)
                 Spacer()
-                Button("Add Directory") {
-                    let openPanel = NSOpenPanel()
-                    openPanel.canChooseDirectories = true
-                    openPanel.canChooseFiles = false
-                    openPanel.allowsMultipleSelection = false
-                    openPanel.message = "Select a directory to index"
-                    openPanel.prompt = "Select Directory"
-                    
-                    if openPanel.runModal() == .OK, let url = openPanel.url {
-                        searchState.fileIndex.addDirectory(url.path)
-                    }
-                }
             }
             .padding(.horizontal)
             
             List {
                 ForEach(searchState.fileIndex.indexedDirectoriesList, id: \.self) { directory in
-                    HStack {
-                        Text(directory)
-                            .lineLimit(1)
-                        Spacer()
-                        Button(action: {
-                            searchState.fileIndex.removeDirectory(directory)
-                        }) {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundColor(.red)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Image(systemName: "folder")
+                                .foregroundColor(.blue)
+                            Text(directory)
+                                .lineLimit(1)
+                            Spacer()
+                            Button(action: {
+                                searchState.fileIndex.removeDirectory(directory)
+                            }) {
+                                Image(systemName: "minus.circle.fill")
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+                        
+                        if searchState.isIndexing && searchState.currentIndexingFile.contains(directory) {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.5)
+                                Text("Indexing...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("\(searchState.fileIndex.getIndexedFilesCount(for: directory)) files indexed")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
                     .padding(.vertical, 4)
                 }

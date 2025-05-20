@@ -6,6 +6,7 @@ class FileSearchIndex: ObservableObject {
     private var fileIndex: [String: [String]] = [:] // Maps file names to their full paths
     private var pathIndex: [String: String] = [:] // Maps full paths to their file names
     private var appIndex: [(name: String, path: String, icon: NSImage)] = [] // Applications with icons
+    private var directoryFileCounts: [String: Int] = [:] // Track file counts per directory
     private let fileManager = FileManager.default
     private var indexedDirectories: Set<String> = []
     private var progressTimer: Timer?
@@ -183,12 +184,15 @@ class FileSearchIndex: ObservableObject {
             self.fileIndex.removeAll()
             self.pathIndex.removeAll()
             self.appIndex.removeAll()
+            self.directoryFileCounts.removeAll()
             
             // First, index applications
             self.indexApplications()
             
             // Then index each directory
             for directory in self.indexedDirectories {
+                var directoryFileCount = 0
+                
                 // Check if directory exists and is accessible
                 var isDir: ObjCBool = false
                 if !self.fileManager.fileExists(atPath: directory, isDirectory: &isDir) {
@@ -222,6 +226,7 @@ class FileSearchIndex: ObservableObject {
                         do {
                             let resourceValues = try fileURL.resourceValues(forKeys: [.isReadableKey])
                             if resourceValues.isReadable ?? false {
+                                directoryFileCount += 1
                                 DispatchQueue.main.async {
                                     self.totalFilesCount += 1
                                 }
@@ -283,6 +288,13 @@ class FileSearchIndex: ObservableObject {
                             self.logger.error("Error processing file \(fileURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
                         }
                     }
+                    
+                    // Update directory file count
+                    DispatchQueue.main.async {
+                        self.directoryFileCounts[directory] = directoryFileCount
+                        self.objectWillChange.send()
+                    }
+                    
                 } catch {
                     self.handleError("Error building index: \(error.localizedDescription)", error.localizedDescription)
                     continue
@@ -421,6 +433,10 @@ class FileSearchIndex: ObservableObject {
     
     func hideSettingsPanel() {
         showSettings = false
+    }
+    
+    func getIndexedFilesCount(for directory: String) -> Int {
+        return directoryFileCounts[directory] ?? 0
     }
 }
 

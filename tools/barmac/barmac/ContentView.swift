@@ -95,6 +95,28 @@ struct ContentView: View {
             .disabled(searchState.isIndexing)
             
             Button(action: {
+                let openPanel = NSOpenPanel()
+                openPanel.canChooseDirectories = true
+                openPanel.canChooseFiles = false
+                openPanel.allowsMultipleSelection = false
+                openPanel.message = "Select a directory to index"
+                openPanel.prompt = "Select Directory"
+                
+                if openPanel.runModal() == .OK, let url = openPanel.url {
+                    searchState.fileIndex.addDirectory(url.path)
+                }
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "folder.badge.plus")
+                        .foregroundColor(.blue)
+                    Text("Add Directory")
+                        .font(.system(size: 12))
+                }
+            }
+            .buttonStyle(.plain)
+            .help("Add directory to index")
+            
+            Button(action: {
                 showSettings = true
             }) {
                 Image(systemName: "gear")
