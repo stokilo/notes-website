@@ -11,7 +11,7 @@ struct ContentView: View {
                     .foregroundColor(.red)
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(NSColor.controlBackgroundColor))
+                    .background(.ultraThinMaterial)
             }
             
             if searchState.isIndexing {
@@ -21,7 +21,7 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
-                    .background(Color(NSColor.controlBackgroundColor))
+                    .background(.ultraThinMaterial)
             }
             
             searchBar
@@ -42,9 +42,15 @@ struct ContentView: View {
             }
         }
         .frame(width: 600)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(.ultraThinMaterial)
         .onAppear {
             isSearchFocused = true
+            // Hide the title bar
+            if let window = NSApplication.shared.windows.first {
+                window.titlebarAppearsTransparent = true
+                window.titleVisibility = .hidden
+                window.styleMask.insert(.fullSizeContentView)
+            }
         }
     }
     
@@ -78,9 +84,9 @@ struct ContentView: View {
             .help("Refresh file index")
             .disabled(searchState.isIndexing)
         }
-        .padding(8)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(8)
+        .padding(12)
+        .background(.ultraThinMaterial)
+        .cornerRadius(20)
     }
     
     private var indexingProgressView: some View {
@@ -109,7 +115,7 @@ struct ContentView: View {
         }
         .padding()
         .frame(height: 300)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(.ultraThinMaterial)
         .cornerRadius(12)
         .padding()
     }
@@ -163,5 +169,6 @@ struct ContentView: View {
         }
         .listStyle(.plain)
         .frame(height: 300)
+        .background(.ultraThinMaterial)
     }
 } 

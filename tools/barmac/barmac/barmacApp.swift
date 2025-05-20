@@ -12,12 +12,26 @@ struct MacBarApp: App {
                 .environmentObject(searchState)
                 .onAppear {
                     setupGlobalShortcut()
+                    setupWindow()
                 }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .newItem) { }
+        }
+    }
+    
+    private func setupWindow() {
+        if let window = NSApplication.shared.windows.first {
+            window.backgroundColor = .clear
+            window.isOpaque = false
+            window.hasShadow = false
+            window.level = .floating
+            window.collectionBehavior = [.canJoinAllSpaces, .stationary]
+            window.styleMask = [.borderless, .fullSizeContentView]
+            window.ignoresMouseEvents = false
+            window.isMovableByWindowBackground = true
         }
     }
     
