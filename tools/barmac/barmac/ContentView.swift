@@ -147,11 +147,10 @@ struct ContentView: View {
                     .onTapGesture {
                         if result.path.hasSuffix(".app") {
                             // Launch the application using the new API
-                            if let url = URL(fileURLWithPath: result.path) {
-                                NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { runningApp, error in
-                                    if let error = error {
-                                        print("Error launching application: \(error.localizedDescription)")
-                                    }
+                            let url = URL(fileURLWithPath: result.path)
+                            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { runningApp, error in
+                                if let error = error {
+                                    print("Error launching application: \(error.localizedDescription)")
                                 }
                             }
                         } else {

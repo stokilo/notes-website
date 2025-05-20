@@ -22,7 +22,7 @@ struct MacBarApp: App {
     }
     
     private func setupGlobalShortcut() {
-        let hotKey = HotKey(key: .hyphen, modifiers: [.command])
+        let hotKey = HotKey(key: .minus, modifiers: [.command])
         hotKey.keyDownHandler = {
             if let window = NSApplication.shared.windows.first {
                 window.makeKeyAndOrderFront(nil)
