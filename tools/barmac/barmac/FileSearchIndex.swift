@@ -12,6 +12,9 @@ class FileSearchIndex: ObservableObject {
     private var progressTimer: Timer?
     private let logger = Logger(subsystem: "com.barmac", category: "FileSearchIndex")
     private let indexingQueue = DispatchQueue(label: "com.barmac.indexing", qos: .userInitiated)
+    private var isCancelled = false
+    private var cancellationCheckTimer: Timer?
+    private var terminationObserver: NSObjectProtocol?
     
     private let indexCacheURL: URL
     private let indexTimestampURL: URL
@@ -38,6 +41,7 @@ class FileSearchIndex: ObservableObject {
         
         logger.info("FileSearchIndex initialized")
         loadIndexedDirectories()
+        setupTerminationObserver()
         DispatchQueue.main.async { [weak self] in
             self?.loadOrCreateIndex()
         }
@@ -45,6 +49,20 @@ class FileSearchIndex: ObservableObject {
     
     deinit {
         progressTimer?.invalidate()
+        cancellationCheckTimer?.invalidate()
+        if let observer = terminationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+    
+    private func setupTerminationObserver() {
+        terminationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.isCancelled = true
+        }
     }
     
     private func loadIndexedDirectories() {
@@ -63,7 +81,202 @@ class FileSearchIndex: ObservableObject {
     func addDirectory(_ path: String) {
         indexedDirectories.insert(path)
         saveIndexedDirectories()
-        buildIndex()
+        indexSingleDirectory(path)
+    }
+    
+    private func startCancellationCheck() {
+        // Cancel any existing timer
+        cancellationCheckTimer?.invalidate()
+        
+        // Create a new timer that checks every 0.5 seconds
+        cancellationCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            
+            // Check if the app is terminating
+            if self.isCancelled {
+                self.cancellationCheckTimer?.invalidate()
+                self.cancellationCheckTimer = nil
+            }
+        }
+    }
+    
+    private func stopCancellationCheck() {
+        cancellationCheckTimer?.invalidate()
+        cancellationCheckTimer = nil
+        isCancelled = false
+    }
+    
+    private func checkCancellation() -> Bool {
+        if isCancelled {
+            logger.info("Indexing cancelled")
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.isIndexing = false
+                self.currentIndexingFile = "Indexing cancelled"
+                self.objectWillChange.send()
+            }
+            return true
+        }
+        return false
+    }
+    
+    private func indexSingleDirectory(_ directory: String) {
+        logger.info("Starting index for directory: \(directory, privacy: .public)")
+        isCancelled = false
+        startCancellationCheck()
+        
+        // Set initial state on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.isIndexing = true
+            self.currentIndexingFile = "Starting indexing process..."
+            self.permissionError = nil
+            self.objectWillChange.send()
+        }
+        
+        // Run indexing in background
+        indexingQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            var directoryFileCount = 0
+            
+            // Check if directory exists and is accessible
+            var isDir: ObjCBool = false
+            if !self.fileManager.fileExists(atPath: directory, isDirectory: &isDir) {
+                self.handleError("Directory does not exist: \(directory)", "The selected directory does not exist")
+                self.stopCancellationCheck()
+                return
+            }
+            
+            if !isDir.boolValue {
+                self.handleError("Path is not a directory: \(directory)", "The selected path is not a directory")
+                self.stopCancellationCheck()
+                return
+            }
+            
+            // Check read permissions
+            if !self.fileManager.isReadableFile(atPath: directory) {
+                self.handleError("No read permission for directory: \(directory)", """
+                    No permission to access the directory.
+                    Please grant Full Disk Access in:
+                    System Preferences > Security & Privacy > Privacy > Full Disk Access
+                    """)
+                self.stopCancellationCheck()
+                return
+            }
+            
+            // First, count total files
+            do {
+                self.logger.info("Counting total files in \(directory, privacy: .public)")
+                let enumerator = try self.fileManager.enumerator(at: URL(fileURLWithPath: directory),
+                                                          includingPropertiesForKeys: [.isDirectoryKey, .isReadableKey],
+                                                          options: [.skipsHiddenFiles])
+                
+                while let fileURL = enumerator?.nextObject() as? URL {
+                    if self.checkCancellation() {
+                        self.stopCancellationCheck()
+                        return
+                    }
+                    
+                    do {
+                        let resourceValues = try fileURL.resourceValues(forKeys: [.isReadableKey])
+                        if resourceValues.isReadable ?? false {
+                            directoryFileCount += 1
+                            DispatchQueue.main.async {
+                                self.totalFilesCount += 1
+                            }
+                        } else {
+                            self.logger.warning("Skipping unreadable file: \(fileURL.path, privacy: .public)")
+                        }
+                    } catch {
+                        self.logger.error("Error checking file permissions: \(error.localizedDescription, privacy: .public)")
+                    }
+                }
+                self.logger.info("Found \(directoryFileCount, privacy: .public) files in directory")
+            } catch {
+                self.handleError("Error counting files: \(error.localizedDescription)", error.localizedDescription)
+                self.stopCancellationCheck()
+                return
+            }
+            
+            // Now build the index
+            do {
+                self.logger.info("Building file index for directory")
+                let enumerator = try self.fileManager.enumerator(at: URL(fileURLWithPath: directory),
+                                                          includingPropertiesForKeys: [.isDirectoryKey, .isReadableKey],
+                                                          options: [.skipsHiddenFiles])
+                
+                var indexedCount = 0
+                while let fileURL = enumerator?.nextObject() as? URL {
+                    if self.checkCancellation() {
+                        self.stopCancellationCheck()
+                        return
+                    }
+                    
+                    do {
+                        let resourceValues = try fileURL.resourceValues(forKeys: [.isReadableKey])
+                        guard resourceValues.isReadable ?? false else {
+                            self.logger.warning("Skipping unreadable file: \(fileURL.path, privacy: .public)")
+                            continue
+                        }
+                        
+                        let filePath = fileURL.path
+                        DispatchQueue.main.async {
+                            self.currentIndexingFile = fileURL.lastPathComponent
+                        }
+                        self.logger.debug("Indexing file: \(fileURL.lastPathComponent, privacy: .public)")
+                        
+                        // Get file attributes
+                        let attributes = try self.fileManager.attributesOfItem(atPath: filePath)
+                        let isDirectory = attributes[.type] as? FileAttributeType == .typeDirectory
+                        
+                        if !isDirectory {
+                            // Add file to index
+                            let fileName = fileURL.lastPathComponent
+                            if self.fileIndex[fileName] == nil {
+                                self.fileIndex[fileName] = []
+                            }
+                            self.fileIndex[fileName]?.append(filePath)
+                            self.pathIndex[filePath] = fileName
+                            indexedCount += 1
+                        }
+                        
+                        DispatchQueue.main.async {
+                            self.indexedFilesCount += 1
+                            if indexedCount % 100 == 0 {
+                                self.logger.info("Indexed \(indexedCount, privacy: .public) of \(directoryFileCount, privacy: .public) files")
+                            }
+                        }
+                    } catch {
+                        self.logger.error("Error processing file \(fileURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    }
+                }
+                
+                // Update directory file count
+                DispatchQueue.main.async {
+                    self.directoryFileCounts[directory] = directoryFileCount
+                    self.objectWillChange.send()
+                }
+                
+            } catch {
+                self.handleError("Error building index: \(error.localizedDescription)", error.localizedDescription)
+                self.stopCancellationCheck()
+                return
+            }
+            
+            // Save the index to cache
+            self.saveIndex()
+            
+            // Complete indexing
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.logger.info("Indexing complete for directory: \(directory, privacy: .public)")
+                self.isIndexing = false
+                self.currentIndexingFile = "Indexing complete"
+                self.stopCancellationCheck()
+                self.objectWillChange.send()
+            }
+        }
     }
     
     func removeDirectory(_ path: String) {
