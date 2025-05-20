@@ -16,6 +16,9 @@ class FileSearchIndex: ObservableObject {
     private var cancellationCheckTimer: Timer?
     private var terminationObserver: NSObjectProtocol?
     
+    @Published var indexValidityDuration: TimeInterval = 3600 // Default 1 hour
+    private let indexValidityDurationKey = "indexValidityDuration"
+    
     private let indexCacheURL: URL
     private let indexTimestampURL: URL
     private let directoriesCacheURL: URL
@@ -38,6 +41,11 @@ class FileSearchIndex: ObservableObject {
         indexCacheURL = cacheDirectory.appendingPathComponent("file_index.json")
         indexTimestampURL = cacheDirectory.appendingPathComponent("index_timestamp")
         directoriesCacheURL = cacheDirectory.appendingPathComponent("indexed_directories.json")
+        
+        // Load index validity duration from UserDefaults
+        if let savedDuration = UserDefaults.standard.object(forKey: indexValidityDurationKey) as? TimeInterval {
+            indexValidityDuration = savedDuration
+        }
         
         logger.info("FileSearchIndex initialized")
         loadIndexedDirectories()
@@ -78,7 +86,30 @@ class FileSearchIndex: ObservableObject {
         }
     }
     
+    func setIndexValidityDuration(_ duration: TimeInterval) {
+        indexValidityDuration = duration
+        UserDefaults.standard.set(duration, forKey: indexValidityDurationKey)
+        objectWillChange.send()
+    }
+    
+    private func isIndexValid(for directory: String) -> Bool {
+        guard let timestamp = try? Data(contentsOf: indexTimestampURL),
+              let timestampString = String(data: timestamp, encoding: .utf8),
+              let lastIndexTime = Double(timestampString) else {
+            return false
+        }
+        
+        let currentTime = Date().timeIntervalSince1970
+        return currentTime - lastIndexTime < indexValidityDuration
+    }
+    
     func addDirectory(_ path: String) {
+        // Check if directory is already indexed and valid
+        if indexedDirectories.contains(path) && isIndexValid(for: path) {
+            logger.info("Directory \(path) is already indexed and valid")
+            return
+        }
+        
         indexedDirectories.insert(path)
         saveIndexedDirectories()
         indexSingleDirectory(path)
@@ -280,9 +311,30 @@ class FileSearchIndex: ObservableObject {
     }
     
     func removeDirectory(_ path: String) {
+        // Remove from indexed directories
         indexedDirectories.remove(path)
         saveIndexedDirectories()
-        buildIndex()
+        
+        // Remove from file counts
+        directoryFileCounts.removeValue(forKey: path)
+        
+        // Remove all files from this directory from the index
+        let pathsToRemove = pathIndex.keys.filter { $0.hasPrefix(path) }
+        for path in pathsToRemove {
+            if let fileName = pathIndex[path] {
+                fileIndex[fileName]?.removeAll { $0 == path }
+                if fileIndex[fileName]?.isEmpty == true {
+                    fileIndex.removeValue(forKey: fileName)
+                }
+            }
+            pathIndex.removeValue(forKey: path)
+        }
+        
+        // Save the updated index
+        saveIndex()
+        
+        // Notify observers
+        objectWillChange.send()
     }
     
     var indexedDirectoriesList: [String] {
@@ -296,10 +348,9 @@ class FileSearchIndex: ObservableObject {
            let lastIndexTime = Double(timestampString) {
             
             let currentTime = Date().timeIntervalSince1970
-            let oneHourInSeconds: TimeInterval = 3600
             
-            // If index is less than 1 hour old, load it
-            if currentTime - lastIndexTime < oneHourInSeconds {
+            // If index is less than validity duration old, load it
+            if currentTime - lastIndexTime < indexValidityDuration {
                 if loadCachedIndex() {
                     logger.info("Loaded cached index")
                     return

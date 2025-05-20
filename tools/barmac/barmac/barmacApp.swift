@@ -16,8 +16,7 @@ struct MacBarApp: App {
                     setupWindow()
                 }
                 .sheet(isPresented: $showSettings) {
-                    SettingsView()
-                        .environmentObject(searchState)
+                    SettingsView(fileIndex: searchState.fileIndex)
                 }
         }
         .windowStyle(.hiddenTitleBar)

@@ -45,8 +45,7 @@ struct ContentView: View {
         .frame(width: 600)
         .background(.ultraThinMaterial)
         .sheet(isPresented: $showSettings) {
-            SettingsView()
-                .environmentObject(searchState)
+            SettingsView(fileIndex: searchState.fileIndex)
         }
         .onAppear {
             isSearchFocused = true

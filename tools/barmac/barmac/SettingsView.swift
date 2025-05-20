@@ -1,69 +1,121 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject private var searchState: SearchState
+    @ObservedObject var fileIndex: FileSearchIndex
     @Environment(\.dismiss) private var dismiss
+    @State private var showingDirectoryPicker = false
+    @State private var selectedDuration: TimeInterval
+    
+    init(fileIndex: FileSearchIndex) {
+        self.fileIndex = fileIndex
+        _selectedDuration = State(initialValue: fileIndex.indexValidityDuration)
+    }
     
     var body: some View {
         VStack(spacing: 20) {
             HStack {
-                Text("Indexed Directories")
+                Text("Settings")
+                    .font(.title)
+                    .fontWeight(.bold)
+                Spacer()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                        .imageScale(.large)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom)
+            
+            // Index Validity Duration
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Index Validity Duration")
                     .font(.headline)
-                Spacer()
-            }
-            .padding(.horizontal)
-            
-            List {
-                ForEach(searchState.fileIndex.indexedDirectoriesList, id: \.self) { directory in
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Image(systemName: "folder")
-                                .foregroundColor(.blue)
-                            Text(directory)
-                                .lineLimit(1)
-                            Spacer()
-                            Button(action: {
-                                searchState.fileIndex.removeDirectory(directory)
-                            }) {
-                                Image(systemName: "minus.circle.fill")
-                                    .foregroundColor(.red)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        
-                        if searchState.isIndexing && searchState.currentIndexingFile.contains(directory) {
-                            HStack {
-                                ProgressView()
-                                    .scaleEffect(0.5)
-                                Text("Indexing...")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        } else {
-                            HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text("\(searchState.fileIndex.getIndexedFilesCount(for: directory)) files indexed")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 4)
+                
+                Picker("Duration", selection: $selectedDuration) {
+                    Text("30 minutes").tag(TimeInterval(1800))
+                    Text("1 hour").tag(TimeInterval(3600))
+                    Text("2 hours").tag(TimeInterval(7200))
+                    Text("4 hours").tag(TimeInterval(14400))
+                    Text("8 hours").tag(TimeInterval(28800))
+                    Text("24 hours").tag(TimeInterval(86400))
                 }
-            }
-            .frame(height: 300)
-            
-            HStack {
-                Spacer()
-                Button("Close") {
-                    dismiss()
+                .onChange(of: selectedDuration) { newValue in
+                    fileIndex.setIndexValidityDuration(newValue)
                 }
-                .keyboardShortcut(.defaultAction)
             }
             .padding()
+            .background(Color(.windowBackgroundColor))
+            .cornerRadius(10)
+            
+            // Indexed Directories
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Indexed Directories")
+                    .font(.headline)
+                
+                ScrollView {
+                    VStack(spacing: 12) {
+                        ForEach(fileIndex.indexedDirectoriesList, id: \.self) { directory in
+                            HStack {
+                                Image(systemName: "folder.fill")
+                                    .foregroundColor(.blue)
+                                VStack(alignment: .leading) {
+                                    Text(directory)
+                                        .lineLimit(1)
+                                    Text("\(fileIndex.getIndexedFilesCount(for: directory)) files")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer()
+                                Button(action: {
+                                    fileIndex.removeDirectory(directory)
+                                }) {
+                                    Image(systemName: "minus.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(8)
+                            .background(Color(.windowBackgroundColor))
+                            .cornerRadius(8)
+                        }
+                    }
+                }
+                .frame(maxHeight: 200)
+            }
+            .padding()
+            .background(Color(.windowBackgroundColor))
+            .cornerRadius(10)
+            
+            // Add Directory Button
+            Button(action: { showingDirectoryPicker = true }) {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Add Directory")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.top)
+            
+            Spacer()
         }
-        .frame(width: 500)
-        .background(.ultraThinMaterial)
+        .padding()
+        .frame(width: 500, height: 400)
+        .fileImporter(
+            isPresented: $showingDirectoryPicker,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    fileIndex.addDirectory(url.path)
+                }
+            case .failure(let error):
+                print("Error selecting directory: \(error.localizedDescription)")
+            }
+        }
     }
 } 
