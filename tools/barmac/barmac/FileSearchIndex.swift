@@ -5,6 +5,7 @@ import AppKit
 class FileSearchIndex: ObservableObject {
     private var fileIndex: [String: [String]] = [:] // Maps file names to their full paths
     private var pathIndex: [String: String] = [:] // Maps full paths to their file names
+    private var appIndex: [(name: String, path: String, icon: NSImage)] = [] // Applications with icons
     private let fileManager = FileManager.default
     private var targetDirectory = "/Users/slawomirstec/Documents/projects"
     private var progressTimer: Timer?
@@ -77,6 +78,10 @@ class FileSearchIndex: ObservableObject {
         indexingQueue.async { [weak self] in
             guard let self = self else { return }
             
+            // First, index applications
+            self.indexApplications()
+            
+            // Then proceed with file indexing
             // Check if directory exists and is accessible
             var isDir: ObjCBool = false
             if !self.fileManager.fileExists(atPath: self.targetDirectory, isDirectory: &isDir) {
@@ -188,6 +193,33 @@ class FileSearchIndex: ObservableObject {
         }
     }
     
+    private func indexApplications() {
+        let appDirectories = [
+            "/Applications",
+            "/System/Applications",
+            "/System/Library/CoreServices/Applications",
+            "/System/Library/PreferencePanes"
+        ]
+        
+        for directory in appDirectories {
+            do {
+                let contents = try fileManager.contentsOfDirectory(atPath: directory)
+                for item in contents {
+                    let fullPath = (directory as NSString).appendingPathComponent(item)
+                    if item.hasSuffix(".app") {
+                        let appName = (item as NSString).deletingPathExtension
+                        let icon = NSWorkspace.shared.icon(forFile: fullPath)
+                        DispatchQueue.main.async {
+                            self.appIndex.append((name: appName, path: fullPath, icon: icon))
+                        }
+                    }
+                }
+            } catch {
+                logger.error("Error indexing applications in \(directory): \(error.localizedDescription)")
+            }
+        }
+    }
+    
     private func handleError(_ logMessage: String, _ userMessage: String) {
         logger.error("\(logMessage, privacy: .public)")
         DispatchQueue.main.async { [weak self] in
@@ -200,13 +232,13 @@ class FileSearchIndex: ObservableObject {
         }
     }
     
-    // Search for files matching the query
-    func search(query: String) -> [(name: String, path: String)] {
+    // Search for files and applications matching the query
+    func search(query: String) -> [(name: String, path: String, icon: NSImage?)] {
         guard query.count >= 3 else { return [] }
         
         let searchWords = query.lowercased().split(separator: " ")
         var results: Set<String> = [] // Use Set to avoid duplicates
-        var finalResults: [(name: String, path: String)] = []
+        var finalResults: [(name: String, path: String, icon: NSImage?)] = []
         
         // First pass: Find all paths that match any word
         for word in searchWords {
@@ -237,18 +269,33 @@ class FileSearchIndex: ObservableObject {
             }
             
             if allWordsMatch {
-                finalResults.append((name: fileName, path: path))
+                finalResults.append((name: fileName, path: path, icon: nil))
             }
         }
         
-        // Sort results by filename
-        return finalResults.sorted { $0.name < $1.name }
+        // Search applications
+        for app in appIndex {
+            let lowercasedAppName = app.name.lowercased()
+            let lowercasedAppPath = app.path.lowercased()
+            
+            let allWordsMatch = searchWords.allSatisfy { word in
+                lowercasedAppName.contains(word) || lowercasedAppPath.contains(word)
+            }
+            
+            if allWordsMatch {
+                finalResults.insert((name: app.name, path: app.path, icon: app.icon), at: 0)
+            }
+        }
+        
+        // Sort results by filename (applications are already at the start)
+        return finalResults
     }
     
     // Refresh the index
     func refreshIndex() {
         fileIndex.removeAll()
         pathIndex.removeAll()
+        appIndex.removeAll()
         buildIndex()
     }
     

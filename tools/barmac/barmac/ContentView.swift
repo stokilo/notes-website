@@ -124,8 +124,15 @@ struct ContentView: View {
             } else {
                 ForEach(searchState.searchResults, id: \.path) { result in
                     HStack {
-                        Image(systemName: "doc")
-                            .foregroundColor(.gray)
+                        if let icon = result.icon {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .frame(width: 32, height: 32)
+                        } else {
+                            Image(systemName: "doc")
+                                .foregroundColor(.gray)
+                                .frame(width: 32, height: 32)
+                        }
                         VStack(alignment: .leading) {
                             Text(result.name)
                                 .lineLimit(1)
@@ -138,8 +145,19 @@ struct ContentView: View {
                     .padding(.vertical, 4)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        // Open the file
-                        NSWorkspace.shared.selectFile(result.path, inFileViewerRootedAtPath: "")
+                        if result.path.hasSuffix(".app") {
+                            // Launch the application using the new API
+                            if let url = URL(fileURLWithPath: result.path) {
+                                NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { runningApp, error in
+                                    if let error = error {
+                                        print("Error launching application: \(error.localizedDescription)")
+                                    }
+                                }
+                            }
+                        } else {
+                            // Open the file in Finder
+                            NSWorkspace.shared.selectFile(result.path, inFileViewerRootedAtPath: "")
+                        }
                     }
                 }
             }

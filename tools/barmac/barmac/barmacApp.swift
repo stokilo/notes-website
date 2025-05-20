@@ -1,16 +1,37 @@
 import SwiftUI
+import HotKey
 
 @main
 struct MacBarApp: App {
     @StateObject private var searchState = SearchState()
+    @State private var isWindowVisible = false
     
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(searchState)
+                .onAppear {
+                    setupGlobalShortcut()
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
+        .commands {
+            CommandGroup(replacing: .newItem) { }
+        }
+    }
+    
+    private func setupGlobalShortcut() {
+        let hotKey = HotKey(key: .hyphen, modifiers: [.command])
+        hotKey.keyDownHandler = {
+            if let window = NSApplication.shared.windows.first {
+                window.makeKeyAndOrderFront(nil)
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                if let searchField = window.firstResponder?.nextResponder?.nextResponder as? NSTextField {
+                    searchField.becomeFirstResponder()
+                }
+            }
+        }
     }
 }
 
@@ -22,7 +43,7 @@ class SearchState: ObservableObject {
         }
     }
     @Published var isSearching: Bool = false
-    @Published var searchResults: [(name: String, path: String)] = []
+    @Published var searchResults: [(name: String, path: String, icon: NSImage?)] = []
     @Published var currentIndexingFile: String = ""
     @Published var permissionError: String? = nil
     
