@@ -63,6 +63,11 @@ struct ContentView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 16))
                 .focused($isSearchFocused)
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isSearchFocused = true
+                    }
+                }
             
             if !searchState.searchText.isEmpty {
                 Button(action: {
@@ -128,42 +133,63 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
             } else {
-                ForEach(searchState.searchResults, id: \.path) { result in
-                    HStack {
-                        if let icon = result.icon {
-                            Image(nsImage: icon)
-                                .resizable()
-                                .frame(width: 32, height: 32)
-                        } else {
-                            Image(systemName: "doc")
-                                .foregroundColor(.gray)
-                                .frame(width: 32, height: 32)
-                        }
-                        VStack(alignment: .leading) {
-                            Text(result.name)
-                                .lineLimit(1)
-                            Text(result.path)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .lineLimit(1)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if result.path.hasSuffix(".app") {
-                            // Launch the application using the new API
-                            let url = URL(fileURLWithPath: result.path)
-                            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { runningApp, error in
-                                if let error = error {
-                                    print("Error launching application: \(error.localizedDescription)")
+                // Group results by directory
+                let groupedResults = Dictionary(grouping: searchState.searchResults) { result in
+                    result.isApp ? "Applications" : result.parentDirectory
+                }
+                
+                // Sort directories alphabetically
+                let sortedDirectories = groupedResults.keys.sorted { dir1, dir2 in
+                    if dir1 == "Applications" { return true }
+                    if dir2 == "Applications" { return false }
+                    return dir1 < dir2
+                }
+                
+                ForEach(sortedDirectories, id: \.self) { directory in
+                    Section(header: Text(directory == "Applications" ? "Applications" : directory)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .padding(.top, 8)) {
+                            ForEach(groupedResults[directory] ?? [], id: \.path) { result in
+                                HStack {
+                                    if let icon = result.icon {
+                                        Image(nsImage: icon)
+                                            .resizable()
+                                            .frame(width: 32, height: 32)
+                                    } else {
+                                        Image(systemName: "doc")
+                                            .foregroundColor(.gray)
+                                            .frame(width: 32, height: 32)
+                                    }
+                                    VStack(alignment: .leading) {
+                                        Text(result.name)
+                                            .lineLimit(1)
+                                        if !result.isApp {
+                                            Text(result.path)
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    if result.path.hasSuffix(".app") {
+                                        // Launch the application using the new API
+                                        let url = URL(fileURLWithPath: result.path)
+                                        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { runningApp, error in
+                                            if let error = error {
+                                                print("Error launching application: \(error.localizedDescription)")
+                                            }
+                                        }
+                                    } else {
+                                        // Open the file in Finder
+                                        NSWorkspace.shared.selectFile(result.path, inFileViewerRootedAtPath: "")
+                                    }
                                 }
                             }
-                        } else {
-                            // Open the file in Finder
-                            NSWorkspace.shared.selectFile(result.path, inFileViewerRootedAtPath: "")
                         }
-                    }
                 }
             }
         }

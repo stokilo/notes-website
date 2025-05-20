@@ -302,12 +302,12 @@ class FileSearchIndex: ObservableObject {
     }
     
     // Search for files and applications matching the query
-    func search(query: String) -> [(name: String, path: String, icon: NSImage?)] {
+    func search(query: String) -> [(name: String, path: String, icon: NSImage?, isApp: Bool, parentDirectory: String)] {
         guard query.count >= 3 else { return [] }
         
         let searchWords = query.lowercased().split(separator: " ")
         var results: Set<String> = [] // Use Set to avoid duplicates
-        var finalResults: [(name: String, path: String, icon: NSImage?)] = []
+        var finalResults: [(name: String, path: String, icon: NSImage?, isApp: Bool, parentDirectory: String)] = []
         
         // First pass: Find all paths that match any word
         for word in searchWords {
@@ -338,7 +338,8 @@ class FileSearchIndex: ObservableObject {
             }
             
             if allWordsMatch {
-                finalResults.append((name: fileName, path: path, icon: nil))
+                let parentDirectory = (path as NSString).deletingLastPathComponent
+                finalResults.append((name: fileName, path: path, icon: nil, isApp: false, parentDirectory: parentDirectory))
             }
         }
         
@@ -352,11 +353,10 @@ class FileSearchIndex: ObservableObject {
             }
             
             if allWordsMatch {
-                finalResults.insert((name: app.name, path: app.path, icon: app.icon), at: 0)
+                finalResults.insert((name: app.name, path: app.path, icon: app.icon, isApp: true, parentDirectory: ""), at: 0)
             }
         }
         
-        // Sort results by filename (applications are already at the start)
         return finalResults
     }
     

@@ -29,9 +29,11 @@ struct MacBarApp: App {
             window.hasShadow = false
             window.level = .floating
             window.collectionBehavior = [.canJoinAllSpaces, .stationary]
-            window.styleMask = [.borderless, .fullSizeContentView]
+            window.styleMask = [.borderless, .fullSizeContentView, .titled]
             window.ignoresMouseEvents = false
             window.isMovableByWindowBackground = true
+            window.acceptsMouseMovedEvents = true
+            window.makeFirstResponder(nil)
         }
     }
     
@@ -57,7 +59,7 @@ class SearchState: ObservableObject {
         }
     }
     @Published var isSearching: Bool = false
-    @Published var searchResults: [(name: String, path: String, icon: NSImage?)] = []
+    @Published var searchResults: [(name: String, path: String, icon: NSImage?, isApp: Bool, parentDirectory: String)] = []
     @Published var currentIndexingFile: String = ""
     @Published var permissionError: String? = nil
     
