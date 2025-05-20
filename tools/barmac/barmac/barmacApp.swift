@@ -63,7 +63,7 @@ class SearchState: ObservableObject {
     @Published var currentIndexingFile: String = ""
     @Published var permissionError: String? = nil
     
-    @ObservedObject private var fileIndex = FileSearchIndex()
+    let fileIndex = FileSearchIndex()
     
     private let indexingQueue = DispatchQueue(label: "com.barmac.indexing", qos: .userInitiated)
     private let searchQueue = DispatchQueue(label: "com.barmac.search", qos: .userInitiated)

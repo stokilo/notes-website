@@ -7,19 +7,21 @@ class FileSearchIndex: ObservableObject {
     private var pathIndex: [String: String] = [:] // Maps full paths to their file names
     private var appIndex: [(name: String, path: String, icon: NSImage)] = [] // Applications with icons
     private let fileManager = FileManager.default
-    private var targetDirectory = "/Users/slawomirstec/Documents/projects"
+    private var indexedDirectories: Set<String> = []
     private var progressTimer: Timer?
     private let logger = Logger(subsystem: "com.barmac", category: "FileSearchIndex")
     private let indexingQueue = DispatchQueue(label: "com.barmac.indexing", qos: .userInitiated)
     
     private let indexCacheURL: URL
     private let indexTimestampURL: URL
+    private let directoriesCacheURL: URL
     
     @Published var isIndexing: Bool = false
     @Published var indexedFilesCount: Int = 0
     @Published var totalFilesCount: Int = 0
     @Published var currentIndexingFile: String = ""
     @Published var permissionError: String? = nil
+    @Published var showSettings: Bool = false
     
     init() {
         // Set up cache URLs in the user's home directory
@@ -31,8 +33,10 @@ class FileSearchIndex: ObservableObject {
         
         indexCacheURL = cacheDirectory.appendingPathComponent("file_index.json")
         indexTimestampURL = cacheDirectory.appendingPathComponent("index_timestamp")
+        directoriesCacheURL = cacheDirectory.appendingPathComponent("indexed_directories.json")
         
         logger.info("FileSearchIndex initialized")
+        loadIndexedDirectories()
         DispatchQueue.main.async { [weak self] in
             self?.loadOrCreateIndex()
         }
@@ -40,6 +44,35 @@ class FileSearchIndex: ObservableObject {
     
     deinit {
         progressTimer?.invalidate()
+    }
+    
+    private func loadIndexedDirectories() {
+        if let data = try? Data(contentsOf: directoriesCacheURL),
+           let directories = try? JSONDecoder().decode(Set<String>.self, from: data) {
+            indexedDirectories = directories
+        }
+    }
+    
+    private func saveIndexedDirectories() {
+        if let data = try? JSONEncoder().encode(indexedDirectories) {
+            try? data.write(to: directoriesCacheURL)
+        }
+    }
+    
+    func addDirectory(_ path: String) {
+        indexedDirectories.insert(path)
+        saveIndexedDirectories()
+        buildIndex()
+    }
+    
+    func removeDirectory(_ path: String) {
+        indexedDirectories.remove(path)
+        saveIndexedDirectories()
+        buildIndex()
+    }
+    
+    var indexedDirectoriesList: [String] {
+        Array(indexedDirectories).sorted()
     }
     
     private func loadOrCreateIndex() {
@@ -60,8 +93,12 @@ class FileSearchIndex: ObservableObject {
             }
         }
         
-        // If no valid cache exists, request directory access
-        requestDirectoryAccess()
+        // If no valid cache exists or no directories are indexed, show settings
+        if indexedDirectories.isEmpty {
+            showSettings = true
+        } else {
+            buildIndex()
+        }
     }
     
     private func loadCachedIndex() -> Bool {
@@ -101,17 +138,15 @@ class FileSearchIndex: ObservableObject {
         openPanel.canChooseDirectories = true
         openPanel.canChooseFiles = false
         openPanel.allowsMultipleSelection = false
-        openPanel.message = "Please select the projects directory to index"
+        openPanel.message = "Please select a directory to index"
         openPanel.prompt = "Select Directory"
-        openPanel.directoryURL = URL(fileURLWithPath: targetDirectory)
         
         openPanel.begin { [weak self] response in
             guard let self = self else { return }
             
             if response == .OK, let url = openPanel.url {
-                // Store the selected directory
-                self.targetDirectory = url.path
-                self.buildIndex()
+                // Add the selected directory
+                self.addDirectory(url.path)
             } else {
                 self.permissionError = "Please select a directory to continue"
                 self.isIndexing = false
@@ -144,107 +179,114 @@ class FileSearchIndex: ObservableObject {
         indexingQueue.async { [weak self] in
             guard let self = self else { return }
             
+            // Clear existing indexes
+            self.fileIndex.removeAll()
+            self.pathIndex.removeAll()
+            self.appIndex.removeAll()
+            
             // First, index applications
             self.indexApplications()
             
-            // Then proceed with file indexing
-            // Check if directory exists and is accessible
-            var isDir: ObjCBool = false
-            if !self.fileManager.fileExists(atPath: self.targetDirectory, isDirectory: &isDir) {
-                self.handleError("Directory does not exist: \(self.targetDirectory)", "The selected directory does not exist")
-                return
-            }
-            
-            if !isDir.boolValue {
-                self.handleError("Path is not a directory: \(self.targetDirectory)", "The selected path is not a directory")
-                return
-            }
-            
-            // Check read permissions
-            if !self.fileManager.isReadableFile(atPath: self.targetDirectory) {
-                self.handleError("No read permission for directory: \(self.targetDirectory)", """
-                    No permission to access the directory.
-                    Please grant Full Disk Access in:
-                    System Preferences > Security & Privacy > Privacy > Full Disk Access
-                    """)
-                return
-            }
-            
-            // First, count total files
-            do {
-                self.logger.info("Counting total files in \(self.targetDirectory, privacy: .public)")
-                let enumerator = try self.fileManager.enumerator(at: URL(fileURLWithPath: self.targetDirectory),
-                                                          includingPropertiesForKeys: [.isDirectoryKey, .isReadableKey],
-                                                          options: [.skipsHiddenFiles])
+            // Then index each directory
+            for directory in self.indexedDirectories {
+                // Check if directory exists and is accessible
+                var isDir: ObjCBool = false
+                if !self.fileManager.fileExists(atPath: directory, isDirectory: &isDir) {
+                    self.handleError("Directory does not exist: \(directory)", "The selected directory does not exist")
+                    continue
+                }
                 
-                while let fileURL = enumerator?.nextObject() as? URL {
-                    do {
-                        let resourceValues = try fileURL.resourceValues(forKeys: [.isReadableKey])
-                        if resourceValues.isReadable ?? false {
+                if !isDir.boolValue {
+                    self.handleError("Path is not a directory: \(directory)", "The selected path is not a directory")
+                    continue
+                }
+                
+                // Check read permissions
+                if !self.fileManager.isReadableFile(atPath: directory) {
+                    self.handleError("No read permission for directory: \(directory)", """
+                        No permission to access the directory.
+                        Please grant Full Disk Access in:
+                        System Preferences > Security & Privacy > Privacy > Full Disk Access
+                        """)
+                    continue
+                }
+                
+                // First, count total files
+                do {
+                    self.logger.info("Counting total files in \(directory, privacy: .public)")
+                    let enumerator = try self.fileManager.enumerator(at: URL(fileURLWithPath: directory),
+                                                              includingPropertiesForKeys: [.isDirectoryKey, .isReadableKey],
+                                                              options: [.skipsHiddenFiles])
+                    
+                    while let fileURL = enumerator?.nextObject() as? URL {
+                        do {
+                            let resourceValues = try fileURL.resourceValues(forKeys: [.isReadableKey])
+                            if resourceValues.isReadable ?? false {
+                                DispatchQueue.main.async {
+                                    self.totalFilesCount += 1
+                                }
+                            } else {
+                                self.logger.warning("Skipping unreadable file: \(fileURL.path, privacy: .public)")
+                            }
+                        } catch {
+                            self.logger.error("Error checking file permissions: \(error.localizedDescription, privacy: .public)")
+                        }
+                    }
+                    self.logger.info("Found \(self.totalFilesCount, privacy: .public) total files")
+                } catch {
+                    self.handleError("Error counting files: \(error.localizedDescription)", error.localizedDescription)
+                    continue
+                }
+                
+                // Now build the index
+                do {
+                    self.logger.info("Building file index")
+                    let enumerator = try self.fileManager.enumerator(at: URL(fileURLWithPath: directory),
+                                                              includingPropertiesForKeys: [.isDirectoryKey, .isReadableKey],
+                                                              options: [.skipsHiddenFiles])
+                    
+                    while let fileURL = enumerator?.nextObject() as? URL {
+                        do {
+                            let resourceValues = try fileURL.resourceValues(forKeys: [.isReadableKey])
+                            guard resourceValues.isReadable ?? false else {
+                                self.logger.warning("Skipping unreadable file: \(fileURL.path, privacy: .public)")
+                                continue
+                            }
+                            
+                            let filePath = fileURL.path
                             DispatchQueue.main.async {
-                                self.totalFilesCount += 1
+                                self.currentIndexingFile = fileURL.lastPathComponent
                             }
-                        } else {
-                            self.logger.warning("Skipping unreadable file: \(fileURL.path, privacy: .public)")
+                            self.logger.debug("Indexing file: \(fileURL.lastPathComponent, privacy: .public)")
+                            
+                            // Get file attributes
+                            let attributes = try self.fileManager.attributesOfItem(atPath: filePath)
+                            let isDirectory = attributes[.type] as? FileAttributeType == .typeDirectory
+                            
+                            if !isDirectory {
+                                // Add file to index
+                                let fileName = fileURL.lastPathComponent
+                                if self.fileIndex[fileName] == nil {
+                                    self.fileIndex[fileName] = []
+                                }
+                                self.fileIndex[fileName]?.append(filePath)
+                                self.pathIndex[filePath] = fileName
+                            }
+                            
+                            DispatchQueue.main.async {
+                                self.indexedFilesCount += 1
+                                if self.indexedFilesCount % 100 == 0 {
+                                    self.logger.info("Indexed \(self.indexedFilesCount, privacy: .public) of \(self.totalFilesCount, privacy: .public) files")
+                                }
+                            }
+                        } catch {
+                            self.logger.error("Error processing file \(fileURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
                         }
-                    } catch {
-                        self.logger.error("Error checking file permissions: \(error.localizedDescription, privacy: .public)")
                     }
+                } catch {
+                    self.handleError("Error building index: \(error.localizedDescription)", error.localizedDescription)
+                    continue
                 }
-                self.logger.info("Found \(self.totalFilesCount, privacy: .public) total files")
-            } catch {
-                self.handleError("Error counting files: \(error.localizedDescription)", error.localizedDescription)
-                return
-            }
-            
-            // Now build the index
-            do {
-                self.logger.info("Building file index")
-                let enumerator = try self.fileManager.enumerator(at: URL(fileURLWithPath: self.targetDirectory),
-                                                          includingPropertiesForKeys: [.isDirectoryKey, .isReadableKey],
-                                                          options: [.skipsHiddenFiles])
-                
-                while let fileURL = enumerator?.nextObject() as? URL {
-                    do {
-                        let resourceValues = try fileURL.resourceValues(forKeys: [.isReadableKey])
-                        guard resourceValues.isReadable ?? false else {
-                            self.logger.warning("Skipping unreadable file: \(fileURL.path, privacy: .public)")
-                            continue
-                        }
-                        
-                        let filePath = fileURL.path
-                        DispatchQueue.main.async {
-                            self.currentIndexingFile = fileURL.lastPathComponent
-                        }
-                        self.logger.debug("Indexing file: \(fileURL.lastPathComponent, privacy: .public)")
-                        
-                        // Get file attributes
-                        let attributes = try self.fileManager.attributesOfItem(atPath: filePath)
-                        let isDirectory = attributes[.type] as? FileAttributeType == .typeDirectory
-                        
-                        if !isDirectory {
-                            // Add file to index
-                            let fileName = fileURL.lastPathComponent
-                            if self.fileIndex[fileName] == nil {
-                                self.fileIndex[fileName] = []
-                            }
-                            self.fileIndex[fileName]?.append(filePath)
-                            self.pathIndex[filePath] = fileName
-                        }
-                        
-                        DispatchQueue.main.async {
-                            self.indexedFilesCount += 1
-                            if self.indexedFilesCount % 100 == 0 {
-                                self.logger.info("Indexed \(self.indexedFilesCount, privacy: .public) of \(self.totalFilesCount, privacy: .public) files")
-                            }
-                        }
-                    } catch {
-                        self.logger.error("Error processing file \(fileURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
-                    }
-                }
-            } catch {
-                self.handleError("Error building index: \(error.localizedDescription)", error.localizedDescription)
-                return
             }
             
             // Save the index to cache
@@ -371,6 +413,14 @@ class FileSearchIndex: ObservableObject {
     var progress: Double {
         guard totalFilesCount > 0 else { return 0 }
         return Double(indexedFilesCount) / Double(totalFilesCount)
+    }
+    
+    func showSettingsPanel() {
+        showSettings = true
+    }
+    
+    func hideSettingsPanel() {
+        showSettings = false
     }
 }
 

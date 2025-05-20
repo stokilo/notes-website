@@ -43,6 +43,12 @@ struct ContentView: View {
         }
         .frame(width: 600)
         .background(.ultraThinMaterial)
+        .sheet(isPresented: Binding(
+            get: { searchState.fileIndex.showSettings },
+            set: { if $0 { searchState.fileIndex.showSettingsPanel() } else { searchState.fileIndex.hideSettingsPanel() } }
+        )) {
+            SettingsView()
+        }
         .onAppear {
             isSearchFocused = true
             // Hide the title bar
@@ -88,6 +94,15 @@ struct ContentView: View {
             .buttonStyle(.plain)
             .help("Refresh file index")
             .disabled(searchState.isIndexing)
+            
+            Button(action: {
+                searchState.fileIndex.showSettingsPanel()
+            }) {
+                Image(systemName: "gear")
+                    .foregroundColor(.gray)
+            }
+            .buttonStyle(.plain)
+            .help("Settings")
         }
         .padding(12)
         .background(.ultraThinMaterial)
