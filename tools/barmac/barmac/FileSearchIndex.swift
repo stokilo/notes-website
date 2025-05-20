@@ -12,22 +12,88 @@ class FileSearchIndex: ObservableObject {
     private let logger = Logger(subsystem: "com.barmac", category: "FileSearchIndex")
     private let indexingQueue = DispatchQueue(label: "com.barmac.indexing", qos: .userInitiated)
     
+    private let indexCacheURL: URL
+    private let indexTimestampURL: URL
+    
     @Published var isIndexing: Bool = false
     @Published var indexedFilesCount: Int = 0
     @Published var totalFilesCount: Int = 0
     @Published var currentIndexingFile: String = ""
     @Published var permissionError: String? = nil
     
-    // Initialize and build the index
     init() {
+        // Set up cache URLs in the user's home directory
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        let cacheDirectory = homeDirectory.appendingPathComponent(".barmac", isDirectory: true)
+        
+        // Create cache directory if it doesn't exist
+        try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        
+        indexCacheURL = cacheDirectory.appendingPathComponent("file_index.json")
+        indexTimestampURL = cacheDirectory.appendingPathComponent("index_timestamp")
+        
         logger.info("FileSearchIndex initialized")
         DispatchQueue.main.async { [weak self] in
-            self?.requestDirectoryAccess()
+            self?.loadOrCreateIndex()
         }
     }
     
     deinit {
         progressTimer?.invalidate()
+    }
+    
+    private func loadOrCreateIndex() {
+        // Check if we have a valid cached index
+        if let timestamp = try? Data(contentsOf: indexTimestampURL),
+           let timestampString = String(data: timestamp, encoding: .utf8),
+           let lastIndexTime = Double(timestampString) {
+            
+            let currentTime = Date().timeIntervalSince1970
+            let oneHourInSeconds: TimeInterval = 3600
+            
+            // If index is less than 1 hour old, load it
+            if currentTime - lastIndexTime < oneHourInSeconds {
+                if loadCachedIndex() {
+                    logger.info("Loaded cached index")
+                    return
+                }
+            }
+        }
+        
+        // If no valid cache exists, request directory access
+        requestDirectoryAccess()
+    }
+    
+    private func loadCachedIndex() -> Bool {
+        guard let data = try? Data(contentsOf: indexCacheURL),
+              let decodedIndex = try? JSONDecoder().decode(CachedIndex.self, from: data) else {
+            return false
+        }
+        
+        fileIndex = decodedIndex.fileIndex
+        pathIndex = decodedIndex.pathIndex
+        
+        // Rebuild app index as it can't be cached
+        indexApplications()
+        
+        return true
+    }
+    
+    private func saveIndex() {
+        let cachedIndex = CachedIndex(fileIndex: fileIndex, pathIndex: pathIndex)
+        
+        do {
+            let data = try JSONEncoder().encode(cachedIndex)
+            try data.write(to: indexCacheURL)
+            
+            // Save timestamp
+            let timestamp = String(Date().timeIntervalSince1970)
+            try timestamp.data(using: .utf8)?.write(to: indexTimestampURL)
+            
+            logger.info("Saved index to cache")
+        } catch {
+            logger.error("Failed to save index: \(error.localizedDescription)")
+        }
     }
     
     private func requestDirectoryAccess() {
@@ -181,6 +247,9 @@ class FileSearchIndex: ObservableObject {
                 return
             }
             
+            // Save the index to cache
+            self.saveIndex()
+            
             // Complete indexing
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
@@ -303,4 +372,10 @@ class FileSearchIndex: ObservableObject {
         guard totalFilesCount > 0 else { return 0 }
         return Double(indexedFilesCount) / Double(totalFilesCount)
     }
+}
+
+// Structure for caching the index
+private struct CachedIndex: Codable {
+    let fileIndex: [String: [String]]
+    let pathIndex: [String: String]
 } 
