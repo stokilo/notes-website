@@ -11,8 +11,8 @@ config_version=5
 [application]
 
 config/name="bgm"
-run/main_scene="res://scenes/main.tscn"
-config/features=PackedStringArray("4.4", "Forward Plus")
+run/main_scene="res://scenes/welcome.tscn"
+config/features=PackedStringArray("4.2", "Forward Plus")
 config/icon="res://icon.png"
 
 [display]
