@@ -41,7 +41,7 @@ const Main: React.FC = () => {
     const newBuilding: Building = {
       id: nextId,
       color: colors[Math.floor(Math.random() * colors.length)],
-      size: Math.floor(Math.random() * 50) + 50, // Random size between 50 and 100
+      size: Math.floor(Math.random() * 50) + 50,
     };
     setBuildings([...buildings, newBuilding]);
     setNextId(nextId + 1);
@@ -66,36 +66,21 @@ const Main: React.FC = () => {
 
   return (
     <div className="app-container" onContextMenu={handleContextMenu}>
-      <header className="app-header">
-        <h1>City Notes Board</h1>
-      </header>
-      <main className="app-main">
-        <ScrollablePanel onScrollEnd={handleScrollEnd}>
-          <div className="buildings-grid">
-            {buildings.map((building) => (
-              <div
-                key={building.id}
-                className="building-container"
-                style={{
-                  padding: '20px',
-                  margin: '10px',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '8px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <IsometricBuilding
-                  color={building.color}
-                  size={building.size}
-                />
-              </div>
-            ))}
-          </div>
-        </ScrollablePanel>
-      </main>
+      <ScrollablePanel onScrollEnd={handleScrollEnd}>
+        <div className="buildings-grid">
+          {buildings.map((building) => (
+            <div
+              key={building.id}
+              className="building-container"
+            >
+              <IsometricBuilding
+                color={building.color}
+                size={building.size}
+              />
+            </div>
+          ))}
+        </div>
+      </ScrollablePanel>
       {contextMenu.show && (
         <ContextMenu
           items={menuItems}
