@@ -9,8 +9,8 @@ interface AnimatedColoredBoxProps {
 }
 
 const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
-  width = 40,
-  height = 40,
+  width = 20,
+  height = 20,
   color = '#f0f0f0',
   children,
 }) => {
@@ -20,7 +20,7 @@ const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
   useEffect(() => {
     // Random animation intervals
     const rotationInterval = setInterval(() => {
-      setRotation(Math.random() * 20 - 10); // Random rotation between -10 and 10 degrees
+      setRotation(Math.random() * 10 - 5); // Random rotation between -10 and 10 degrees
     }, 5000);
 
     const shakeInterval = setInterval(() => {
