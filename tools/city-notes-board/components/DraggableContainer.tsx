@@ -21,6 +21,8 @@ interface DraggableItem {
   label?: string;
 }
 
+const STORAGE_KEY = 'city-notes-scene';
+
 const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' }) => {
   const [items, setItems] = useState<DraggableItem[]>([]);
   const [contextMenu, setContextMenu] = useState<{
@@ -32,6 +34,31 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const [copiedItem, setCopiedItem] = useState<DraggableItem | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Load scene from localStorage on initial mount
+  useEffect(() => {
+    console.log('Attempting to load saved scene...');
+    const savedScene = localStorage.getItem(STORAGE_KEY);
+    if (savedScene) {
+      try {
+        const parsedScene = JSON.parse(savedScene);
+        console.log('Successfully loaded scene:', parsedScene);
+        setItems(parsedScene);
+      } catch (error) {
+        console.error('Error loading saved scene:', error);
+      }
+    } else {
+      console.log('No saved scene found in localStorage');
+    }
+  }, []);
+
+  // Save scene to localStorage whenever items change
+  useEffect(() => {
+    if (items.length > 0) {
+      console.log('Saving scene to localStorage:', items);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+  }, [items]);
 
   const handleCopy = (itemId: string) => {
     const itemToCopy = items.find(item => item.id === itemId);
@@ -260,6 +287,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             setSelectedItemId(null);
             setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
             setCopiedItem(null);
+            localStorage.removeItem(STORAGE_KEY);
           }
         }}
       />
