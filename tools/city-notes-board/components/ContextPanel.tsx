@@ -1,0 +1,85 @@
+import React from 'react';
+import { GiModernCity, GiRoad } from 'react-icons/gi';
+
+interface ContextPanelProps {
+  onAddBuilding: () => void;
+  onAddStreet: () => void;
+}
+
+const ContextPanel: React.FC<ContextPanelProps> = ({
+  onAddBuilding,
+  onAddStreet,
+}) => {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: '20px',
+        left: '20px',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        borderRadius: '8px',
+        padding: '12px',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        zIndex: 1000,
+      }}
+    >
+      <button
+        onClick={onAddBuilding}
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '8px',
+          border: 'none',
+          backgroundColor: '#4a90e2',
+          color: 'white',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+          e.currentTarget.style.backgroundColor = '#357abd';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.backgroundColor = '#4a90e2';
+        }}
+      >
+        <GiModernCity size={24} />
+      </button>
+      <button
+        onClick={onAddStreet}
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '8px',
+          border: 'none',
+          backgroundColor: '#4a4a4a',
+          color: 'white',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+          e.currentTarget.style.backgroundColor = '#333333';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.backgroundColor = '#4a4a4a';
+        }}
+      >
+        <GiRoad size={24} />
+      </button>
+    </div>
+  );
+};
+
+export default ContextPanel; 
