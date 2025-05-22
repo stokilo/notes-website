@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { FaHome } from 'react-icons/fa';
 import './styles.css';
 import ScrollablePanel from './components/ScrollablePanel';
 import ContextMenu from './components/ContextMenu';
+import IsometricBuilding from './components/IsometricBuilding';
+
+interface Building {
+  id: number;
+  color: string;
+  size: number;
+}
 
 const Main: React.FC = () => {
   const [contextMenu, setContextMenu] = useState<{
@@ -12,6 +20,9 @@ const Main: React.FC = () => {
     show: false,
     position: { x: 0, y: 0 },
   });
+
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [nextId, setNextId] = useState(0);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -23,13 +34,24 @@ const Main: React.FC = () => {
 
   const handleScrollEnd = () => {
     console.log('Reached end of scroll');
-    // Here you can implement loading more content
+  };
+
+  const addBuilding = () => {
+    const colors = ['#4a90e2', '#50c878', '#e67e22', '#e74c3c', '#9b59b6'];
+    const newBuilding: Building = {
+      id: nextId,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: Math.floor(Math.random() * 50) + 50, // Random size between 50 and 100
+    };
+    setBuildings([...buildings, newBuilding]);
+    setNextId(nextId + 1);
   };
 
   const menuItems = [
     {
-      label: 'Add Note',
-      onClick: () => console.log('Add note clicked'),
+      label: 'Add Building',
+      onClick: addBuilding,
+      icon: <FaHome style={{ marginRight: '8px' }} />,
     },
     {
       label: 'Refresh',
@@ -49,21 +71,29 @@ const Main: React.FC = () => {
       </header>
       <main className="app-main">
         <ScrollablePanel onScrollEnd={handleScrollEnd}>
-          {/* Example content - replace with your actual components */}
-          {Array.from({ length: 20 }).map((_, index) => (
-            <div
-              key={index}
-              style={{
-                padding: '20px',
-                margin: '10px',
-                backgroundColor: '#f8f9fa',
-                borderRadius: '8px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              }}
-            >
-              Sample Content {index + 1}
-            </div>
-          ))}
+          <div className="buildings-grid">
+            {buildings.map((building) => (
+              <div
+                key={building.id}
+                className="building-container"
+                style={{
+                  padding: '20px',
+                  margin: '10px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '8px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <IsometricBuilding
+                  color={building.color}
+                  size={building.size}
+                />
+              </div>
+            ))}
+          </div>
         </ScrollablePanel>
       </main>
       {contextMenu.show && (

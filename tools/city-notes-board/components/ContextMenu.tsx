@@ -4,6 +4,7 @@ interface MenuItem {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  icon?: React.ReactNode;
 }
 
 interface ContextMenuProps {
@@ -63,7 +64,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             textAlign: 'left',
             cursor: item.disabled ? 'not-allowed' : 'pointer',
             color: item.disabled ? '#999' : '#333',
-            display: 'block',
+            display: 'flex',
+            alignItems: 'center',
             fontSize: '14px',
           }}
           onMouseEnter={(e) => {
@@ -75,7 +77,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          {item.label}
+          {item.icon}
+          <span>{item.label}</span>
         </button>
       ))}
     </div>
