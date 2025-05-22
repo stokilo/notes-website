@@ -1,5 +1,4 @@
 import React from 'react';
-import { GiModernCity, GiRoad } from 'react-icons/gi';
 
 interface ContextPanelProps {
   onAddBuilding: () => void;
@@ -33,24 +32,32 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
           height: '40px',
           borderRadius: '8px',
           border: 'none',
-          backgroundColor: '#4a90e2',
-          color: 'white',
+          backgroundColor: 'white',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           transition: 'all 0.2s ease',
+          padding: 0,
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.backgroundColor = '#357abd';
+          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.backgroundColor = '#4a90e2';
+          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
         }}
       >
-        <GiModernCity size={24} />
+        <img
+          src="/house.svg"
+          alt="Add Building"
+          style={{
+            width: '28px',
+            height: '28px',
+          }}
+        />
       </button>
       <button
         onClick={onAddStreet}
@@ -59,24 +66,32 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
           height: '40px',
           borderRadius: '8px',
           border: 'none',
-          backgroundColor: '#4a4a4a',
-          color: 'white',
+          backgroundColor: 'white',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           transition: 'all 0.2s ease',
+          padding: 0,
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.backgroundColor = '#333333';
+          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.backgroundColor = '#4a4a4a';
+          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
         }}
       >
-        <GiRoad size={24} />
+        <img
+          src="/street.svg"
+          alt="Add Street"
+          style={{
+            width: '28px',
+            height: '28px',
+          }}
+        />
       </button>
     </div>
   );
