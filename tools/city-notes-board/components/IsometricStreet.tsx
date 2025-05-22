@@ -79,6 +79,18 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
             msUserSelect: 'none',
             minWidth: 'max-content',
           }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsEditing(true);
+            setEditValue(label || '');
+            setTimeout(() => {
+              if (inputRef.current) {
+                inputRef.current.select();
+              }
+            }, 0);
+          }}
+          onMouseDown={(e) => e.preventDefault()}
         >
           {isEditing ? (
             <input
