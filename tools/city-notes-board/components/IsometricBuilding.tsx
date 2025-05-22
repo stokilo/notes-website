@@ -34,6 +34,10 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
     }
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
       {/* Label */}
@@ -83,10 +87,17 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
       <img
         src="/house.svg"
         alt="House"
+        draggable="false"
+        onDragStart={handleDragStart}
         style={{
           width: size,
           height: size,
           display: 'block',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
+          pointerEvents: 'none',
         }}
       />
     </div>
