@@ -14,6 +14,7 @@ interface DraggableItem {
   id: string;
   type: 'building' | 'street';
   position: { x: number; y: number };
+  size: { width: number; height: number };
   props?: any;
   label?: string;
 }
@@ -35,11 +36,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
+  const handleSizeChange = (id: string, newSize: { width: number; height: number }) => {
+    setItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id ? { ...item, size: newSize } : item
+      )
+    );
+  };
+
   const addItem = (type: 'building' | 'street', position: { x: number; y: number }) => {
     const newItem: DraggableItem = {
       id: `${type}-${Date.now()}`,
       type,
       position,
+      size: { width: 50, height: 50 },
       props: type === 'building' 
         ? { color: '#4a90e2', size: 50, height: 40 } 
         : { width: 50, length: 100 },
@@ -75,7 +85,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const commonProps = {
       id: item.id,
       initialPosition: item.position,
+      initialSize: item.size,
       onPositionChange: (pos: { x: number; y: number }) => handlePositionChange(item.id, pos),
+      onSizeChange: (size: { width: number; height: number }) => handleSizeChange(item.id, size),
       onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, item.id),
     };
 
@@ -84,12 +96,16 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         {item.type === 'building' ? (
           <IsometricBuilding 
             {...item.props} 
+            width={item.size.width}
+            height={item.size.height}
             label={item.label} 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
         ) : (
           <IsometricStreet 
             {...item.props} 
+            width={item.size.width}
+            height={item.size.height}
             label={item.label} 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />

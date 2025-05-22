@@ -4,16 +4,21 @@ interface IsometricBuildingProps {
   label?: string;
   onLabelChange?: (newLabel: string) => void;
   size?: number;
+  width?: number;
+  height?: number;
 }
 
 const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
   label,
   onLabelChange,
   size = 50,
+  width,
+  height,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label || '');
   const inputRef = useRef<HTMLInputElement>(null);
+  const actualSize = width || size;
 
   const handleLabelClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -47,7 +52,7 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
   };
 
   return (
-    <div style={{ position: 'relative', width: size, height: size }}>
+    <div style={{ position: 'relative', width: actualSize, height: actualSize }}>
       {/* Label */}
       {label && (
         <div
@@ -109,8 +114,8 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
         draggable="false"
         onDragStart={handleDragStart}
         style={{
-          width: size,
-          height: size,
+          width: actualSize,
+          height: actualSize,
           display: 'block',
           userSelect: 'none',
           WebkitUserSelect: 'none',
