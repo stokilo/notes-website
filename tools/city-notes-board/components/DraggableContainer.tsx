@@ -30,11 +30,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   }>({ show: false, x: 0, y: 0, itemId: '' });
   const [copiedItem, setCopiedItem] = useState<DraggableItem | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [drawingType, setDrawingType] = useState<'grass' | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastDrawnPosition = useRef<{ x: number; y: number } | null>(null);
 
   const handleCopy = (itemId: string) => {
     const itemToCopy = items.find(item => item.id === itemId);
@@ -129,11 +125,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
-    if (isDrawing) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
     e.preventDefault();
     e.stopPropagation();
     setSelectedItemId(itemId);
@@ -146,11 +137,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    if (isDrawing) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
     // Only clear selection if clicking directly on the container
     if (e.target === containerRef.current) {
       setSelectedItemId(null);
@@ -159,11 +145,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleItemClick = (e: React.MouseEvent, itemId: string) => {
-    if (isDrawing) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
     e.stopPropagation();
     setSelectedItemId(itemId);
   };
@@ -180,76 +161,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItems(prevItems => prevItems.filter(item => item.id !== itemId));
     setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
   };
-
-  const startDrawing = (type: 'grass') => {
-    setIsDrawing(true);
-    setDrawingType(type);
-    setSelectedItemId(null); // Clear any selected item
-    setContextMenu({ show: false, x: 0, y: 0, itemId: '' }); // Hide context menu
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-    setDrawingType(null);
-    setIsDragging(false);
-    lastDrawnPosition.current = null;
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (isDrawing) {
-      e.preventDefault(); // Prevent other interactions
-      e.stopPropagation();
-      setIsDragging(true);
-      
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      addItem(drawingType!, { x, y });
-      lastDrawnPosition.current = { x, y };
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || !drawingType || !isDragging) return;
-
-    e.preventDefault(); // Prevent other interactions
-    e.stopPropagation();
-
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    // Only create new items if we've moved far enough from the last position
-    if (!lastDrawnPosition.current || 
-        Math.hypot(x - lastDrawnPosition.current.x, y - lastDrawnPosition.current.y) > 30) {
-      addItem(drawingType, { x, y });
-      lastDrawnPosition.current = { x, y };
-    }
-  };
-
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (isDrawing) {
-      e.preventDefault(); // Prevent other interactions
-      e.stopPropagation();
-    }
-    stopDrawing();
-  };
-
-  useEffect(() => {
-    // Add global mouse up listener to stop drawing if mouse leaves the container
-    const handleGlobalMouseUp = () => {
-      stopDrawing();
-    };
-
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => {
-      window.removeEventListener('mouseup', handleGlobalMouseUp);
-    };
-  }, []);
 
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
@@ -304,12 +215,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         height: '100vh',
         overflow: 'hidden',
         backgroundColor: '#f0f0f0',
-        cursor: isDrawing ? 'crosshair' : 'default',
       }}
       onClick={handleClick}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
       tabIndex={0}
     >
       {items.map(renderItem)}
@@ -317,7 +224,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       <ContextPanel
         onAddBuilding={() => addItem('building', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
         onAddStreet={() => addItem('street', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-        onAddGrass={() => startDrawing('grass')}
+        onAddGrass={() => addItem('grass', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
       />
       {contextMenu.show && (
         <ContextMenu
