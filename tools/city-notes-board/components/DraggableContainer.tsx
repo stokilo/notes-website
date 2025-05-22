@@ -8,6 +8,7 @@ import Grass from './Grass';
 import QuestionBox from './QuestionBox';
 import ContextMenu from './ContextMenu';
 import CommentEditor from './CommentEditor';
+import BoxGlassMeasuringContainer from './box/BoxGlassMeasuringContainer';
 
 interface DraggableContainerProps {
   className?: string;
@@ -15,13 +16,14 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'building' | 'street' | 'grass' | 'questionBox';
+  type: 'building' | 'street' | 'grass' | 'questionBox' | 'questionBoxContainer';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
   label?: string;
   comment?: string;
   commentLabel?: string;
+  parentId?: string;
 }
 
 const STORAGE_KEY = 'city-notes-scene';
@@ -161,25 +163,47 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addQuestionBox = (position: { x: number; y: number }) => {
-    // Find all existing question boxes for this position
-    const existingBoxes = items.filter(item => 
-      item.type === 'questionBox' && 
-      Math.abs(item.position.x - position.x) < 10
+    // Find existing container for this position
+    const existingContainer = items.find(item => 
+      item.type === 'questionBoxContainer' && 
+      Math.abs(item.position.x - position.x) < 50
     );
 
-    // Calculate the new position based on existing boxes
-    const verticalOffset = 50; // Space between boxes
-    const newY = position.y + (existingBoxes.length * verticalOffset);
+    if (existingContainer) {
+      // Add to existing container
+      const newItem: DraggableItem = {
+        id: `questionBox-${Date.now()}`,
+        type: 'questionBox',
+        position: { x: 0, y: 0 }, // Position relative to container
+        size: { width: 40, height: 40 },
+        props: {},
+        label: undefined,
+        parentId: existingContainer.id
+      };
+      setItems(prev => [...prev, newItem]);
+    } else {
+      // Create new container
+      const containerId = `questionBoxContainer-${Date.now()}`;
+      const containerItem: DraggableItem = {
+        id: containerId,
+        type: 'questionBoxContainer',
+        position,
+        size: { width: 200, height: 400 },
+        props: {},
+      };
 
-    const newItem: DraggableItem = {
-      id: `questionBox-${Date.now()}`,
-      type: 'questionBox',
-      position: { ...position, y: newY },
-      size: { width: 40, height: 40 },
-      props: {},
-      label: undefined
-    };
-    setItems(prev => [...prev, newItem]);
+      const questionBoxItem: DraggableItem = {
+        id: `questionBox-${Date.now()}`,
+        type: 'questionBox',
+        position: { x: 0, y: 0 }, // Position relative to container
+        size: { width: 40, height: 40 },
+        props: {},
+        label: undefined,
+        parentId: containerId
+      };
+
+      setItems(prev => [...prev, containerItem, questionBoxItem]);
+    }
   };
 
   const handleCommentChange = (itemId: string, comment: string, label: string) => {
@@ -239,6 +263,25 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
       isSelected: item.id === selectedItemId,
     };
+
+    if (item.type === 'questionBoxContainer') {
+      const containerQuestionBoxes = items.filter(qb => qb.parentId === item.id);
+      return (
+        <DraggableItem key={item.id} {...commonProps}>
+          <BoxGlassMeasuringContainer width={item.size.width} height={item.size.height}>
+            {containerQuestionBoxes.map(qb => (
+              <QuestionBox
+                key={qb.id}
+                width={qb.size.width}
+                height={qb.size.height}
+                comment={qb.comment}
+                commentLabel={qb.commentLabel}
+              />
+            ))}
+          </BoxGlassMeasuringContainer>
+        </DraggableItem>
+      );
+    }
 
     return (
       <DraggableItem key={item.id} {...commonProps}>
