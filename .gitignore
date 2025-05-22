@@ -6,3 +6,4 @@
 /build/
 /electron-screenshot-app/node_modules/
 /tools/screenshoots/target/
+/tools/city-notes-board/node_modules/
