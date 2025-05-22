@@ -47,7 +47,7 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
       <svg
         width={svgWidth}
         height={svgHeight}
-        style={{ position: 'absolute', top: 0, left: 0, zIndex: 0 }}
+        style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, pointerEvents: 'none' }}
       >
         {/* Glass body */}
         <path
@@ -147,6 +147,7 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
           gap: '10px',
           overflowY: 'auto',
           zIndex: 1,
+          pointerEvents: 'auto',
         }}
       >
         {React.Children.map(children, (child, idx) => (

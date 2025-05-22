@@ -6,6 +6,8 @@ interface QuestionBoxProps {
   height?: number;
   comment?: string;
   commentLabel?: string;
+  onClick?: (e: React.MouseEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 const QuestionBox: React.FC<QuestionBoxProps> = ({
@@ -13,6 +15,8 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   height = 40,
   comment,
   commentLabel,
+  onClick,
+  onContextMenu,
 }) => {
   const [boxColor, setBoxColor] = useState('#FFD700');
 
@@ -25,7 +29,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   }, []);
 
   return (
-    <div style={{ position: 'relative', width, height }}>
+    <div style={{ position: 'relative', width, height }} onClick={onClick} onContextMenu={onContextMenu}>
       {/* Comment indicator with label */}
       {comment && commentLabel && (
         <div

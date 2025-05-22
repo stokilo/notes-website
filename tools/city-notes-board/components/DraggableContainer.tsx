@@ -276,6 +276,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 height={qb.size.height}
                 comment={qb.comment}
                 commentLabel={qb.commentLabel}
+                onClick={e => {
+                  e.stopPropagation();
+                  setSelectedItemId(qb.id);
+                }}
+                onContextMenu={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSelectedItemId(qb.id);
+                  setCommentEditor({
+                    show: true,
+                    itemId: qb.id,
+                    position: { x: e.clientX, y: e.clientY },
+                  });
+                }}
               />
             ))}
           </BoxGlassMeasuringContainer>
