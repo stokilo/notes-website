@@ -4,6 +4,7 @@ import DebugPanel from './DebugPanel';
 import ContextPanel from './ContextPanel';
 import IsometricBuilding from './IsometricBuilding';
 import IsometricStreet from './IsometricStreet';
+import Grass from './Grass';
 import ContextMenu from './ContextMenu';
 
 interface DraggableContainerProps {
@@ -12,7 +13,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'building' | 'street';
+  type: 'building' | 'street' | 'grass';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -29,7 +30,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   }>({ show: false, x: 0, y: 0, itemId: '' });
   const [copiedItem, setCopiedItem] = useState<DraggableItem | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawingType, setDrawingType] = useState<'grass' | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastDrawnPosition = useRef<{ x: number; y: number } | null>(null);
 
   const handleCopy = (itemId: string) => {
     const itemToCopy = items.find(item => item.id === itemId);
@@ -107,7 +112,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
-  const addItem = (type: 'building' | 'street', position: { x: number; y: number }) => {
+  const addItem = (type: 'building' | 'street' | 'grass', position: { x: number; y: number }) => {
     const newItem: DraggableItem = {
       id: `${type}-${Date.now()}`,
       type,
@@ -115,7 +120,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       size: { width: 100, height: 100 },
       props: type === 'building' 
         ? { color: '#4a90e2', size: 100, height: 80 } 
-        : { width: 100, length: 200 },
+        : type === 'street'
+        ? { width: 100, length: 200 }
+        : { width: 100, height: 100 },
       label: undefined
     };
     setItems(prev => [...prev, newItem]);
@@ -159,6 +166,64 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
   };
 
+  const startDrawing = (type: 'grass') => {
+    setIsDrawing(true);
+    setDrawingType(type);
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+    setDrawingType(null);
+    setIsDragging(false);
+    lastDrawnPosition.current = null;
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isDrawing || !drawingType) return;
+    setIsDragging(true);
+    
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    addItem(drawingType, { x, y });
+    lastDrawnPosition.current = { x, y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDrawing || !drawingType || !isDragging) return;
+
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Only create new items if we've moved far enough from the last position
+    if (!lastDrawnPosition.current || 
+        Math.hypot(x - lastDrawnPosition.current.x, y - lastDrawnPosition.current.y) > 30) {
+      addItem(drawingType, { x, y });
+      lastDrawnPosition.current = { x, y };
+    }
+  };
+
+  const handleMouseUp = () => {
+    stopDrawing();
+  };
+
+  useEffect(() => {
+    // Add global mouse up listener to stop drawing if mouse leaves the container
+    const handleGlobalMouseUp = () => {
+      stopDrawing();
+    };
+
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, []);
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -181,12 +246,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             label={item.label} 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
-        ) : (
+        ) : item.type === 'street' ? (
           <IsometricStreet 
             {...item.props} 
             width={item.size.width}
             height={item.size.height}
             label={item.label} 
+            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
+          />
+        ) : (
+          <Grass
+            {...item.props}
+            width={item.size.width}
+            height={item.size.height}
+            label={item.label}
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
         )}
@@ -204,15 +277,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         height: '100vh',
         overflow: 'hidden',
         backgroundColor: '#f0f0f0',
+        cursor: isDrawing ? 'crosshair' : 'default',
       }}
       onClick={handleClick}
-      tabIndex={0} // Make the container focusable
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      tabIndex={0}
     >
       {items.map(renderItem)}
       <DebugPanel />
       <ContextPanel
         onAddBuilding={() => addItem('building', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
         onAddStreet={() => addItem('street', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+        onAddGrass={() => startDrawing('grass')}
       />
       {contextMenu.show && (
         <ContextMenu
