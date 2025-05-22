@@ -24,6 +24,8 @@ interface DraggableItem {
   comment?: string;
   commentLabel?: string;
   parentId?: string;
+  finalPosition?: { x: number; y: number };
+  isNew?: boolean;
 }
 
 const STORAGE_KEY = 'city-notes-scene';
@@ -170,15 +172,24 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
 
     if (existingContainer) {
-      // Add to existing container's children
+      // Calculate final position for the new question box
+      const existingBoxes = existingContainer.props.children || [];
+      const boxHeight = 40; // Height of each question box
+      const boxSpacing = 20; // Spacing between boxes
+      const containerPadding = 30; // Padding from container edges
+      const finalY = containerPadding + (existingBoxes.length * (boxHeight + boxSpacing));
+
+      // Add to existing container's children, starting at the top
       const newQuestionBox = {
         id: `questionBox-${Date.now()}`,
         type: 'questionBox',
-        position: { x: 0, y: 0 },
+        position: { x: 0, y: containerPadding }, // Start at top
+        finalPosition: { x: 0, y: finalY }, // Store final position for animation
         size: { width: 40, height: 40 },
         props: {},
         label: undefined,
-        parentId: existingContainer.id
+        parentId: existingContainer.id,
+        isNew: true // Flag to indicate this is a new box that needs animation
       };
       
       setItems(prevItems => 
@@ -200,11 +211,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       const initialQuestionBox = {
         id: `questionBox-${Date.now()}`,
         type: 'questionBox',
-        position: { x: 0, y: 0 },
+        position: { x: 0, y: 30 }, // Start with padding from top
+        finalPosition: { x: 0, y: 30 }, // Same as position for initial box
         size: { width: 40, height: 40 },
         props: {},
         label: undefined,
-        parentId: containerId
+        parentId: containerId,
+        isNew: true
       };
 
       const containerItem: DraggableItem = {

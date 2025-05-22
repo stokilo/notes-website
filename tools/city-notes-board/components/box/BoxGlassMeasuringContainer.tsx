@@ -12,7 +12,7 @@ const markings = [100, 150, 200, 250, 300, 400];
 const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
   children,
   width = 120,
-  height = 240,
+  height = 400,
 }) => {
   // SVG dimensions
   const svgWidth = width;
@@ -144,7 +144,7 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '10px',
+          gap: '20px',
           overflowY: 'auto',
           zIndex: 1,
           pointerEvents: 'auto',
@@ -153,10 +153,21 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
         {React.Children.map(children, (child, idx) => (
           <motion.div
             key={idx}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: -100 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
+            transition={{ 
+              delay: idx * 0.2,
+              type: "spring",
+              damping: 12,
+              stiffness: 80,
+              duration: 2
+            }}
+            style={{ 
+              width: '100%', 
+              display: 'flex', 
+              justifyContent: 'center',
+              position: 'relative'
+            }}
           >
             {child}
           </motion.div>

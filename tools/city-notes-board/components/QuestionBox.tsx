@@ -8,6 +8,8 @@ interface QuestionBoxProps {
   commentLabel?: string;
   onClick?: (e: React.MouseEvent) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
+  isNew?: boolean;
+  finalPosition?: { x: number; y: number };
 }
 
 const QuestionBox: React.FC<QuestionBoxProps> = ({
@@ -17,6 +19,8 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   commentLabel,
   onClick,
   onContextMenu,
+  isNew,
+  finalPosition,
 }) => {
   const [boxColor, setBoxColor] = useState('#FFD700');
 
@@ -70,7 +74,13 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
         </div>
       )}
       {/* Question Box */}
-      <AnimatedColoredBox width={width} height={height} color={boxColor}>
+      <AnimatedColoredBox 
+        width={width} 
+        height={height} 
+        color={boxColor}
+        isNew={isNew}
+        finalPosition={finalPosition}
+      >
         <span
           style={{
             fontSize: '24px',
