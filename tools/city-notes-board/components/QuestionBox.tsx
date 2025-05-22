@@ -31,7 +31,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   return (
     <div style={{ position: 'relative', width, height }} onClick={onClick} onContextMenu={onContextMenu}>
       {/* Comment indicator with label */}
-      {comment && commentLabel && (
+      {comment && (
         <div
           style={{
             position: 'absolute',
@@ -54,7 +54,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
               textOverflow: 'ellipsis',
             }}
           >
-            {commentLabel}
+            {commentLabel || 'Comment'}
           </div>
         </div>
       )}

@@ -170,47 +170,85 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
 
     if (existingContainer) {
-      // Add to existing container
-      const newItem: DraggableItem = {
+      // Add to existing container's children
+      const newQuestionBox = {
         id: `questionBox-${Date.now()}`,
         type: 'questionBox',
-        position: { x: 0, y: 0 }, // Position relative to container
+        position: { x: 0, y: 0 },
         size: { width: 40, height: 40 },
         props: {},
         label: undefined,
         parentId: existingContainer.id
       };
-      setItems(prev => [...prev, newItem]);
+      
+      setItems(prevItems => 
+        prevItems.map(item => 
+          item.id === existingContainer.id 
+            ? { 
+                ...item, 
+                props: { 
+                  ...item.props,
+                  children: [...(item.props.children || []), newQuestionBox]
+                }
+              }
+            : item
+        )
+      );
     } else {
-      // Create new container
+      // Create new container with initial question box
       const containerId = `questionBoxContainer-${Date.now()}`;
-      const containerItem: DraggableItem = {
-        id: containerId,
-        type: 'questionBoxContainer',
-        position,
-        size: { width: 200, height: 400 },
-        props: {},
-      };
-
-      const questionBoxItem: DraggableItem = {
+      const initialQuestionBox = {
         id: `questionBox-${Date.now()}`,
         type: 'questionBox',
-        position: { x: 0, y: 0 }, // Position relative to container
+        position: { x: 0, y: 0 },
         size: { width: 40, height: 40 },
         props: {},
         label: undefined,
         parentId: containerId
       };
 
-      setItems(prev => [...prev, containerItem, questionBoxItem]);
+      const containerItem: DraggableItem = {
+        id: containerId,
+        type: 'questionBoxContainer',
+        position,
+        size: { width: 200, height: 400 },
+        props: {
+          children: [initialQuestionBox]
+        },
+      };
+
+      setItems(prev => [...prev, containerItem]);
     }
   };
 
   const handleCommentChange = (itemId: string, comment: string, label: string) => {
     setItems(prevItems =>
-      prevItems.map(item =>
-        item.id === itemId ? { ...item, comment, commentLabel: label } : item
-      )
+      prevItems.map(item => {
+        // Check if this is a container that might have the question box as a child
+        if (item.type === 'questionBoxContainer' && item.props.children) {
+          const updatedChildren = item.props.children.map(child => 
+            child.id === itemId 
+              ? { ...child, comment, commentLabel: label }
+              : child
+          );
+          
+          // If we found and updated the child, return the updated container
+          if (updatedChildren.some(child => child.id === itemId)) {
+            return {
+              ...item,
+              props: {
+                ...item.props,
+                children: updatedChildren
+              }
+            };
+          }
+        }
+        
+        // If this is the item itself (not a child of a container)
+        return item.id === itemId 
+          ? { ...item, comment, commentLabel: label }
+          : item;
+      })
     );
   };
 
@@ -265,7 +303,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     };
 
     if (item.type === 'questionBoxContainer') {
-      const containerQuestionBoxes = items.filter(qb => qb.parentId === item.id);
+      const containerQuestionBoxes = item.props.children || [];
       return (
         <DraggableItem key={item.id} {...commonProps}>
           <BoxGlassMeasuringContainer width={item.size.width} height={item.size.height}>
@@ -385,6 +423,35 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 onClick: () => handleDeleteItem(contextMenu.itemId),
               },
             ];
+
+            // Check if the item is a question box in a container
+            const containerWithQuestionBox = items.find(container => 
+              container.type === 'questionBoxContainer' && 
+              container.props.children?.some(child => child.id === contextMenu.itemId)
+            );
+
+            if (containerWithQuestionBox) {
+              const questionBox = containerWithQuestionBox.props.children.find(
+                child => child.id === contextMenu.itemId
+              );
+              
+              if (questionBox) {
+                return [
+                  {
+                    label: questionBox.comment ? 'View Comment' : 'Add Comment',
+                    onClick: () => {
+                      setCommentEditor({
+                        show: true,
+                        itemId: contextMenu.itemId,
+                        position: { x: contextMenu.x, y: contextMenu.y },
+                      });
+                      setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+                    },
+                  },
+                  ...baseItems,
+                ];
+              }
+            }
 
             if (item.type === 'questionBox') {
               return [
