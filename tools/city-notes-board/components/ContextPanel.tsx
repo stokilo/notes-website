@@ -28,9 +28,9 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
       <button
         onClick={onAddBuilding}
         style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '8px',
+          width: '80px',
+          height: '80px',
+          borderRadius: '12px',
           border: 'none',
           backgroundColor: 'white',
           cursor: 'pointer',
@@ -54,17 +54,17 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
           src="/house.svg"
           alt="Add Building"
           style={{
-            width: '28px',
-            height: '28px',
+            width: '56px',
+            height: '56px',
           }}
         />
       </button>
       <button
         onClick={onAddStreet}
         style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '8px',
+          width: '80px',
+          height: '80px',
+          borderRadius: '12px',
           border: 'none',
           backgroundColor: 'white',
           cursor: 'pointer',
@@ -88,8 +88,8 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
           src="/street.svg"
           alt="Add Street"
           style={{
-            width: '28px',
-            height: '28px',
+            width: '56px',
+            height: '56px',
           }}
         />
       </button>

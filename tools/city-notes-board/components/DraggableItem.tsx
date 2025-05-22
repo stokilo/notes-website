@@ -10,6 +10,8 @@ interface DraggableItemProps {
   onDragStart?: (position: { x: number; y: number }) => void;
   onDragEnd?: (position: { x: number; y: number }) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
+  onClick?: (e: React.MouseEvent) => void;
+  isSelected?: boolean;
 }
 
 const DraggableItem: React.FC<DraggableItemProps> = ({
@@ -22,6 +24,8 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   onDragStart,
   onDragEnd,
   onContextMenu,
+  onClick,
+  isSelected = false,
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [size, setSize] = useState(initialSize);
@@ -57,6 +61,12 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       y: e.clientY,
     };
     setIsResizing(true);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (!isDragging && !isResizing) {
+      onClick?.(e);
+    }
   };
 
   useEffect(() => {
@@ -149,9 +159,12 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         zIndex: isDragging || isResizing ? 1000 : 1,
         willChange: 'transform',
         transform: 'translate3d(0, 0, 0)',
+        outline: isSelected ? '2px solid #4a90e2' : 'none',
+        outlineOffset: '2px',
       }}
       onMouseDown={handleMouseDown}
       onContextMenu={onContextMenu}
+      onClick={handleClick}
     >
       {children}
       {/* Resize handle */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DraggableItem from './DraggableItem';
 import DebugPanel from './DebugPanel';
 import ContextPanel from './ContextPanel';
@@ -27,6 +27,69 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     y: number;
     itemId: string;
   }>({ show: false, x: 0, y: 0, itemId: '' });
+  const [copiedItem, setCopiedItem] = useState<DraggableItem | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleCopy = (itemId: string) => {
+    const itemToCopy = items.find(item => item.id === itemId);
+    if (itemToCopy) {
+      setCopiedItem(itemToCopy);
+      console.log('Item copied:', itemToCopy);
+    }
+  };
+
+  const handlePaste = () => {
+    if (!copiedItem) return;
+
+    // Calculate new position with offset from original
+    const offset = 20;
+    const newPosition = {
+      x: copiedItem.position.x + offset,
+      y: copiedItem.position.y + offset,
+    };
+
+    // Ensure the new position is within viewport bounds
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    if (newPosition.x + copiedItem.size.width > viewportWidth) {
+      newPosition.x = viewportWidth - copiedItem.size.width - 20;
+    }
+    if (newPosition.y + copiedItem.size.height > viewportHeight) {
+      newPosition.y = viewportHeight - copiedItem.size.height - 20;
+    }
+
+    const newItem: DraggableItem = {
+      ...copiedItem,
+      id: `${copiedItem.type}-${Date.now()}`,
+      position: newPosition,
+    };
+
+    setItems(prev => [...prev, newItem]);
+    console.log('Item pasted:', newItem);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for CMD+C (Mac) or CTRL+C (Windows)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+        e.preventDefault();
+        if (selectedItemId) {
+          handleCopy(selectedItemId);
+        }
+      }
+      // Check for CMD+V (Mac) or CTRL+V (Windows)
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+        e.preventDefault();
+        handlePaste();
+      }
+    };
+
+    // Add event listener to the document instead of window
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedItemId, copiedItem, items]); // Add items to dependencies
 
   const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
     setItems(prevItems =>
@@ -61,12 +124,26 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
     e.preventDefault();
     e.stopPropagation();
+    setSelectedItemId(itemId);
     setContextMenu({
       show: true,
       x: e.clientX,
       y: e.clientY,
       itemId,
     });
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Only clear selection if clicking directly on the container
+    if (e.target === containerRef.current) {
+      setSelectedItemId(null);
+      setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+    }
+  };
+
+  const handleItemClick = (e: React.MouseEvent, itemId: string) => {
+    e.stopPropagation();
+    setSelectedItemId(itemId);
   };
 
   const handleLabelChange = (itemId: string, newLabel: string) => {
@@ -90,6 +167,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       onPositionChange: (pos: { x: number; y: number }) => handlePositionChange(item.id, pos),
       onSizeChange: (size: { width: number; height: number }) => handleSizeChange(item.id, size),
       onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, item.id),
+      onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
+      isSelected: item.id === selectedItemId,
     };
 
     return (
@@ -117,6 +196,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
   return (
     <div
+      ref={containerRef}
       className={`draggable-container ${className}`}
       style={{
         position: 'relative',
@@ -125,6 +205,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         overflow: 'hidden',
         backgroundColor: '#f0f0f0',
       }}
+      onClick={handleClick}
+      tabIndex={0} // Make the container focusable
     >
       {items.map(renderItem)}
       <DebugPanel />
@@ -143,6 +225,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                   handleLabelChange(contextMenu.itemId, '');
                 }
               },
+            },
+            {
+              label: 'Copy',
+              onClick: () => handleCopy(contextMenu.itemId),
+            },
+            {
+              label: 'Paste',
+              onClick: handlePaste,
+              disabled: !copiedItem,
             },
             {
               label: 'Delete',
