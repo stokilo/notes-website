@@ -235,8 +235,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleCommentChange = (itemId: string, comment: string, label: string) => {
-    setItems(prevItems =>
-      prevItems.map(item => {
+    setItems(prevItems => {
+      const updatedItems = prevItems.map(item => {
         // Check if this is a container that might have the question box as a child
         if (item.type === 'questionBoxContainer' && item.props.children) {
           const updatedChildren = item.props.children.map(child => 
@@ -261,8 +261,12 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         return item.id === itemId 
           ? { ...item, comment, commentLabel: label }
           : item;
-      })
-    );
+      });
+
+      // Save to localStorage after updating state
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
+      return updatedItems;
+    });
   };
 
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
@@ -510,8 +514,50 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       )}
       {commentEditor.show && (
         <CommentEditor
-          initialContent={items.find(i => i.id === commentEditor.itemId)?.comment}
-          initialLabel={items.find(i => i.id === commentEditor.itemId)?.commentLabel}
+          initialContent={(() => {
+            // First check if it's a standalone question box
+            const standaloneBox = items.find(i => i.id === commentEditor.itemId);
+            if (standaloneBox) {
+              return standaloneBox.comment;
+            }
+            
+            // If not found, check if it's in a container
+            const containerWithBox = items.find(container => 
+              container.type === 'questionBoxContainer' && 
+              container.props.children?.some(child => child.id === commentEditor.itemId)
+            );
+            
+            if (containerWithBox) {
+              const questionBox = containerWithBox.props.children.find(
+                child => child.id === commentEditor.itemId
+              );
+              return questionBox?.comment;
+            }
+            
+            return '';
+          })()}
+          initialLabel={(() => {
+            // First check if it's a standalone question box
+            const standaloneBox = items.find(i => i.id === commentEditor.itemId);
+            if (standaloneBox) {
+              return standaloneBox.commentLabel;
+            }
+            
+            // If not found, check if it's in a container
+            const containerWithBox = items.find(container => 
+              container.type === 'questionBoxContainer' && 
+              container.props.children?.some(child => child.id === commentEditor.itemId)
+            );
+            
+            if (containerWithBox) {
+              const questionBox = containerWithBox.props.children.find(
+                child => child.id === commentEditor.itemId
+              );
+              return questionBox?.commentLabel;
+            }
+            
+            return '';
+          })()}
           position={commentEditor.position}
           onSave={(content, label) => {
             handleCommentChange(commentEditor.itemId, content, label);
