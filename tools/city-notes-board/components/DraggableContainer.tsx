@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import DraggableItem from './DraggableItem';
 import DebugPanel from './DebugPanel';
+import ContextPanel from './ContextPanel';
 import IsometricBuilding from './IsometricBuilding';
 import IsometricStreet from './IsometricStreet';
 
@@ -67,44 +68,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     >
       {items.map(renderItem)}
       <DebugPanel />
-      
-      {/* Add buttons to create new items */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '20px',
-          left: '20px',
-          display: 'flex',
-          gap: '10px',
-        }}
-      >
-        <button
-          onClick={() => addItem('building', { x: 100, y: 100 })}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#4a90e2',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
-          Add Building
-        </button>
-        <button
-          onClick={() => addItem('street', { x: 100, y: 100 })}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#4a4a4a',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
-          Add Street
-        </button>
-      </div>
+      <ContextPanel
+        onAddBuilding={() => addItem('building', { x: 100, y: 100 })}
+        onAddStreet={() => addItem('street', { x: 100, y: 100 })}
+      />
     </div>
   );
 };
