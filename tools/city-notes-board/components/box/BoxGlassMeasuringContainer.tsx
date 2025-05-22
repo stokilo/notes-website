@@ -11,21 +11,21 @@ const markings = [100, 150, 200, 250, 300, 400];
 
 const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
   children,
-  width = 120,
-  height = 400,
+  width = 60,
+  height = 200,
 }) => {
   // SVG dimensions
   const svgWidth = width;
   const svgHeight = height;
   const beakerWidth = svgWidth * 0.8;
   const beakerX = svgWidth * 0.1;
-  const beakerY = 10;
-  const beakerHeight = svgHeight - 20;
-  const beakerRadius = 18;
+  const beakerY = 5;
+  const beakerHeight = svgHeight - 10;
+  const beakerRadius = 9;
 
   // Marking positions
-  const markingStartY = beakerY + 30;
-  const markingEndY = beakerY + beakerHeight - 20;
+  const markingStartY = beakerY + 15;
+  const markingEndY = beakerY + beakerHeight - 10;
   const markingStep = (markingEndY - markingStartY) / (markings.length - 1);
 
   return (
@@ -51,31 +51,31 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
       >
         {/* Glass body */}
         <path
-          d={`M${beakerX + 10},${beakerY + 8}
-            Q${beakerX + 2},${beakerY + 2} ${beakerX + 18},${beakerY}
-            L${beakerX + beakerWidth - 10},${beakerY}
-            Q${beakerX + beakerWidth + 8},${beakerY + 2} ${beakerX + beakerWidth - 2},${beakerY + 8}
+          d={`M${beakerX + 5},${beakerY + 4}
+            Q${beakerX + 1},${beakerY + 1} ${beakerX + 9},${beakerY}
+            L${beakerX + beakerWidth - 5},${beakerY}
+            Q${beakerX + beakerWidth + 4},${beakerY + 1} ${beakerX + beakerWidth - 1},${beakerY + 4}
             L${beakerX + beakerWidth},${beakerY + beakerHeight - beakerRadius}
             Q${beakerX + beakerWidth},${beakerY + beakerHeight} ${beakerX + beakerWidth / 2},${beakerY + beakerHeight}
             Q${beakerX},${beakerY + beakerHeight} ${beakerX},${beakerY + beakerHeight - beakerRadius}
             Z`}
           fill="rgba(255,255,255,0.25)"
           stroke="#b0c4de"
-          strokeWidth={3}
+          strokeWidth={2}
           filter="url(#glassShadow)"
         />
         {/* Spout */}
         <path
-          d={`M${beakerX + 10},${beakerY + 8} Q${beakerX},${beakerY + 18} ${beakerX + 18},${beakerY}`}
+          d={`M${beakerX + 5},${beakerY + 4} Q${beakerX},${beakerY + 9} ${beakerX + 9},${beakerY}`}
           fill="none"
           stroke="#b0c4de"
-          strokeWidth={3}
+          strokeWidth={2}
         />
         {/* Shine */}
         <ellipse
           cx={beakerX + beakerWidth * 0.25}
           cy={beakerY + beakerHeight * 0.4}
-          rx={8}
+          rx={4}
           ry={beakerHeight * 0.18}
           fill="rgba(255,255,255,0.18)"
         />
@@ -85,17 +85,17 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
           return (
             <g key={mark}>
               <line
-                x1={beakerX - 8}
-                x2={beakerX + 22}
+                x1={beakerX - 4}
+                x2={beakerX + 11}
                 y1={y}
                 y2={y}
                 stroke="#222"
-                strokeWidth={2}
+                strokeWidth={1}
               />
               <text
-                x={beakerX - 12}
-                y={y + 4}
-                fontSize={mark === 400 ? 15 : 12}
+                x={beakerX - 6}
+                y={y + 2}
+                fontSize={mark === 400 ? 8 : 6}
                 fontWeight={mark === 400 ? 'bold' : 'normal'}
                 fill="#222"
                 textAnchor="end"
@@ -109,18 +109,18 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
         })}
         {/* Volume label */}
         <text
-          x={beakerX + 30}
+          x={beakerX + 15}
           y={markingEndY - markingStep * 1.5}
-          fontSize={10}
+          fontSize={5}
           fill="#222"
           fontFamily="monospace"
         >
           APPROX
         </text>
         <text
-          x={beakerX + 30}
+          x={beakerX + 15}
           y={markingEndY - markingStep * 1.1}
-          fontSize={10}
+          fontSize={5}
           fill="#222"
           fontFamily="monospace"
         >
@@ -129,7 +129,7 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
         {/* Glass shadow filter */}
         <defs>
           <filter id="glassShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#b0c4de" floodOpacity="0.25" />
+            <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#b0c4de" floodOpacity="0.25" />
           </filter>
         </defs>
       </svg>
@@ -137,14 +137,14 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
       <div
         style={{
           position: 'absolute',
-          left: beakerX + 25,
-          top: beakerY + 30,
-          width: beakerWidth - 50,
-          height: beakerHeight - 50,
+          left: beakerX + 12,
+          top: beakerY + 15,
+          width: beakerWidth - 25,
+          height: beakerHeight - 25,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '20px',
+          gap: '10px',
           overflowY: 'auto',
           zIndex: 1,
           pointerEvents: 'auto',
@@ -153,14 +153,14 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
         {React.Children.map(children, (child, idx) => (
           <motion.div
             key={idx}
-            initial={{ opacity: 0, y: -100 }}
+            initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ 
-              delay: idx * 0.2,
+              delay: idx * 0.1,
               type: "spring",
               damping: 12,
               stiffness: 80,
-              duration: 2
+              duration: 1
             }}
             style={{ 
               width: '100%', 

@@ -13,8 +13,8 @@ interface QuestionBoxProps {
 }
 
 const QuestionBox: React.FC<QuestionBoxProps> = ({
-  width = 40,
-  height = 40,
+  width = 20,
+  height = 20,
   comment,
   commentLabel,
   onClick,
@@ -80,18 +80,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
         color={boxColor}
         isNew={isNew}
         finalPosition={finalPosition}
-      >
-        <span
-          style={{
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: '#666',
-            textShadow: '1px 1px 0 rgba(255,255,255,0.5)',
-          }}
-        >
-          ?
-        </span>
-      </AnimatedColoredBox>
+      />
     </div>
   );
 };

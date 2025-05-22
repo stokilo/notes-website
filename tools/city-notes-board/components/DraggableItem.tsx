@@ -99,8 +99,8 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       const deltaX = e.clientX - resizeStartPos.current.x;
       const deltaY = e.clientY - resizeStartPos.current.y;
       
-      const newWidth = Math.max(60, resizeStartSize.current.width + deltaX);
-      const newHeight = Math.max(60, resizeStartSize.current.height + deltaY);
+      const newWidth = Math.max(10, resizeStartSize.current.width + deltaX);
+      const newHeight = Math.max(10, resizeStartSize.current.height + deltaY);
 
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);

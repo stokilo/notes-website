@@ -174,9 +174,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     if (existingContainer) {
       // Calculate final position for the new question box
       const existingBoxes = existingContainer.props.children || [];
-      const boxHeight = 40; // Height of each question box
-      const boxSpacing = 20; // Spacing between boxes
-      const containerPadding = 30; // Padding from container edges
+      const boxHeight = 20; // Height of each question box
+      const boxSpacing = 10; // Spacing between boxes
+      const containerPadding = 15; // Padding from container edges
       const finalY = containerPadding + (existingBoxes.length * (boxHeight + boxSpacing));
 
       // Add to existing container's children, starting at the top
@@ -185,7 +185,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         type: 'questionBox',
         position: { x: 0, y: containerPadding }, // Start at top
         finalPosition: { x: 0, y: finalY }, // Store final position for animation
-        size: { width: 40, height: 40 },
+        size: { width: 20, height: 20 },
         props: {},
         label: undefined,
         parentId: existingContainer.id,
@@ -211,9 +211,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       const initialQuestionBox = {
         id: `questionBox-${Date.now()}`,
         type: 'questionBox',
-        position: { x: 0, y: 30 }, // Start with padding from top
-        finalPosition: { x: 0, y: 30 }, // Same as position for initial box
-        size: { width: 40, height: 40 },
+        position: { x: 0, y: 15 }, // Start with padding from top
+        finalPosition: { x: 0, y: 15 }, // Same as position for initial box
+        size: { width: 20, height: 20 },
         props: {},
         label: undefined,
         parentId: containerId,
