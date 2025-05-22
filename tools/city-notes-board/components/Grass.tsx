@@ -49,7 +49,7 @@ const Grass: React.FC<GrassProps> = ({
       )}
       {/* Grass area with randomized colors */}
       <img
-        src="/images/grass.png"
+        src="/grass.svg"
         alt="Grass"
         style={{
           width: '100%',

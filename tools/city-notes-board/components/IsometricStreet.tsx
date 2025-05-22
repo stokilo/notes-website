@@ -133,7 +133,7 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
       )}
       {/* Street image with randomized colors */}
       <img
-        src="/images/street.png"
+        src="/street.svg"
         alt="Street"
         draggable="false"
         onDragStart={handleDragStart}
