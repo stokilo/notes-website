@@ -19,85 +19,76 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragOffset = useRef({ x: 0, y: 0 });
   const itemRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number>();
+  const lastPositionRef = useRef(position);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!itemRef.current) return;
 
     const rect = itemRef.current.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
-
-    setDragOffset({ x: offsetX, y: offsetY });
+    dragOffset.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
     setIsDragging(true);
-
-    // Update debug panel
-    const debugEvent = new CustomEvent('debug-update', {
-      detail: {
-        type: 'dragStart',
-        itemId: id,
-        startX: e.clientX,
-        startY: e.clientY,
-        currentX: e.clientX,
-        currentY: e.clientY,
-      },
-    });
-    window.dispatchEvent(debugEvent);
-
     onDragStart?.({ x: e.clientX, y: e.clientY });
   };
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const updatePosition = (e: MouseEvent) => {
       if (!isDragging) return;
 
-      const newX = e.clientX - dragOffset.x;
-      const newY = e.clientY - dragOffset.y;
+      const newX = e.clientX - dragOffset.current.x;
+      const newY = e.clientY - dragOffset.current.y;
 
-      setPosition({ x: newX, y: newY });
-      onPositionChange?.({ x: newX, y: newY });
+      // Only update if position has changed significantly
+      if (
+        Math.abs(newX - lastPositionRef.current.x) > 1 ||
+        Math.abs(newY - lastPositionRef.current.y) > 1
+      ) {
+        lastPositionRef.current = { x: newX, y: newY };
+        
+        // Use requestAnimationFrame for smooth animation
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+        
+        animationFrameRef.current = requestAnimationFrame(() => {
+          setPosition({ x: newX, y: newY });
+          onPositionChange?.({ x: newX, y: newY });
+        });
+      }
+    };
 
-      // Update debug panel
-      const debugEvent = new CustomEvent('debug-update', {
-        detail: {
-          type: 'dragMove',
-          itemId: id,
-          currentX: e.clientX,
-          currentY: e.clientY,
-        },
-      });
-      window.dispatchEvent(debugEvent);
+    const handleMouseMove = (e: MouseEvent) => {
+      updatePosition(e);
     };
 
     const handleMouseUp = (e: MouseEvent) => {
       if (!isDragging) return;
 
       setIsDragging(false);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
       onDragEnd?.({ x: e.clientX, y: e.clientY });
-
-      // Update debug panel
-      const debugEvent = new CustomEvent('debug-update', {
-        detail: {
-          type: 'dragEnd',
-          itemId: id,
-          endX: e.clientX,
-          endY: e.clientY,
-        },
-      });
-      window.dispatchEvent(debugEvent);
     };
 
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mousemove', handleMouseMove, { passive: true });
       window.addEventListener('mouseup', handleMouseUp);
     }
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     };
-  }, [isDragging, dragOffset, id, onPositionChange, onDragEnd]);
+  }, [isDragging, onPositionChange, onDragEnd]);
 
   return (
     <div
@@ -109,6 +100,8 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         zIndex: isDragging ? 1000 : 1,
+        willChange: 'transform',
+        transform: 'translate3d(0, 0, 0)',
       }}
       onMouseDown={handleMouseDown}
     >
