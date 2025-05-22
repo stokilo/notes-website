@@ -16,68 +16,60 @@ body {
   width: 100vw;
   height: 100vh;
   position: relative;
+  background-color: #f5f5f5;
+  overflow: hidden;
 }
 
-.scrollable-panel {
+.canvas {
+  position: absolute;
   width: 100%;
   height: 100%;
-  overflow-y: auto;
-  background-color: #f5f5f5;
-}
-
-.buildings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-  padding: 1rem;
-  min-height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-color: #f8f9fa;
+  transition: transform 0.1s ease-out;
 }
 
 .building-container {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  background-color: transparent;
   transition: transform 0.2s ease-in-out;
-  min-height: 200px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem;
+  user-select: none;
 }
 
 .building-container:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.scrollable-panel::-webkit-scrollbar {
-  width: 8px;
-}
-
-.scrollable-panel::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.scrollable-panel::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-}
-
-.scrollable-panel::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  transform: translate(-50%, -50%) scale(1.05);
+  z-index: 1;
 }
 
 .context-menu {
   animation: fadeIn 0.1s ease-in-out;
+  z-index: 1000;
 }
 
 .context-menu button {
   transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background-color: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: #333;
+  font-size: 14px;
 }
 
 .context-menu button:hover {
   background-color: #f5f5f5;
+}
+
+.context-menu button:disabled {
+  cursor: not-allowed;
+  color: #999;
 }
 
 @keyframes fadeIn {

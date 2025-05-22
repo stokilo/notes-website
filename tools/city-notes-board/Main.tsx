@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FaHome } from 'react-icons/fa';
 import './styles.css';
@@ -10,6 +10,7 @@ interface Building {
   id: number;
   color: string;
   size: number;
+  position: { x: number; y: number };
 }
 
 const Main: React.FC = () => {
@@ -23,6 +24,10 @@ const Main: React.FC = () => {
 
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [nextId, setNextId] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -32,8 +37,27 @@ const Main: React.FC = () => {
     });
   };
 
-  const handleScrollEnd = () => {
-    console.log('Reached end of scroll');
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 0) { // Left click
+      setIsDragging(true);
+      setDragOffset({
+        x: e.clientX - canvasOffset.x,
+        y: e.clientY - canvasOffset.y,
+      });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setCanvasOffset({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
   const addBuilding = () => {
@@ -42,6 +66,10 @@ const Main: React.FC = () => {
       id: nextId,
       color: colors[Math.floor(Math.random() * colors.length)],
       size: Math.floor(Math.random() * 50) + 50,
+      position: {
+        x: contextMenu.position.x - canvasOffset.x,
+        y: contextMenu.position.y - canvasOffset.y,
+      },
     };
     setBuildings([...buildings, newBuilding]);
     setNextId(nextId + 1);
@@ -51,7 +79,7 @@ const Main: React.FC = () => {
     {
       label: 'Add Building',
       onClick: addBuilding,
-      icon: <FaHome style={{ marginRight: '8px' }} />,
+      icon: <FaHome size={16} style={{ marginRight: '8px' }} />,
     },
     {
       label: 'Refresh',
@@ -65,22 +93,40 @@ const Main: React.FC = () => {
   ];
 
   return (
-    <div className="app-container" onContextMenu={handleContextMenu}>
-      <ScrollablePanel onScrollEnd={handleScrollEnd}>
-        <div className="buildings-grid">
-          {buildings.map((building) => (
-            <div
-              key={building.id}
-              className="building-container"
-            >
-              <IsometricBuilding
-                color={building.color}
-                size={building.size}
-              />
-            </div>
-          ))}
-        </div>
-      </ScrollablePanel>
+    <div 
+      className="app-container" 
+      onContextMenu={handleContextMenu}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
+      <div 
+        ref={canvasRef}
+        className="canvas"
+        style={{
+          transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px)`,
+          cursor: isDragging ? 'grabbing' : 'grab',
+        }}
+      >
+        {buildings.map((building) => (
+          <div
+            key={building.id}
+            className="building-container"
+            style={{
+              position: 'absolute',
+              left: building.position.x,
+              top: building.position.y,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <IsometricBuilding
+              color={building.color}
+              size={building.size}
+            />
+          </div>
+        ))}
+      </div>
       {contextMenu.show && (
         <ContextMenu
           items={menuItems}
