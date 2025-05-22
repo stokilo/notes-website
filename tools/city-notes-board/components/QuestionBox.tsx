@@ -27,52 +27,30 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   return (
     <div style={{ position: 'relative', width, height }}>
       {/* Comment indicator with label */}
-      {comment && (
+      {comment && commentLabel && (
         <div
           style={{
             position: 'absolute',
             top: '-25px',
             left: '50%',
             transform: 'translateX(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
             zIndex: 1001,
           }}
         >
-          {commentLabel && (
-            <div
-              style={{
-                backgroundColor: '#4a90e2',
-                color: 'white',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                fontSize: '12px',
-                whiteSpace: 'nowrap',
-                maxWidth: '200px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {commentLabel}
-            </div>
-          )}
           <div
             style={{
-              width: '16px',
-              height: '16px',
               backgroundColor: '#4a90e2',
-              borderRadius: '50%',
-              border: '2px solid white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
               color: 'white',
-              fontSize: '10px',
-              fontWeight: 'bold',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+              maxWidth: '200px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
-            C
+            {commentLabel}
           </div>
         </div>
       )}
