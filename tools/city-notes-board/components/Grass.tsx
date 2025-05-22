@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface GrassProps {
   width?: number;
@@ -13,6 +13,17 @@ const Grass: React.FC<GrassProps> = ({
   label,
   onLabelChange,
 }) => {
+  const [hueRotate, setHueRotate] = useState(0);
+  const [saturate, setSaturate] = useState(100);
+  const [brightness, setBrightness] = useState(100);
+
+  useEffect(() => {
+    // Randomize colors on component mount
+    setHueRotate(Math.random() * 360); // Random hue rotation (0-360)
+    setSaturate(80 + Math.random() * 40); // Random saturation (80-120%)
+    setBrightness(90 + Math.random() * 20); // Random brightness (90-110%)
+  }, []);
+
   return (
     <div style={{ position: 'relative', width, height }}>
       {/* Label */}
@@ -36,14 +47,15 @@ const Grass: React.FC<GrassProps> = ({
           {label}
         </div>
       )}
-      {/* Grass area */}
+      {/* Grass area with randomized colors */}
       <img
-        src="/grass.svg"
+        src="/images/grass.png"
         alt="Grass"
         style={{
           width: '100%',
           height: '100%',
           objectFit: 'contain',
+          filter: `hue-rotate(${hueRotate}deg) saturate(${saturate}%) brightness(${brightness}%)`,
         }}
       />
     </div>
