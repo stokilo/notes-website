@@ -1,15 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MdHome } from 'react-icons/md';
+import { MdHome, MdAddRoad } from 'react-icons/md';
 import './styles.css';
 import ContextMenu from './components/ContextMenu';
 import IsometricBuilding from './components/IsometricBuilding';
+import IsometricStreet from './components/IsometricStreet';
 
 interface Building {
   id: number;
   color: string;
   size: number;
   position: { x: number; y: number };
+}
+
+interface Street {
+  id: number;
+  width: number;
+  length: number;
+  position: { x: number; y: number };
+  rotation: number;
 }
 
 const Main: React.FC = () => {
@@ -22,6 +31,7 @@ const Main: React.FC = () => {
   });
 
   const [buildings, setBuildings] = useState<Building[]>([]);
+  const [streets, setStreets] = useState<Street[]>([]);
   const [nextId, setNextId] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -72,14 +82,12 @@ const Main: React.FC = () => {
     const zoomFactor = delta > 0 ? 0.9 : 1.1;
     const newScale = Math.max(0.1, Math.min(2, scale * zoomFactor));
     
-    // Calculate mouse position relative to canvas
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
-    // Calculate new offset to zoom towards mouse position
     const newOffsetX = canvasOffset.x - (mouseX * (zoomFactor - 1));
     const newOffsetY = canvasOffset.y - (mouseY * (zoomFactor - 1));
     
@@ -105,11 +113,34 @@ const Main: React.FC = () => {
     setNextId(nextId + 1);
   };
 
+  const addStreet = () => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const newStreet: Street = {
+      id: nextId,
+      width: 100,
+      length: 200,
+      position: {
+        x: (contextMenu.position.x - rect.left - canvasOffset.x) / scale,
+        y: (contextMenu.position.y - rect.top - canvasOffset.y) / scale,
+      },
+      rotation: Math.floor(Math.random() * 4) * 90, // Random rotation in 90-degree increments
+    };
+    setStreets([...streets, newStreet]);
+    setNextId(nextId + 1);
+  };
+
   const menuItems = [
     {
       label: 'Add Building',
       onClick: addBuilding,
       icon: <MdHome size={20} style={{ marginRight: '8px' }} />,
+    },
+    {
+      label: 'Add Street',
+      onClick: addStreet,
+      icon: <MdAddRoad size={20} style={{ marginRight: '8px' }} />,
     },
     {
       label: 'Refresh',
@@ -140,6 +171,23 @@ const Main: React.FC = () => {
           cursor: isDragging ? 'grabbing' : 'grab',
         }}
       >
+        {streets.map((street) => (
+          <div
+            key={street.id}
+            className="street-container"
+            style={{
+              position: 'absolute',
+              left: street.position.x,
+              top: street.position.y,
+              transform: `translate(-50%, -50%) rotate(${street.rotation}deg)`,
+            }}
+          >
+            <IsometricStreet
+              width={street.width}
+              length={street.length}
+            />
+          </div>
+        ))}
         {buildings.map((building) => (
           <div
             key={building.id}

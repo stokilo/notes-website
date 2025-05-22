@@ -35,7 +35,8 @@ body {
   transform-origin: center center;
 }
 
-.building-container {
+.building-container,
+.street-container {
   position: absolute;
   background-color: transparent;
   transition: transform 0.2s ease-in-out;
@@ -43,9 +44,14 @@ body {
   will-change: transform;
 }
 
-.building-container:hover {
+.building-container:hover,
+.street-container:hover {
   transform: translate(-50%, -50%) scale(1.05);
   z-index: 1;
+}
+
+.street-container {
+  z-index: 0;
 }
 
 .context-menu {
