@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface IsometricStreetProps {
   width?: number;
@@ -23,17 +23,18 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
   const [editValue, setEditValue] = useState(label || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleLabelClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsEditing(true);
-    setEditValue(label || '');
-    // Use setTimeout to ensure the input is mounted before selecting
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.select();
-      }
-    }, 0);
-  };
+  useEffect(() => {
+    if (label === '') {
+      setIsEditing(true);
+      setEditValue('');
+      // Use setTimeout to ensure the input is mounted before selecting
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.select();
+        }
+      }, 0);
+    }
+  }, [label]);
 
   const handleLabelSubmit = () => {
     setIsEditing(false);
@@ -57,7 +58,7 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
   return (
     <div style={{ position: 'relative', width, height: width }}>
       {/* Label */}
-      {label && (
+      {(label !== undefined || isEditing) && (
         <div
           style={{
             position: 'absolute',
@@ -78,8 +79,6 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
             msUserSelect: 'none',
             minWidth: 'max-content',
           }}
-          onClick={handleLabelClick}
-          onMouseDown={(e) => e.preventDefault()}
         >
           {isEditing ? (
             <input

@@ -9,6 +9,7 @@ interface DraggableItemProps {
   onSizeChange?: (size: { width: number; height: number }) => void;
   onDragStart?: (position: { x: number; y: number }) => void;
   onDragEnd?: (position: { x: number; y: number }) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 const DraggableItem: React.FC<DraggableItemProps> = ({
@@ -20,6 +21,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   onSizeChange,
   onDragStart,
   onDragEnd,
+  onContextMenu,
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [size, setSize] = useState(initialSize);
@@ -149,6 +151,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         transform: 'translate3d(0, 0, 0)',
       }}
       onMouseDown={handleMouseDown}
+      onContextMenu={onContextMenu}
     >
       {children}
       {/* Resize handle */}

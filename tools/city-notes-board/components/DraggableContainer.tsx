@@ -53,13 +53,14 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       props: type === 'building' 
         ? { color: '#4a90e2', size: 100, height: 80 } 
         : { width: 100, length: 200 },
-      label: `${type.charAt(0).toUpperCase() + type.slice(1)} ${items.filter(i => i.type === type).length + 1}`,
+      label: undefined
     };
     setItems(prev => [...prev, newItem]);
   };
 
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
     e.preventDefault();
+    e.stopPropagation();
     setContextMenu({
       show: true,
       x: e.clientX,
@@ -134,6 +135,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       {contextMenu.show && (
         <ContextMenu
           items={[
+            {
+              label: 'Add Label',
+              onClick: () => {
+                const item = items.find(i => i.id === contextMenu.itemId);
+                if (item) {
+                  handleLabelChange(contextMenu.itemId, '');
+                }
+              },
+            },
             {
               label: 'Delete',
               onClick: () => handleDeleteItem(contextMenu.itemId),
