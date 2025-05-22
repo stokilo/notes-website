@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface IsometricBuildingProps {
   label?: string;
@@ -13,10 +13,18 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label || '');
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleLabelClick = () => {
+  const handleLabelClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsEditing(true);
     setEditValue(label || '');
+    // Use setTimeout to ensure the input is mounted before selecting
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.select();
+      }
+    }, 0);
   };
 
   const handleLabelSubmit = () => {
@@ -57,11 +65,16 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
             zIndex: 1000,
             cursor: 'pointer',
             userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
           }}
           onClick={handleLabelClick}
+          onMouseDown={(e) => e.preventDefault()}
         >
           {isEditing ? (
             <input
+              ref={inputRef}
               type="text"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
@@ -75,6 +88,7 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
                 width: '100%',
                 outline: 'none',
                 textAlign: 'center',
+                userSelect: 'text',
               }}
               autoFocus
             />
