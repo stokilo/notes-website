@@ -58,16 +58,12 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     });
   };
 
-  const handleEditLabel = (itemId: string) => {
-    const newLabel = prompt('Enter new label:');
-    if (newLabel !== null) {
-      setItems(prevItems =>
-        prevItems.map(item =>
-          item.id === itemId ? { ...item, label: newLabel } : item
-        )
-      );
-    }
-    setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+  const handleLabelChange = (itemId: string, newLabel: string) => {
+    setItems(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId ? { ...item, label: newLabel } : item
+      )
+    );
   };
 
   const handleDeleteItem = (itemId: string) => {
@@ -86,9 +82,17 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     return (
       <DraggableItem key={item.id} {...commonProps}>
         {item.type === 'building' ? (
-          <IsometricBuilding {...item.props} label={item.label} />
+          <IsometricBuilding 
+            {...item.props} 
+            label={item.label} 
+            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
+          />
         ) : (
-          <IsometricStreet {...item.props} label={item.label} />
+          <IsometricStreet 
+            {...item.props} 
+            label={item.label} 
+            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
+          />
         )}
       </DraggableItem>
     );
@@ -114,10 +118,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       {contextMenu.show && (
         <ContextMenu
           items={[
-            {
-              label: 'Edit Label',
-              onClick: () => handleEditLabel(contextMenu.itemId),
-            },
             {
               label: 'Delete',
               onClick: () => handleDeleteItem(contextMenu.itemId),
