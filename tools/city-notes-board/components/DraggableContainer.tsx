@@ -32,7 +32,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       id: `${type}-${Date.now()}`,
       type,
       position,
-      props: type === 'building' ? { color: '#4a90e2' } : { width: 100, length: 200 },
+      props: type === 'building' 
+        ? { color: '#4a90e2', size: 50, height: 40 } 
+        : { width: 50, length: 100 },
     };
     setItems(prev => [...prev, newItem]);
   };
@@ -69,8 +71,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       {items.map(renderItem)}
       <DebugPanel />
       <ContextPanel
-        onAddBuilding={() => addItem('building', { x: 100, y: 100 })}
-        onAddStreet={() => addItem('street', { x: 100, y: 100 })}
+        onAddBuilding={() => addItem('building', { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 25 })}
+        onAddStreet={() => addItem('street', { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 25 })}
       />
     </div>
   );

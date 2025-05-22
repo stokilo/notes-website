@@ -5,16 +5,19 @@ interface IsometricStreetProps {
   length?: number;
   color?: string;
   hasSidewalk?: boolean;
+  hasMarkings?: boolean;
 }
 
 const IsometricStreet: React.FC<IsometricStreetProps> = ({
-  width = 100,
-  length = 200,
+  width = 50,
+  length = 100,
   color = '#4a4a4a',
   hasSidewalk = true,
+  hasMarkings = true,
 }) => {
   const sidewalkColor = '#e0e0e0';
   const roadMarkingColor = '#ffffff';
+  const sidewalkWidth = width * 0.15;
 
   return (
     <div
@@ -26,6 +29,18 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
         transformStyle: 'preserve-3d',
       }}
     >
+      {/* Base shadow */}
+      <div
+        style={{
+          position: 'absolute',
+          width: length,
+          height: width,
+          backgroundColor: 'rgba(0,0,0,0.2)',
+          transform: 'translateZ(-1px)',
+          filter: 'blur(4px)',
+        }}
+      />
+
       {/* Main road */}
       <div
         style={{
@@ -38,28 +53,45 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
         }}
       >
         {/* Road markings */}
-        <div
-          style={{
-            position: 'absolute',
-            width: '100%',
-            height: '4px',
-            backgroundColor: roadMarkingColor,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            opacity: 0.8,
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            width: '4px',
-            height: '100%',
-            backgroundColor: roadMarkingColor,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            opacity: 0.8,
-          }}
-        />
+        {hasMarkings && (
+          <>
+            {/* Center line */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '4px',
+                backgroundColor: roadMarkingColor,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                opacity: 0.8,
+                backgroundImage: 'linear-gradient(90deg, transparent 50%, #fff 50%)',
+                backgroundSize: '20px 100%',
+              }}
+            />
+            {/* Side lines */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '2px',
+                backgroundColor: roadMarkingColor,
+                top: '25%',
+                opacity: 0.6,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '2px',
+                backgroundColor: roadMarkingColor,
+                top: '75%',
+                opacity: 0.6,
+              }}
+            />
+          </>
+        )}
       </div>
 
       {/* Sidewalks */}
@@ -70,48 +102,92 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
             style={{
               position: 'absolute',
               width: length,
-              height: width * 0.2,
+              height: sidewalkWidth,
               backgroundColor: sidewalkColor,
               transform: 'translateZ(1px)',
               boxShadow: '0 0 5px rgba(0,0,0,0.1)',
             }}
-          />
+          >
+            {/* Sidewalk pattern */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundImage: 'linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%)',
+                backgroundSize: '10px 10px',
+              }}
+            />
+          </div>
           {/* Bottom sidewalk */}
           <div
             style={{
               position: 'absolute',
               width: length,
-              height: width * 0.2,
+              height: sidewalkWidth,
               backgroundColor: sidewalkColor,
               bottom: 0,
               transform: 'translateZ(1px)',
               boxShadow: '0 0 5px rgba(0,0,0,0.1)',
             }}
-          />
+          >
+            {/* Sidewalk pattern */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundImage: 'linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%)',
+                backgroundSize: '10px 10px',
+              }}
+            />
+          </div>
           {/* Left sidewalk */}
           <div
             style={{
               position: 'absolute',
-              width: width * 0.2,
+              width: sidewalkWidth,
               height: width,
               backgroundColor: sidewalkColor,
               left: 0,
               transform: 'translateZ(1px)',
               boxShadow: '0 0 5px rgba(0,0,0,0.1)',
             }}
-          />
+          >
+            {/* Sidewalk pattern */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundImage: 'linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%)',
+                backgroundSize: '10px 10px',
+              }}
+            />
+          </div>
           {/* Right sidewalk */}
           <div
             style={{
               position: 'absolute',
-              width: width * 0.2,
+              width: sidewalkWidth,
               height: width,
               backgroundColor: sidewalkColor,
               right: 0,
               transform: 'translateZ(1px)',
               boxShadow: '0 0 5px rgba(0,0,0,0.1)',
             }}
-          />
+          >
+            {/* Sidewalk pattern */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundImage: 'linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%)',
+                backgroundSize: '10px 10px',
+              }}
+            />
+          </div>
         </>
       )}
     </div>
