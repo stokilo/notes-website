@@ -91,7 +91,7 @@ const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
           backgroundColor: color,
           border: `1px solid ${color}20`,
           borderRadius: '4px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          boxShadow: '0 4px 8px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
