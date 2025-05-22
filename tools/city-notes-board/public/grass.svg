@@ -1,19 +1,19 @@
 <svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-  <!-- Base isometric grass polygon -->
-  <polygon points="150,300 350,300 450,400 250,400" fill="#7CFC00"/>
+  <!-- Full canvas grass polygon -->
+  <polygon points="0,200 500,200 500,500 0,500" fill="#7CFC00"/>
 
   <!-- Grass blades -->
-  <path d="M180,320 Q183,310 185,320 Q187,310 190,320 Q192,310 195,320" fill="#32CD32"/>
-  <path d="M220,340 Q223,330 225,340 Q227,330 230,340 Q232,330 235,340" fill="#32CD32"/>
-  <path d="M260,360 Q263,350 265,360 Q267,350 270,360 Q272,350 275,360" fill="#32CD32"/>
+  <path d="M80,300 Q83,290 85,300 Q87,290 90,300 Q92,290 95,300" fill="#32CD32"/>
+  <path d="M200,340 Q203,330 205,340 Q207,330 210,340 Q212,330 215,340" fill="#32CD32"/>
+  <path d="M360,400 Q363,390 365,400 Q367,390 370,400 Q372,390 375,400" fill="#32CD32"/>
 
-  <!-- Flower group -->
-  <circle cx="200" cy="350" r="4" fill="#FF69B4"/>
-  <circle cx="210" cy="360" r="4" fill="#FFD700"/>
-  <circle cx="220" cy="350" r="4" fill="#FF6347"/>
+  <!-- Flowers -->
+  <circle cx="100" cy="420" r="4" fill="#FF69B4"/>
+  <circle cx="120" cy="440" r="4" fill="#FFD700"/>
+  <circle cx="140" cy="420" r="4" fill="#FF6347"/>
 
   <!-- Bushes -->
-  <ellipse cx="170" cy="370" rx="12" ry="6" fill="#228B22"/>
-  <ellipse cx="300" cy="360" rx="15" ry="8" fill="#2e8b57"/>
-  <ellipse cx="330" cy="370" rx="10" ry="5" fill="#006400"/>
+  <ellipse cx="60" cy="460" rx="15" ry="8" fill="#228B22"/>
+  <ellipse cx="300" cy="460" rx="20" ry="10" fill="#2e8b57"/>
+  <ellipse cx="450" cy="470" rx="18" ry="9" fill="#006400"/>
 </svg>
