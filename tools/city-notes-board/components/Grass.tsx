@@ -37,14 +37,13 @@ const Grass: React.FC<GrassProps> = ({
         </div>
       )}
       {/* Grass area */}
-      <div
+      <img
+        src="/grass.svg"
+        alt="Grass"
         style={{
           width: '100%',
           height: '100%',
-          backgroundColor: '#90EE90',
-          backgroundImage: 'radial-gradient(circle at 50% 50%, #98FB98 0%, #90EE90 100%)',
-          borderRadius: '4px',
-          border: '1px solid #7CCD7C',
+          objectFit: 'contain',
         }}
       />
     </div>

@@ -129,6 +129,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
+    if (isDrawing) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     setSelectedItemId(itemId);
@@ -141,6 +146,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    if (isDrawing) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     // Only clear selection if clicking directly on the container
     if (e.target === containerRef.current) {
       setSelectedItemId(null);
@@ -149,6 +159,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleItemClick = (e: React.MouseEvent, itemId: string) => {
+    if (isDrawing) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     e.stopPropagation();
     setSelectedItemId(itemId);
   };
@@ -169,6 +184,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const startDrawing = (type: 'grass') => {
     setIsDrawing(true);
     setDrawingType(type);
+    setSelectedItemId(null); // Clear any selected item
+    setContextMenu({ show: false, x: 0, y: 0, itemId: '' }); // Hide context menu
   };
 
   const stopDrawing = () => {
@@ -179,20 +196,26 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isDrawing || !drawingType) return;
-    setIsDragging(true);
-    
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (isDrawing) {
+      e.preventDefault(); // Prevent other interactions
+      e.stopPropagation();
+      setIsDragging(true);
+      
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    addItem(drawingType, { x, y });
-    lastDrawnPosition.current = { x, y };
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      addItem(drawingType!, { x, y });
+      lastDrawnPosition.current = { x, y };
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDrawing || !drawingType || !isDragging) return;
+
+    e.preventDefault(); // Prevent other interactions
+    e.stopPropagation();
 
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -208,7 +231,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (isDrawing) {
+      e.preventDefault(); // Prevent other interactions
+      e.stopPropagation();
+    }
     stopDrawing();
   };
 
