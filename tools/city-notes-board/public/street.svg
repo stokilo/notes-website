@@ -1,41 +1,54 @@
-<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-  <!-- Sky background -->
-  <rect width="100%" height="100%" opacity="0%"/>
+<svg width="600" height="500" viewBox="0 0 600 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="100%" height="100%" opacity="0"/>
 
-  <!-- Grass base around the road -->
-  <polygon points="100,300 400,300 500,400 200,400" fill="#7CFC00"/>
+  <!-- Grass area -->
+  <polygon points="100,280 500,280 600,380 200,380" fill="#7CFC00"/>
 
-  <!-- Road body -->
-  <polygon points="150,300 350,300 450,400 250,400" fill="#2f2f2f"/>
+  <!-- Road base -->
+  <polygon points="180,280 420,280 520,380 280,380" fill="#2f2f2f"/>
 
-  <!-- Road lane divider (center line) -->
-  <line x1="200" y1="320" x2="240" y2="360" stroke="#ffffff" stroke-width="4" stroke-dasharray="10,10"/>
-  <line x1="240" y1="320" x2="280" y2="360" stroke="#ffffff" stroke-width="4" stroke-dasharray="10,10"/>
-  <line x1="280" y1="320" x2="320" y2="360" stroke="#ffffff" stroke-width="4" stroke-dasharray="10,10"/>
+  <!-- Center lane markings -->
+  <line x1="210" y1="300" x2="250" y2="340" stroke="#ffffff" stroke-width="4" stroke-dasharray="12,8"/>
+  <line x1="250" y1="300" x2="290" y2="340" stroke="#ffffff" stroke-width="4" stroke-dasharray="12,8"/>
+  <line x1="290" y1="300" x2="330" y2="340" stroke="#ffffff" stroke-width="4" stroke-dasharray="12,8"/>
 
-  <!-- Sidewalk left -->
-  <polygon points="140,295 150,300 250,400 240,395" fill="#cccccc"/>
+  <!-- Sidewalk Left -->
+  <polygon points="170,275 180,280 280,380 270,375" fill="#d3d3d3"/>
+  <!-- Curb shadow -->
+  <polygon points="180,280 185,282 285,382 280,380" fill="#a9a9a9"/>
 
-  <!-- Sidewalk right -->
-  <polygon points="350,300 360,295 260,395 250,400" fill="#cccccc"/>
+  <!-- Sidewalk Right -->
+  <polygon points="420,280 430,275 330,375 320,380" fill="#d3d3d3"/>
+  <!-- Curb shadow -->
+  <polygon points="420,280 425,282 325,382 320,380" fill="#a9a9a9"/>
 
-  <!-- Crosswalk lines -->
-  <polygon points="220,330 230,340 235,340 225,330" fill="#ffffff"/>
-  <polygon points="240,350 250,360 255,360 245,350" fill="#ffffff"/>
-  <polygon points="260,370 270,380 275,380 265,370" fill="#ffffff"/>
+  <!-- Manhole cover -->
+  <ellipse cx="350" cy="340" rx="10" ry="6" fill="#555" stroke="#333" stroke-width="1"/>
 
-  <!-- Trees on sides -->
-  <!-- Left side tree -->
-  <rect x="120" y="310" width="10" height="30" fill="#8B4513"/>
-  <circle cx="125" cy="295" r="20" fill="#228B22"/>
+  <!-- Gutter grates -->
+  <rect x="295" y="350" width="12" height="6" fill="#444"/>
+  <rect x="305" y="360" width="12" height="6" fill="#444"/>
 
-  <!-- Right side tree -->
-  <rect x="370" y="310" width="10" height="30" fill="#8B4513"/>
-  <circle cx="375" cy="295" r="20" fill="#228B22"/>
+  <!-- Flowers and bushes -->
+  <circle cx="160" cy="360" r="5" fill="#FF69B4"/>
+  <circle cx="170" cy="370" r="5" fill="#FFD700"/>
+  <circle cx="430" cy="360" r="5" fill="#00FA9A"/>
+  <ellipse cx="150" cy="350" rx="10" ry="6" fill="#228B22"/>
+  <ellipse cx="440" cy="350" rx="10" ry="6" fill="#228B22"/>
 
-  <!-- Flowers along sidewalk -->
-  <circle cx="160" cy="370" r="4" fill="#FF69B4"/>
-  <circle cx="170" cy="380" r="4" fill="#FFD700"/>
-  <circle cx="360" cy="360" r="4" fill="#FF1493"/>
-  <circle cx="370" cy="370" r="4" fill="#00FA9A"/>
+  <!-- Tree left -->
+  <rect x="120" y="310" width="12" height="35" fill="#8B4513"/>
+  <circle cx="126" cy="295" r="25" fill="#2e8b57"/>
+  <ellipse cx="115" cy="335" rx="20" ry="8" fill="#00000033"/>
+
+  <!-- Tree right -->
+  <rect x="470" y="310" width="12" height="35" fill="#8B4513"/>
+  <circle cx="476" cy="295" r="25" fill="#2e8b57"/>
+  <ellipse cx="465" cy="335" rx="20" ry="8" fill="#00000033"/>
+
+  <!-- Isometric light post -->
+  <rect x="220" y="290" width="4" height="40" fill="#666"/>
+  <polygon points="222,290 230,282 232,284 224,292" fill="#cccccc"/>
+  <circle cx="230" cy="282" r="3" fill="#ffff99" stroke="#999" stroke-width="1"/>
 </svg>
