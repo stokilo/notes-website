@@ -5,6 +5,7 @@ interface IsometricBuildingProps {
   size?: number;
   height?: number;
   windows?: number;
+  label?: string;
 }
 
 const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
@@ -12,6 +13,7 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
   size = 50,
   height = 40,
   windows = 4,
+  label,
 }) => {
   const windowSize = size / 6;
   const windowSpacing = size / 4;
@@ -28,6 +30,27 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
         transformStyle: 'preserve-3d',
       }}
     >
+      {/* Label */}
+      {label && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-25px',
+            left: '50%',
+            transform: 'translateX(-50%) rotateX(-60deg) rotateZ(45deg)',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            color: 'white',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            whiteSpace: 'nowrap',
+            zIndex: 1000,
+          }}
+        >
+          {label}
+        </div>
+      )}
+
       {/* Base shadow */}
       <div
         style={{

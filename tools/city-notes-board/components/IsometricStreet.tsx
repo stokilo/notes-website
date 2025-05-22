@@ -6,6 +6,7 @@ interface IsometricStreetProps {
   color?: string;
   hasSidewalk?: boolean;
   hasMarkings?: boolean;
+  label?: string;
 }
 
 const IsometricStreet: React.FC<IsometricStreetProps> = ({
@@ -14,6 +15,7 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
   color = '#4a4a4a',
   hasSidewalk = true,
   hasMarkings = true,
+  label,
 }) => {
   const sidewalkColor = '#e0e0e0';
   const roadMarkingColor = '#ffffff';
@@ -29,6 +31,27 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
         transformStyle: 'preserve-3d',
       }}
     >
+      {/* Label */}
+      {label && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-25px',
+            left: '50%',
+            transform: 'translateX(-50%) rotateX(-60deg) rotateZ(45deg)',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            color: 'white',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            whiteSpace: 'nowrap',
+            zIndex: 1000,
+          }}
+        >
+          {label}
+        </div>
+      )}
+
       {/* Base shadow */}
       <div
         style={{
