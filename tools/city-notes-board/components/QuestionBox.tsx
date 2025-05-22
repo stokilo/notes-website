@@ -3,19 +3,15 @@ import React, { useEffect, useState } from 'react';
 interface QuestionBoxProps {
   width?: number;
   height?: number;
-  label?: string;
   comment?: string;
   commentLabel?: string;
-  onLabelChange?: (newLabel: string) => void;
 }
 
 const QuestionBox: React.FC<QuestionBoxProps> = ({
   width = 40,
   height = 40,
-  label,
   comment,
   commentLabel,
-  onLabelChange,
 }) => {
   const [boxColor, setBoxColor] = useState('#FFD700');
   const [borderColor, setBorderColor] = useState('#B8860B');
@@ -34,34 +30,14 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
 
   return (
     <div style={{ position: 'relative', width, height }}>
-      {/* Label */}
-      {label && (
+      {/* Comment indicator with label */}
+      {comment && (
         <div
           style={{
             position: 'absolute',
             top: '-25px',
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            color: 'white',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            whiteSpace: 'nowrap',
-            zIndex: 1000,
-            minWidth: 'max-content',
-          }}
-        >
-          {label}
-        </div>
-      )}
-      {/* Comment indicator with label */}
-      {comment && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '-8px',
-            right: '-8px',
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
@@ -75,9 +51,9 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
                 color: 'white',
                 padding: '2px 6px',
                 borderRadius: '4px',
-                fontSize: '10px',
+                fontSize: '12px',
                 whiteSpace: 'nowrap',
-                maxWidth: '100px',
+                maxWidth: '200px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}

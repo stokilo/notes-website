@@ -262,8 +262,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           <QuestionBox
             width={item.size.width}
             height={item.size.height}
-            label={item.label}
-            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
+            comment={item.comment}
+            commentLabel={item.commentLabel}
           />
         ) : (
           <Grass
