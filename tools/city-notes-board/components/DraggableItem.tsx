@@ -15,7 +15,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   children,
   id,
   initialPosition = { x: 0, y: 0 },
-  initialSize = { width: 50, height: 50 },
+  initialSize = { width: 100, height: 100 },
   onPositionChange,
   onSizeChange,
   onDragStart,
@@ -87,8 +87,8 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       const deltaX = e.clientX - resizeStartPos.current.x;
       const deltaY = e.clientY - resizeStartPos.current.y;
       
-      const newWidth = Math.max(30, resizeStartSize.current.width + deltaX);
-      const newHeight = Math.max(30, resizeStartSize.current.height + deltaY);
+      const newWidth = Math.max(60, resizeStartSize.current.width + deltaX);
+      const newHeight = Math.max(60, resizeStartSize.current.height + deltaY);
 
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface IsometricStreetProps {
   width?: number;
@@ -11,8 +11,8 @@ interface IsometricStreetProps {
 }
 
 const IsometricStreet: React.FC<IsometricStreetProps> = ({
-  width = 50,
-  length = 100,
+  width = 100,
+  length = 200,
   color = '#4a4a4a',
   hasSidewalk = true,
   hasMarkings = true,
@@ -21,13 +21,18 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label || '');
-  const sidewalkColor = '#e0e0e0';
-  const roadMarkingColor = '#ffffff';
-  const sidewalkWidth = width * 0.15;
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleLabelClick = () => {
+  const handleLabelClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsEditing(true);
     setEditValue(label || '');
+    // Use setTimeout to ensure the input is mounted before selecting
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.select();
+      }
+    }, 0);
   };
 
   const handleLabelSubmit = () => {
@@ -38,17 +43,20 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleLabelSubmit();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Enter') handleLabelSubmit();
+    else if (e.key === 'Escape') {
       setIsEditing(false);
       setEditValue(label || '');
     }
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Label Container */}
+    <div style={{ position: 'relative', width, height: width }}>
+      {/* Label */}
       {label && (
         <div
           style={{
@@ -65,11 +73,17 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
             zIndex: 1000,
             cursor: 'pointer',
             userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
+            minWidth: 'max-content',
           }}
           onClick={handleLabelClick}
+          onMouseDown={(e) => e.preventDefault()}
         >
           {isEditing ? (
             <input
+              ref={inputRef}
               type="text"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
@@ -81,8 +95,13 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
                 color: 'white',
                 fontSize: '12px',
                 width: '100%',
+                minWidth: '100%',
                 outline: 'none',
                 textAlign: 'center',
+                userSelect: 'text',
+                padding: 0,
+                margin: 0,
+                boxSizing: 'border-box',
               }}
               autoFocus
             />
@@ -91,83 +110,23 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
           )}
         </div>
       )}
-
-      {/* Isometric Street SVG */}
-      <svg
-        width={length}
-        height={width}
-        viewBox={`0 0 ${length} ${width}`}
+      {/* Street image */}
+      <img
+        src="/street.svg"
+        alt="Street"
+        draggable="false"
+        onDragStart={handleDragStart}
         style={{
+          width: '100%',
+          height: '100%',
           display: 'block',
-          boxShadow: '0 0 10px rgba(0,0,0,0.2)',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
+          pointerEvents: 'none',
         }}
-      >
-        {/* Shadow */}
-        <path
-          d={`M0 0 L${length} 0 L${length} ${width} L0 ${width} Z`}
-          fill="rgba(0,0,0,0.2)"
-          filter="blur(4px)"
-        />
-
-        {/* Main road */}
-        <path
-          d={`M0 0 L${length} 0 L${length} ${width} L0 ${width} Z`}
-          fill={color}
-        />
-
-        {/* Road markings */}
-        {hasMarkings && (
-          <>
-            {/* Center line */}
-            <path
-              d={`M0 ${width/2} L${length} ${width/2}`}
-              stroke={roadMarkingColor}
-              strokeWidth="4"
-              strokeDasharray="20 20"
-              opacity="0.8"
-            />
-            {/* Side lines */}
-            <path
-              d={`M0 ${width/4} L${length} ${width/4}`}
-              stroke={roadMarkingColor}
-              strokeWidth="2"
-              opacity="0.6"
-            />
-            <path
-              d={`M0 ${width*3/4} L${length} ${width*3/4}`}
-              stroke={roadMarkingColor}
-              strokeWidth="2"
-              opacity="0.6"
-            />
-          </>
-        )}
-
-        {/* Sidewalks */}
-        {hasSidewalk && (
-          <>
-            {/* Top sidewalk */}
-            <path
-              d={`M0 0 L${length} 0 L${length} ${sidewalkWidth} L0 ${sidewalkWidth} Z`}
-              fill={sidewalkColor}
-            />
-            {/* Bottom sidewalk */}
-            <path
-              d={`M0 ${width-sidewalkWidth} L${length} ${width-sidewalkWidth} L${length} ${width} L0 ${width} Z`}
-              fill={sidewalkColor}
-            />
-            {/* Left sidewalk */}
-            <path
-              d={`M0 0 L${sidewalkWidth} 0 L${sidewalkWidth} ${width} L0 ${width} Z`}
-              fill={sidewalkColor}
-            />
-            {/* Right sidewalk */}
-            <path
-              d={`M${length-sidewalkWidth} 0 L${length} 0 L${length} ${width} L${length-sidewalkWidth} ${width} Z`}
-              fill={sidewalkColor}
-            />
-          </>
-        )}
-      </svg>
+      />
     </div>
   );
 };
