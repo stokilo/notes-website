@@ -224,7 +224,14 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       <ContextPanel
         onAddBuilding={() => addItem('building', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
         onAddStreet={() => addItem('street', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-        onAddGrass={() => addItem('grass', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+        onClearScene={() => {
+          if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
+            setItems([]);
+            setSelectedItemId(null);
+            setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+            setCopiedItem(null);
+          }
+        }}
       />
       {contextMenu.show && (
         <ContextMenu

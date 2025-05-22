@@ -3,11 +3,13 @@ import React from 'react';
 interface ContextPanelProps {
   onAddBuilding: () => void;
   onAddStreet: () => void;
+  onClearScene: () => void;
 }
 
 const ContextPanel: React.FC<ContextPanelProps> = ({
   onAddBuilding,
   onAddStreet,
+  onClearScene,
 }) => {
   return (
     <div
@@ -92,6 +94,38 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
             height: '56px',
           }}
         />
+      </button>
+      <button
+        onClick={onClearScene}
+        style={{
+          width: '80px',
+          height: '40px',
+          borderRadius: '12px',
+          border: 'none',
+          backgroundColor: '#ff4444',
+          color: 'white',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s ease',
+          padding: 0,
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+          fontSize: '14px',
+          fontWeight: 'bold',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+          e.currentTarget.style.backgroundColor = '#ff6666';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.backgroundColor = '#ff4444';
+        }}
+      >
+        Clear Scene
       </button>
     </div>
   );
