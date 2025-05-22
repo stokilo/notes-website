@@ -49,10 +49,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       id: `${type}-${Date.now()}`,
       type,
       position,
-      size: { width: 50, height: 50 },
+      size: { width: 100, height: 100 },
       props: type === 'building' 
-        ? { color: '#4a90e2', size: 50, height: 40 } 
-        : { width: 50, length: 100 },
+        ? { color: '#4a90e2', size: 100, height: 80 } 
+        : { width: 100, length: 200 },
       label: `${type.charAt(0).toUpperCase() + type.slice(1)} ${items.filter(i => i.type === type).length + 1}`,
     };
     setItems(prev => [...prev, newItem]);
@@ -128,8 +128,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       {items.map(renderItem)}
       <DebugPanel />
       <ContextPanel
-        onAddBuilding={() => addItem('building', { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 25 })}
-        onAddStreet={() => addItem('street', { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 25 })}
+        onAddBuilding={() => addItem('building', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+        onAddStreet={() => addItem('street', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
       />
       {contextMenu.show && (
         <ContextMenu
