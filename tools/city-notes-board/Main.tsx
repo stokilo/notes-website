@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { FaHome } from 'react-icons/fa';
+import { MdHome } from 'react-icons/md';
 import './styles.css';
-import ScrollablePanel from './components/ScrollablePanel';
 import ContextMenu from './components/ContextMenu';
 import IsometricBuilding from './components/IsometricBuilding';
 
@@ -27,13 +26,20 @@ const Main: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
     setContextMenu({
       show: true,
-      position: { x: e.clientX, y: e.clientY },
+      position: { 
+        x: e.clientX,
+        y: e.clientY
+      },
     });
   };
 
@@ -60,15 +66,39 @@ const Main: React.FC = () => {
     setIsDragging(false);
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY;
+    const zoomFactor = delta > 0 ? 0.9 : 1.1;
+    const newScale = Math.max(0.1, Math.min(2, scale * zoomFactor));
+    
+    // Calculate mouse position relative to canvas
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    // Calculate new offset to zoom towards mouse position
+    const newOffsetX = canvasOffset.x - (mouseX * (zoomFactor - 1));
+    const newOffsetY = canvasOffset.y - (mouseY * (zoomFactor - 1));
+    
+    setScale(newScale);
+    setCanvasOffset({ x: newOffsetX, y: newOffsetY });
+  };
+
   const addBuilding = () => {
     const colors = ['#4a90e2', '#50c878', '#e67e22', '#e74c3c', '#9b59b6'];
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
     const newBuilding: Building = {
       id: nextId,
       color: colors[Math.floor(Math.random() * colors.length)],
       size: Math.floor(Math.random() * 50) + 50,
       position: {
-        x: contextMenu.position.x - canvasOffset.x,
-        y: contextMenu.position.y - canvasOffset.y,
+        x: (contextMenu.position.x - rect.left - canvasOffset.x) / scale,
+        y: (contextMenu.position.y - rect.top - canvasOffset.y) / scale,
       },
     };
     setBuildings([...buildings, newBuilding]);
@@ -79,7 +109,7 @@ const Main: React.FC = () => {
     {
       label: 'Add Building',
       onClick: addBuilding,
-      icon: <FaHome size={16} style={{ marginRight: '8px' }} />,
+      icon: <MdHome size={20} style={{ marginRight: '8px' }} />,
     },
     {
       label: 'Refresh',
@@ -100,12 +130,13 @@ const Main: React.FC = () => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onWheel={handleWheel}
     >
       <div 
         ref={canvasRef}
         className="canvas"
         style={{
-          transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px)`,
+          transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${scale})`,
           cursor: isDragging ? 'grabbing' : 'grab',
         }}
       >
