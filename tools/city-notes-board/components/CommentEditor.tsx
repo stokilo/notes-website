@@ -18,7 +18,7 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
   const [content, setContent] = useState(initialContent);
   const [label, setLabel] = useState(initialLabel);
   const [isEditing, setIsEditing] = useState(!initialContent);
-  const editorRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,13 +46,6 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
       handleSave();
     } else if (e.key === 'Escape') {
       onClose();
-    }
-  };
-
-  const handleFormat = (command: string) => {
-    document.execCommand(command, false);
-    if (editorRef.current) {
-      setContent(editorRef.current.innerHTML);
     }
   };
 
@@ -99,9 +92,11 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
               backgroundColor: 'white',
               borderRadius: '4px',
               boxShadow: 'inset 0 0 4px rgba(0,0,0,0.1)',
+              whiteSpace: 'pre-wrap',
             }}
-            dangerouslySetInnerHTML={{ __html: content || '<em>No comment yet</em>' }}
-          />
+          >
+            {content || <em>No comment yet</em>}
+          </div>
         </div>
 
         {/* Editor view */}
@@ -124,69 +119,10 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
               }}
             />
           </div>
-          <div
-            style={{
-              padding: '8px',
-              borderBottom: '1px solid #eee',
-              display: 'flex',
-              gap: '8px',
-            }}
-          >
-            <button
-              onClick={() => handleFormat('bold')}
-              style={{
-                padding: '4px 8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-              }}
-            >
-              B
-            </button>
-            <button
-              onClick={() => handleFormat('italic')}
-              style={{
-                padding: '4px 8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                fontStyle: 'italic',
-              }}
-            >
-              I
-            </button>
-            <button
-              onClick={() => handleFormat('underline')}
-              style={{
-                padding: '4px 8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-              }}
-            >
-              U
-            </button>
-            <button
-              onClick={() => handleFormat('insertUnorderedList')}
-              style={{
-                padding: '4px 8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-              }}
-            >
-              • List
-            </button>
-          </div>
-          <div
+          <textarea
             ref={editorRef}
-            contentEditable
-            onInput={(e) => setContent(e.currentTarget.innerHTML)}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
             style={{
               padding: '12px',
@@ -195,11 +131,13 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
               minHeight: '200px',
               maxHeight: '60vh',
               outline: 'none',
-              direction: 'ltr',
-              textAlign: 'left',
-              unicodeBidi: 'plaintext',
+              border: 'none',
+              resize: 'none',
+              fontFamily: 'inherit',
+              fontSize: '14px',
+              lineHeight: '1.5',
             }}
-            dangerouslySetInnerHTML={{ __html: content }}
+            placeholder="Enter your comment here..."
           />
         </div>
       </div>
