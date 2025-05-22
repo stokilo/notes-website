@@ -68,6 +68,7 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
             WebkitUserSelect: 'none',
             MozUserSelect: 'none',
             msUserSelect: 'none',
+            minWidth: 'max-content',
           }}
           onClick={handleLabelClick}
           onMouseDown={(e) => e.preventDefault()}
@@ -86,9 +87,13 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
                 color: 'white',
                 fontSize: '12px',
                 width: '100%',
+                minWidth: '100%',
                 outline: 'none',
                 textAlign: 'center',
                 userSelect: 'text',
+                padding: 0,
+                margin: 0,
+                boxSizing: 'border-box',
               }}
               autoFocus
             />
