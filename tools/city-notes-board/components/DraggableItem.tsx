@@ -135,6 +135,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   return (
     <div
       ref={itemRef}
+      className="draggable-item"
       style={{
         position: 'absolute',
         left: position.x,
@@ -164,9 +165,18 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
           border: '2px solid white',
           boxShadow: '0 0 4px rgba(0,0,0,0.2)',
           zIndex: 1001,
+          opacity: 0,
+          transition: 'opacity 0.2s ease',
         }}
         onMouseDown={handleResizeStart}
       />
+      <style>
+        {`
+          .draggable-item:hover > div[style*="position: absolute"] {
+            opacity: 1 !important;
+          }
+        `}
+      </style>
     </div>
   );
 };
