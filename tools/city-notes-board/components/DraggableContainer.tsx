@@ -5,6 +5,7 @@ import ContextPanel from './ContextPanel';
 import IsometricBuilding from './IsometricBuilding';
 import IsometricStreet from './IsometricStreet';
 import Grass from './Grass';
+import QuestionBox from './QuestionBox';
 import ContextMenu from './ContextMenu';
 
 interface DraggableContainerProps {
@@ -13,7 +14,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'building' | 'street' | 'grass';
+  type: 'building' | 'street' | 'grass' | 'questionBox';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -124,6 +125,28 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItems(prev => [...prev, newItem]);
   };
 
+  const addQuestionBox = (position: { x: number; y: number }) => {
+    // Find all existing question boxes for this position
+    const existingBoxes = items.filter(item => 
+      item.type === 'questionBox' && 
+      Math.abs(item.position.x - position.x) < 10
+    );
+
+    // Calculate the new position based on existing boxes
+    const verticalOffset = 50; // Space between boxes
+    const newY = position.y + (existingBoxes.length * verticalOffset);
+
+    const newItem: DraggableItem = {
+      id: `questionBox-${Date.now()}`,
+      type: 'questionBox',
+      position: { ...position, y: newY },
+      size: { width: 40, height: 40 },
+      props: {},
+      label: undefined
+    };
+    setItems(prev => [...prev, newItem]);
+  };
+
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -192,6 +215,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             label={item.label} 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
+        ) : item.type === 'questionBox' ? (
+          <QuestionBox
+            width={item.size.width}
+            height={item.size.height}
+            label={item.label}
+            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
+          />
         ) : (
           <Grass
             {...item.props}
@@ -242,6 +272,21 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 const item = items.find(i => i.id === contextMenu.itemId);
                 if (item) {
                   handleLabelChange(contextMenu.itemId, '');
+                }
+              },
+            },
+            {
+              label: 'Add Question Box',
+              onClick: () => {
+                const item = items.find(i => i.id === contextMenu.itemId);
+                if (item) {
+                  // Add the question box next to the selected item
+                  const offset = 50; // Space between items
+                  const newPosition = {
+                    x: item.position.x + item.size.width + offset,
+                    y: item.position.y
+                  };
+                  addQuestionBox(newPosition);
                 }
               },
             },
