@@ -81,14 +81,12 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
       )}
       {/* Isometric image */}
       <img
-        src="/house.png"
+        src="/house.svg"
         alt="House"
         style={{
           width: size,
           height: size,
           display: 'block',
-          transform: 'skewY(-26.565deg) scaleY(0.5) rotateZ(-45deg)',
-          boxShadow: '0 0 10px rgba(0,0,0,0.2)',
         }}
       />
     </div>

@@ -48,7 +48,7 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Label Container - Not affected by 3D transform */}
+      {/* Label Container */}
       {label && (
         <div
           style={{
@@ -92,178 +92,82 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
         </div>
       )}
 
-      {/* 3D Street Container */}
-      <div
+      {/* Isometric Street SVG */}
+      <svg
+        width={length}
+        height={width}
+        viewBox={`0 0 ${length} ${width}`}
         style={{
-          width: length,
-          height: width,
-          position: 'relative',
-          transform: 'rotateX(60deg) rotateZ(-45deg)',
-          transformStyle: 'preserve-3d',
+          display: 'block',
+          boxShadow: '0 0 10px rgba(0,0,0,0.2)',
         }}
       >
-        {/* Base shadow */}
-        <div
-          style={{
-            position: 'absolute',
-            width: length,
-            height: width,
-            backgroundColor: 'rgba(0,0,0,0.2)',
-            transform: 'translateZ(-1px)',
-            filter: 'blur(4px)',
-          }}
+        {/* Shadow */}
+        <path
+          d={`M0 0 L${length} 0 L${length} ${width} L0 ${width} Z`}
+          fill="rgba(0,0,0,0.2)"
+          filter="blur(4px)"
         />
 
         {/* Main road */}
-        <div
-          style={{
-            position: 'absolute',
-            width: length,
-            height: width,
-            backgroundColor: color,
-            transform: 'translateZ(0)',
-            boxShadow: '0 0 10px rgba(0,0,0,0.2)',
-          }}
-        >
-          {/* Road markings */}
-          {hasMarkings && (
-            <>
-              {/* Center line */}
-              <div
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '4px',
-                  backgroundColor: roadMarkingColor,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  opacity: 0.8,
-                  backgroundImage: 'linear-gradient(90deg, transparent 50%, #fff 50%)',
-                  backgroundSize: '20px 100%',
-                }}
-              />
-              {/* Side lines */}
-              <div
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '2px',
-                  backgroundColor: roadMarkingColor,
-                  top: '25%',
-                  opacity: 0.6,
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '2px',
-                  backgroundColor: roadMarkingColor,
-                  top: '75%',
-                  opacity: 0.6,
-                }}
-              />
-            </>
-          )}
-        </div>
+        <path
+          d={`M0 0 L${length} 0 L${length} ${width} L0 ${width} Z`}
+          fill={color}
+        />
+
+        {/* Road markings */}
+        {hasMarkings && (
+          <>
+            {/* Center line */}
+            <path
+              d={`M0 ${width/2} L${length} ${width/2}`}
+              stroke={roadMarkingColor}
+              strokeWidth="4"
+              strokeDasharray="20 20"
+              opacity="0.8"
+            />
+            {/* Side lines */}
+            <path
+              d={`M0 ${width/4} L${length} ${width/4}`}
+              stroke={roadMarkingColor}
+              strokeWidth="2"
+              opacity="0.6"
+            />
+            <path
+              d={`M0 ${width*3/4} L${length} ${width*3/4}`}
+              stroke={roadMarkingColor}
+              strokeWidth="2"
+              opacity="0.6"
+            />
+          </>
+        )}
 
         {/* Sidewalks */}
         {hasSidewalk && (
           <>
             {/* Top sidewalk */}
-            <div
-              style={{
-                position: 'absolute',
-                width: length,
-                height: sidewalkWidth,
-                backgroundColor: sidewalkColor,
-                transform: 'translateZ(1px)',
-                boxShadow: '0 0 5px rgba(0,0,0,0.1)',
-              }}
-            >
-              {/* Sidewalk pattern */}
-              <div
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backgroundImage: 'linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%)',
-                  backgroundSize: '10px 10px',
-                }}
-              />
-            </div>
+            <path
+              d={`M0 0 L${length} 0 L${length} ${sidewalkWidth} L0 ${sidewalkWidth} Z`}
+              fill={sidewalkColor}
+            />
             {/* Bottom sidewalk */}
-            <div
-              style={{
-                position: 'absolute',
-                width: length,
-                height: sidewalkWidth,
-                backgroundColor: sidewalkColor,
-                bottom: 0,
-                transform: 'translateZ(1px)',
-                boxShadow: '0 0 5px rgba(0,0,0,0.1)',
-              }}
-            >
-              {/* Sidewalk pattern */}
-              <div
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backgroundImage: 'linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%)',
-                  backgroundSize: '10px 10px',
-                }}
-              />
-            </div>
+            <path
+              d={`M0 ${width-sidewalkWidth} L${length} ${width-sidewalkWidth} L${length} ${width} L0 ${width} Z`}
+              fill={sidewalkColor}
+            />
             {/* Left sidewalk */}
-            <div
-              style={{
-                position: 'absolute',
-                width: sidewalkWidth,
-                height: width,
-                backgroundColor: sidewalkColor,
-                left: 0,
-                transform: 'translateZ(1px)',
-                boxShadow: '0 0 5px rgba(0,0,0,0.1)',
-              }}
-            >
-              {/* Sidewalk pattern */}
-              <div
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backgroundImage: 'linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%)',
-                  backgroundSize: '10px 10px',
-                }}
-              />
-            </div>
+            <path
+              d={`M0 0 L${sidewalkWidth} 0 L${sidewalkWidth} ${width} L0 ${width} Z`}
+              fill={sidewalkColor}
+            />
             {/* Right sidewalk */}
-            <div
-              style={{
-                position: 'absolute',
-                width: sidewalkWidth,
-                height: width,
-                backgroundColor: sidewalkColor,
-                right: 0,
-                transform: 'translateZ(1px)',
-                boxShadow: '0 0 5px rgba(0,0,0,0.1)',
-              }}
-            >
-              {/* Sidewalk pattern */}
-              <div
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backgroundImage: 'linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%)',
-                  backgroundSize: '10px 10px',
-                }}
-              />
-            </div>
+            <path
+              d={`M${length-sidewalkWidth} 0 L${length} 0 L${length} ${width} L${length-sidewalkWidth} ${width} Z`}
+              fill={sidewalkColor}
+            />
           </>
         )}
-      </div>
+      </svg>
     </div>
   );
 };
