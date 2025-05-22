@@ -29,7 +29,16 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   }, []);
 
   return (
-    <div style={{ position: 'relative', width, height }} onClick={onClick} onContextMenu={onContextMenu}>
+    <div 
+      style={{ 
+        position: 'relative', 
+        width, 
+        height,
+        marginTop: comment ? '25px' : '0' // Add margin when there's a comment to make space for the label
+      }} 
+      onClick={onClick} 
+      onContextMenu={onContextMenu}
+    >
       {/* Comment indicator with label */}
       {comment && (
         <div
@@ -39,6 +48,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1001,
+            pointerEvents: 'none', // Prevent the label from interfering with clicks
           }}
         >
           <div
@@ -52,6 +62,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
               maxWidth: '200px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)', // Add shadow for better visibility
             }}
           >
             {commentLabel || 'Comment'}
