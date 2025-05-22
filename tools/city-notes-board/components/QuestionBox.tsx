@@ -4,6 +4,7 @@ interface QuestionBoxProps {
   width?: number;
   height?: number;
   label?: string;
+  comment?: string;
   onLabelChange?: (newLabel: string) => void;
 }
 
@@ -11,6 +12,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   width = 40,
   height = 40,
   label,
+  comment,
   onLabelChange,
 }) => {
   const [boxColor, setBoxColor] = useState('#FFD700');
@@ -49,6 +51,30 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
           }}
         >
           {label}
+        </div>
+      )}
+      {/* Comment indicator */}
+      {comment && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-8px',
+            right: '-8px',
+            width: '16px',
+            height: '16px',
+            backgroundColor: '#4a90e2',
+            borderRadius: '50%',
+            border: '2px solid white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            zIndex: 1001,
+          }}
+        >
+          C
         </div>
       )}
       {/* Question Box */}

@@ -7,6 +7,7 @@ import IsometricStreet from './IsometricStreet';
 import Grass from './Grass';
 import QuestionBox from './QuestionBox';
 import ContextMenu from './ContextMenu';
+import CommentEditor from './CommentEditor';
 
 interface DraggableContainerProps {
   className?: string;
@@ -19,6 +20,7 @@ interface DraggableItem {
   size: { width: number; height: number };
   props?: any;
   label?: string;
+  comment?: string;
 }
 
 const STORAGE_KEY = 'city-notes-scene';
@@ -34,6 +36,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const [copiedItem, setCopiedItem] = useState<DraggableItem | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [commentEditor, setCommentEditor] = useState<{
+    show: boolean;
+    itemId: string;
+    position: { x: number; y: number };
+  }>({ show: false, itemId: '', position: { x: 0, y: 0 } });
 
   // Load scene from localStorage on initial mount
   useEffect(() => {
@@ -174,6 +181,14 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItems(prev => [...prev, newItem]);
   };
 
+  const handleCommentChange = (itemId: string, comment: string) => {
+    setItems(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId ? { ...item, comment } : item
+      )
+    );
+  };
+
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -293,47 +308,77 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       />
       {contextMenu.show && (
         <ContextMenu
-          items={[
-            {
-              label: 'Add Label',
-              onClick: () => {
-                const item = items.find(i => i.id === contextMenu.itemId);
-                if (item) {
-                  handleLabelChange(contextMenu.itemId, '');
-                }
+          items={(() => {
+            const item = items.find(i => i.id === contextMenu.itemId);
+            if (!item) return [];
+
+            const baseItems = [
+              {
+                label: 'Copy',
+                onClick: () => handleCopy(contextMenu.itemId),
               },
-            },
-            {
-              label: 'Add Question Box',
-              onClick: () => {
-                const item = items.find(i => i.id === contextMenu.itemId);
-                if (item) {
-                  // Add the question box next to the selected item
-                  const offset = 50; // Space between items
+              {
+                label: 'Paste',
+                onClick: handlePaste,
+                disabled: !copiedItem,
+              },
+              {
+                label: 'Delete',
+                onClick: () => handleDeleteItem(contextMenu.itemId),
+              },
+            ];
+
+            if (item.type === 'questionBox') {
+              return [
+                {
+                  label: 'Add Comment',
+                  onClick: () => {
+                    setCommentEditor({
+                      show: true,
+                      itemId: contextMenu.itemId,
+                      position: { x: contextMenu.x, y: contextMenu.y },
+                    });
+                    setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+                  },
+                },
+                ...baseItems,
+              ];
+            }
+
+            return [
+              {
+                label: 'Add Label',
+                onClick: () => {
+                  handleLabelChange(contextMenu.itemId, '');
+                },
+              },
+              {
+                label: 'Add Question Box',
+                onClick: () => {
+                  const offset = 50;
                   const newPosition = {
                     x: item.position.x + item.size.width + offset,
-                    y: item.position.y
+                    y: item.position.y,
                   };
                   addQuestionBox(newPosition);
-                }
+                },
               },
-            },
-            {
-              label: 'Copy',
-              onClick: () => handleCopy(contextMenu.itemId),
-            },
-            {
-              label: 'Paste',
-              onClick: handlePaste,
-              disabled: !copiedItem,
-            },
-            {
-              label: 'Delete',
-              onClick: () => handleDeleteItem(contextMenu.itemId),
-            },
-          ]}
+              ...baseItems,
+            ];
+          })()}
           position={{ x: contextMenu.x, y: contextMenu.y }}
           onClose={() => setContextMenu({ show: false, x: 0, y: 0, itemId: '' })}
+        />
+      )}
+      {commentEditor.show && (
+        <CommentEditor
+          initialContent={items.find(i => i.id === commentEditor.itemId)?.comment}
+          position={commentEditor.position}
+          onSave={(content) => {
+            handleCommentChange(commentEditor.itemId, content);
+            setCommentEditor({ show: false, itemId: '', position: { x: 0, y: 0 } });
+          }}
+          onClose={() => setCommentEditor({ show: false, itemId: '', position: { x: 0, y: 0 } })}
         />
       )}
     </div>
