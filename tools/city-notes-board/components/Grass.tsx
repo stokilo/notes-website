@@ -42,6 +42,7 @@ const Grass: React.FC<GrassProps> = ({
             whiteSpace: 'nowrap',
             zIndex: 1000,
             minWidth: 'max-content',
+            unicodeBidi: 'plaintext'
           }}
         >
           {label}

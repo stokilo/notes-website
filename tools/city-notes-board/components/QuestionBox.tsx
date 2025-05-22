@@ -5,6 +5,7 @@ interface QuestionBoxProps {
   height?: number;
   label?: string;
   comment?: string;
+  commentLabel?: string;
   onLabelChange?: (newLabel: string) => void;
 }
 
@@ -13,6 +14,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   height = 40,
   label,
   comment,
+  commentLabel,
   onLabelChange,
 }) => {
   const [boxColor, setBoxColor] = useState('#FFD700');
@@ -53,28 +55,53 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
           {label}
         </div>
       )}
-      {/* Comment indicator */}
+      {/* Comment indicator with label */}
       {comment && (
         <div
           style={{
             position: 'absolute',
             top: '-8px',
             right: '-8px',
-            width: '16px',
-            height: '16px',
-            backgroundColor: '#4a90e2',
-            borderRadius: '50%',
-            border: '2px solid white',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontSize: '10px',
-            fontWeight: 'bold',
+            gap: '4px',
             zIndex: 1001,
           }}
         >
-          C
+          {commentLabel && (
+            <div
+              style={{
+                backgroundColor: '#4a90e2',
+                color: 'white',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                fontSize: '10px',
+                whiteSpace: 'nowrap',
+                maxWidth: '100px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {commentLabel}
+            </div>
+          )}
+          <div
+            style={{
+              width: '16px',
+              height: '16px',
+              backgroundColor: '#4a90e2',
+              borderRadius: '50%',
+              border: '2px solid white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '10px',
+              fontWeight: 'bold',
+            }}
+          >
+            C
+          </div>
         </div>
       )}
       {/* Question Box */}

@@ -21,6 +21,7 @@ interface DraggableItem {
   props?: any;
   label?: string;
   comment?: string;
+  commentLabel?: string;
 }
 
 const STORAGE_KEY = 'city-notes-scene';
@@ -181,10 +182,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItems(prev => [...prev, newItem]);
   };
 
-  const handleCommentChange = (itemId: string, comment: string) => {
+  const handleCommentChange = (itemId: string, comment: string, label: string) => {
     setItems(prevItems =>
       prevItems.map(item =>
-        item.id === itemId ? { ...item, comment } : item
+        item.id === itemId ? { ...item, comment, commentLabel: label } : item
       )
     );
   };
@@ -331,7 +332,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             if (item.type === 'questionBox') {
               return [
                 {
-                  label: 'Add Comment',
+                  label: item.comment ? 'View Comment' : 'Add Comment',
                   onClick: () => {
                     setCommentEditor({
                       show: true,
@@ -373,9 +374,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       {commentEditor.show && (
         <CommentEditor
           initialContent={items.find(i => i.id === commentEditor.itemId)?.comment}
+          initialLabel={items.find(i => i.id === commentEditor.itemId)?.commentLabel}
           position={commentEditor.position}
-          onSave={(content) => {
-            handleCommentChange(commentEditor.itemId, content);
+          onSave={(content, label) => {
+            handleCommentChange(commentEditor.itemId, content, label);
             setCommentEditor({ show: false, itemId: '', position: { x: 0, y: 0 } });
           }}
           onClose={() => setCommentEditor({ show: false, itemId: '', position: { x: 0, y: 0 } })}
