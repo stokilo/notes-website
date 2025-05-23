@@ -131,19 +131,25 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       const newX = unzoomedX - dragOffset.current.x;
       const newY = unzoomedY - dragOffset.current.y;
 
+      // Only update if position changed significantly (more than 1px)
       if (
         Math.abs(newX - lastPositionRef.current.x) > 1 ||
         Math.abs(newY - lastPositionRef.current.y) > 1
       ) {
         lastPositionRef.current = { x: newX, y: newY };
         
+        // Use RAF for smooth updates
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
         }
         
         animationFrameRef.current = requestAnimationFrame(() => {
+          // Update local state for smooth animation
           setPosition({ x: newX, y: newY });
-          onPositionChange?.({ x: newX, y: newY });
+          // Debounce the parent update
+          if (onPositionChange) {
+            onPositionChange({ x: newX, y: newY });
+          }
         });
       }
     };
@@ -168,13 +174,18 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       const newWidth = Math.max(10, resizeStartSize.current.width + deltaX);
       const newHeight = Math.max(10, resizeStartSize.current.height + deltaY);
 
+      // Use RAF for smooth updates
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
 
       animationFrameRef.current = requestAnimationFrame(() => {
+        // Update local state for smooth animation
         setSize({ width: newWidth, height: newHeight });
-        onSizeChange?.({ width: newWidth, height: newHeight });
+        // Debounce the parent update
+        if (onSizeChange) {
+          onSizeChange({ width: newWidth, height: newHeight });
+        }
       });
     };
 
@@ -186,11 +197,15 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
     const handleMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         setIsDragging(false);
-        onDragEnd?.({ x: e.clientX, y: e.clientY });
+        if (onDragEnd) {
+          onDragEnd({ x: e.clientX, y: e.clientY });
+        }
       }
       if (isResizing) {
         setIsResizing(false);
-        onResizeEnd?.();
+        if (onResizeEnd) {
+          onResizeEnd();
+        }
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -245,10 +260,10 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       transition={disableAnimations ? {} : {
         rotate: { duration: 0.5, ease: "easeInOut" },
         scale: { duration: 0.2, ease: "easeInOut" },
-        x: { duration: 0.2, ease: "easeInOut" },
-        y: { duration: 0.2, ease: "easeInOut" },
-        width: { duration: 0.2, ease: "easeInOut" },
-        height: { duration: 0.2, ease: "easeInOut" },
+        x: { duration: 0.1, ease: "linear" },
+        y: { duration: 0.1, ease: "linear" },
+        width: { duration: 0.1, ease: "linear" },
+        height: { duration: 0.1, ease: "linear" },
       }}
       whileHover={disableAnimations ? {} : { scale: 1.1 }}
       onHoverStart={() => !disableAnimations && setHover(true)}
@@ -282,16 +297,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
           {children}
         </div>
       ) : (
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.8, 1, 0.8],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+        <div
           style={{
             width: '100%',
             height: '100%',
@@ -301,7 +307,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
           }}
         >
           {children}
-        </motion.div>
+        </div>
       )}
       {/* Resize handle */}
       <div
