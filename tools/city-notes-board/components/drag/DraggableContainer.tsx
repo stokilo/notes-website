@@ -386,7 +386,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
     if (item.type === 'codeBlock') {
       return (
-        <DraggableItem key={item.id} {...commonProps}>
+        <DraggableItem key={item.id} {...commonProps} disableAnimations={true}>
           <ShikiCodeBlockItem
             width={item.size.width}
             height={item.size.height}

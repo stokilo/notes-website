@@ -13,6 +13,7 @@ interface DraggableItemProps {
   onContextMenu?: (e: React.MouseEvent) => void;
   onClick?: (e: React.MouseEvent) => void;
   isSelected?: boolean;
+  disableAnimations?: boolean;
 }
 
 const DraggableItem: React.FC<DraggableItemProps> = ({
@@ -27,6 +28,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   onContextMenu,
   onClick,
   isSelected = false,
+  disableAnimations = false,
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [size, setSize] = useState(initialSize);
@@ -149,6 +151,8 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   }, [isDragging, isResizing, onPositionChange, onSizeChange, onDragEnd]);
 
   useEffect(() => {
+    if (disableAnimations) return;
+
     // Random animation intervals
     const rotationInterval = setInterval(() => {
       setRotation(Math.random() * 2 - 1); // Random rotation between -1 and 1 degrees
@@ -163,23 +167,23 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       clearInterval(rotationInterval);
       clearInterval(scaleInterval);
     };
-  }, []);
+  }, [disableAnimations]);
 
   return (
     <motion.div
       ref={itemRef}
       className="draggable-item"
-      animate={{
+      animate={disableAnimations ? {} : {
         rotate: rotation,
         scale: hover ? 1.1 : scale,
       }}
-      transition={{
+      transition={disableAnimations ? {} : {
         rotate: { duration: 0.5, ease: "easeInOut" },
         scale: { duration: 0.2, ease: "easeInOut" }
       }}
-      whileHover={{ scale: 1.1 }}
-      onHoverStart={() => setHover(true)}
-      onHoverEnd={() => setHover(false)}
+      whileHover={disableAnimations ? {} : { scale: 1.1 }}
+      onHoverStart={() => !disableAnimations && setHover(true)}
+      onHoverEnd={() => !disableAnimations && setHover(false)}
       style={{
         position: 'absolute',
         left: position.x,
@@ -198,26 +202,40 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       onContextMenu={onContextMenu}
       onClick={handleClick}
     >
-      <motion.div
-        animate={{
-          scale: [1, 1.1, 1],
-          opacity: [0.8, 1, 0.8],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {children}
-      </motion.div>
+      {disableAnimations ? (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {children}
+        </div>
+      ) : (
+        <motion.div
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.8, 1, 0.8],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {children}
+        </motion.div>
+      )}
       {/* Resize handle */}
       <div
         style={{

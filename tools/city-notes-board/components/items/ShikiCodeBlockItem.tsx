@@ -59,15 +59,6 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           backgroundColor: '#2d2d2d',
           borderRadius: '4px',
           cursor: 'pointer',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.05)';
-          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = 'none';
         }}
       >
         <svg
