@@ -54,7 +54,6 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         text="Clear"
         backgroundColor="#ff4444"
         textColor="white"
-        height="40px"
       />
     </div>
   );

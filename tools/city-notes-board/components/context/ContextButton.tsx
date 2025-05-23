@@ -15,15 +15,15 @@ const ContextButton: React.FC<ContextButtonProps> = ({
   text,
   backgroundColor = 'white',
   textColor = 'black',
-  height = '80px',
+  height = '40px',
 }) => {
   return (
     <button
       onClick={onClick}
       style={{
-        width: '80px',
+        width: '40px',
         height,
-        borderRadius: '12px',
+        borderRadius: '6px',
         border: 'none',
         backgroundColor,
         color: textColor,
@@ -34,7 +34,7 @@ const ContextButton: React.FC<ContextButtonProps> = ({
         transition: 'all 0.2s ease',
         padding: 0,
         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        fontSize: '14px',
+        fontSize: '12px',
         fontWeight: 'bold',
       }}
       onMouseEnter={(e) => {
@@ -57,8 +57,8 @@ const ContextButton: React.FC<ContextButtonProps> = ({
           src={icon}
           alt={text || 'Button icon'}
           style={{
-            width: '32px',
-            height: '32px',
+            width: '24px',
+            height: '24px',
           }}
         />
       ) : (
