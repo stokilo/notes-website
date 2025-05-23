@@ -89,37 +89,38 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ className = '' }) => {
     };
   }, []);
 
-  return (
-    <div
-      className={`debug-panel ${className}`}
-      style={{
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        color: '#fff',
-        padding: '10px',
-        borderRadius: '4px',
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        zIndex: 9999,
-        minWidth: '200px',
-      }}
-    >
-      <div>Mouse: ({debugInfo.mouseX}, {debugInfo.mouseY})</div>
-      <div>Window: {debugInfo.windowWidth}x{debugInfo.windowHeight}</div>
-      {debugInfo.lastAction && (
-        <div>Last Action: {debugInfo.lastAction}</div>
-      )}
-      {debugInfo.dragInfo && (
-        <div>
-          <div>Dragging: {debugInfo.dragInfo.itemId}</div>
-          <div>Start: ({debugInfo.dragInfo.startX}, {debugInfo.dragInfo.startY})</div>
-          <div>Current: ({debugInfo.dragInfo.currentX}, {debugInfo.dragInfo.currentY})</div>
-        </div>
-      )}
-    </div>
-  );
+  return <></>
+  // return (
+  //   <div
+  //     className={`debug-panel ${className}`}
+  //     style={{
+  //       position: 'fixed',
+  //       bottom: '20px',
+  //       right: '20px',
+  //       backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  //       color: '#fff',
+  //       padding: '10px',
+  //       borderRadius: '4px',
+  //       fontFamily: 'monospace',
+  //       fontSize: '12px',
+  //       zIndex: 9999,
+  //       minWidth: '200px',
+  //     }}
+  //   >
+  //     <div>Mouse: ({debugInfo.mouseX}, {debugInfo.mouseY})</div>
+  //     <div>Window: {debugInfo.windowWidth}x{debugInfo.windowHeight}</div>
+  //     {debugInfo.lastAction && (
+  //       <div>Last Action: {debugInfo.lastAction}</div>
+  //     )}
+  //     {debugInfo.dragInfo && (
+  //       <div>
+  //         <div>Dragging: {debugInfo.dragInfo.itemId}</div>
+  //         <div>Start: ({debugInfo.dragInfo.startX}, {debugInfo.dragInfo.startY})</div>
+  //         <div>Current: ({debugInfo.dragInfo.currentX}, {debugInfo.dragInfo.currentY})</div>
+  //       </div>
+  //     )}
+  //   </div>
+  // );
 };
 
 export default DebugPanel; 

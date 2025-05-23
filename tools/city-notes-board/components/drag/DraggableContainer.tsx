@@ -56,6 +56,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     itemId: string;
     position: { x: number; y: number };
   }>({ show: false, itemId: '', position: { x: 0, y: 0 } });
+  const [zoom, setZoom] = useState(1);
 
   // Load scene from localStorage on initial mount
   useEffect(() => {
@@ -134,6 +135,19 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       else if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
         e.preventDefault();
         handlePaste();
+      }
+      // Add zoom keyboard shortcuts
+      else if ((e.metaKey || e.ctrlKey) && e.key === '=') {
+        e.preventDefault();
+        setZoom(prev => Math.min(prev + 0.1, 2));
+      }
+      else if ((e.metaKey || e.ctrlKey) && e.key === '-') {
+        e.preventDefault();
+        setZoom(prev => Math.max(prev - 0.1, 0.5));
+      }
+      else if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+        e.preventDefault();
+        setZoom(1);
       }
       // Add rotation keyboard shortcuts
       else if (selectedItemId) {
@@ -461,27 +475,95 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       onClick={handleClick}
       tabIndex={0}
     >
-      {items.map(renderItem)}
-      <DebugPanel />
-      <ContextPanel
-        onAddBox={() => addItem('box', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-        onAddCircle={() => addItem('circle', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-        onAddCodeBlock={() => addCodeBlock({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
-        onClearScene={() => {
-          if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
-            setItems([]);
-            setSelectedItemId(null);
-            setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
-            setCopiedItem(null);
-            localStorage.removeItem(STORAGE_KEY);
-          }
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          transform: `scale(${zoom})`,
+          transformOrigin: 'center center',
         }}
-      />
-      <TopContextPanel
-        onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
-        onAddSeparator={() => addSeparator({ x: window.innerWidth / 2 - 1, y: window.innerHeight / 2 - 50 })}
-        onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
-      />
+      >
+        {items.map(renderItem)}
+      </div>
+
+      {/* Fixed UI elements that don't scale with zoom */}
+      <div style={{ position: 'relative', zIndex: 1000 }}>
+        <DebugPanel />
+        <ContextPanel
+          onAddBox={() => addItem('box', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+          onAddCircle={() => addItem('circle', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+          onAddCodeBlock={() => addCodeBlock({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
+          onClearScene={() => {
+            if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
+              setItems([]);
+              setSelectedItemId(null);
+              setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+              setCopiedItem(null);
+              localStorage.removeItem(STORAGE_KEY);
+            }
+          }}
+        />
+        <TopContextPanel
+          onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
+          onAddSeparator={() => addSeparator({ x: window.innerWidth / 2 - 1, y: window.innerHeight / 2 - 50 })}
+          onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
+        />
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            display: 'flex',
+            gap: '10px',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            padding: '10px',
+            borderRadius: '5px',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+          }}
+        >
+          <button
+            onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.5))}
+            style={{
+              padding: '5px 10px',
+              cursor: 'pointer',
+              border: '1px solid #ccc',
+              borderRadius: '3px',
+              backgroundColor: 'white',
+            }}
+          >
+            -
+          </button>
+          <span style={{ lineHeight: '30px' }}>{Math.round(zoom * 100)}%</span>
+          <button
+            onClick={() => setZoom(prev => Math.min(prev + 0.1, 2))}
+            style={{
+              padding: '5px 10px',
+              cursor: 'pointer',
+              border: '1px solid #ccc',
+              borderRadius: '3px',
+              backgroundColor: 'white',
+            }}
+          >
+            +
+          </button>
+          <button
+            onClick={() => setZoom(1)}
+            style={{
+              padding: '5px 10px',
+              cursor: 'pointer',
+              border: '1px solid #ccc',
+              borderRadius: '3px',
+              backgroundColor: 'white',
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
       {contextMenu.show && (
         <ContextMenu
           items={(() => {
