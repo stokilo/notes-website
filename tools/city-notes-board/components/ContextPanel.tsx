@@ -123,7 +123,7 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         }}
       >
         <img
-          src="/map.svg"
+          src="/map.png"
           alt="Add Map"
           style={{
             width: '56px',

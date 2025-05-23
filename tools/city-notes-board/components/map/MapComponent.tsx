@@ -15,7 +15,7 @@ interface Building {
   y: number;
   width: number;
   height: number;
-  color: string;
+  color: { start: string; end: string };
   comment?: string;
   commentLabel?: string;
   originalData?: any;
@@ -27,6 +27,9 @@ interface Street {
   points: { x: number; y: number }[];
   width: number;
   color: string;
+  gradient: { start: string; end: string };
+  dashArray: string;
+  originalData?: any;
 }
 
 const MapComponent: React.FC<MapComponentProps> = ({
@@ -106,7 +109,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           y: Math.random() * (height - 60),
           width: 40 + Math.random() * 40,
           height: 40 + Math.random() * 40,
-          color: `hsl(${Math.random() * 360}, 70%, 80%)`,
+          color: { start: `hsl(${Math.random() * 360}, 70%, 85%)`, end: `hsl(${(Math.random() * 360 + 30) % 360}, 70%, 75%)` },
           points: [],
         }));
         setBuildings(fallbackBuildings);
@@ -216,22 +219,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
             return;
           }
 
-          // Generate a more realistic building color based on building type
-          const buildingType = element.tags.building;
-          let baseColor;
-          switch (buildingType) {
-            case 'residential':
-              baseColor = `hsl(${Math.random() * 30 + 180}, 70%, 85%)`; // Blue-ish tones
-              break;
-            case 'commercial':
-              baseColor = `hsl(${Math.random() * 30 + 200}, 70%, 80%)`; // Purple-ish tones
-              break;
-            case 'industrial':
-              baseColor = `hsl(${Math.random() * 30 + 30}, 70%, 80%)`; // Orange-ish tones
-              break;
-            default:
-              baseColor = `hsl(${Math.random() * 30 + 150}, 70%, 85%)`; // Green-ish tones
-          }
+          // Generate random gradient colors
+          const hue = Math.random() * 360;
+          const gradientColors = {
+            start: `hsl(${hue}, 70%, 85%)`,
+            end: `hsl(${(hue + 30) % 360}, 70%, 75%)`,
+          };
 
           buildings.push({
             id: `building-${element.id}`,
@@ -239,9 +232,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
             y: bounds.minY,
             width: buildingWidth,
             height: buildingHeight,
-            color: baseColor,
+            color: gradientColors,
             originalData: element,
-            points: points, // Store the original points for better rendering
+            points: points,
           });
         } catch (error) {
           console.warn('Error processing building:', error);
@@ -293,11 +286,17 @@ const MapComponent: React.FC<MapComponentProps> = ({
             return;
           }
 
+          // Generate road style based on highway type
+          const roadStyle = getRoadStyle(element.tags.highway);
+
           streets.push({
             id: `street-${element.id}`,
             points,
-            width: getStreetWidth(element.tags.highway),
-            color: '#4a4a4a',
+            width: roadStyle.width,
+            color: roadStyle.color,
+            gradient: roadStyle.gradient,
+            dashArray: roadStyle.dashArray,
+            originalData: element,
           });
         } catch (error) {
           console.warn('Error processing street:', error);
@@ -308,19 +307,70 @@ const MapComponent: React.FC<MapComponentProps> = ({
     return streets;
   };
 
-  const getStreetWidth = (highwayType: string) => {
+  const getRoadStyle = (highwayType: string) => {
     switch (highwayType) {
       case 'motorway':
       case 'trunk':
-        return 8;
+        return {
+          width: 12,
+          color: '#4a4a4a',
+          gradient: {
+            start: '#666666',
+            end: '#333333',
+          },
+          dashArray: 'none',
+        };
       case 'primary':
-        return 6;
+        return {
+          width: 10,
+          color: '#666666',
+          gradient: {
+            start: '#777777',
+            end: '#444444',
+          },
+          dashArray: 'none',
+        };
       case 'secondary':
-        return 5;
+        return {
+          width: 8,
+          color: '#777777',
+          gradient: {
+            start: '#888888',
+            end: '#555555',
+          },
+          dashArray: 'none',
+        };
       case 'tertiary':
-        return 4;
+        return {
+          width: 6,
+          color: '#888888',
+          gradient: {
+            start: '#999999',
+            end: '#666666',
+          },
+          dashArray: 'none',
+        };
+      case 'residential':
+      case 'unclassified':
+        return {
+          width: 4,
+          color: '#999999',
+          gradient: {
+            start: '#aaaaaa',
+            end: '#777777',
+          },
+          dashArray: '2,2',
+        };
       default:
-        return 3;
+        return {
+          width: 3,
+          color: '#aaaaaa',
+          gradient: {
+            start: '#bbbbbb',
+            end: '#888888',
+          },
+          dashArray: '1,1',
+        };
     }
   };
 
@@ -393,11 +443,45 @@ const MapComponent: React.FC<MapComponentProps> = ({
                   pointerEvents: 'none',
                 }}
               >
-                <polyline
-                  points={street.points.map(p => `${p.x},${p.y}`).join(' ')}
-                  stroke={street.color}
+                <defs>
+                  <linearGradient
+                    id={`road-gradient-${street.id}`}
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="0%"
+                  >
+                    <stop offset="0%" stopColor={street.gradient.start} />
+                    <stop offset="100%" stopColor={street.gradient.end} />
+                  </linearGradient>
+                </defs>
+                {/* Road shadow */}
+                <path
+                  d={`M ${street.points.map(p => `${p.x},${p.y}`).join(' L ')}`}
+                  stroke="rgba(0, 0, 0, 0.2)"
+                  strokeWidth={street.width + 2}
+                  fill="none"
+                  transform="translate(1, 1)"
+                />
+                {/* Road base */}
+                <path
+                  d={`M ${street.points.map(p => `${p.x},${p.y}`).join(' L ')}`}
+                  stroke={`url(#road-gradient-${street.id})`}
                   strokeWidth={street.width}
                   fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={street.dashArray}
+                />
+                {/* Road highlight */}
+                <path
+                  d={`M ${street.points.map(p => `${p.x},${p.y}`).join(' L ')}`}
+                  stroke="rgba(255, 255, 255, 0.3)"
+                  strokeWidth={street.width - 2}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={street.dashArray}
                 />
               </svg>
             ))}
@@ -426,16 +510,28 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     height: '100%',
                   }}
                 >
+                  <defs>
+                    <linearGradient
+                      id={`gradient-${building.id}`}
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
+                    >
+                      <stop offset="0%" stopColor={building.color.start} />
+                      <stop offset="100%" stopColor={building.color.end} />
+                    </linearGradient>
+                  </defs>
                   {/* Building shadow */}
                   <path
                     d={`M ${building.points.map(p => `${p.x - building.x},${p.y - building.y}`).join(' L ')} Z`}
                     fill="rgba(0, 0, 0, 0.2)"
                     transform="translate(2, 2)"
                   />
-                  {/* Building base */}
+                  {/* Building base with gradient */}
                   <path
                     d={`M ${building.points.map(p => `${p.x - building.x},${p.y - building.y}`).join(' L ')} Z`}
-                    fill={building.color}
+                    fill={`url(#gradient-${building.id})`}
                     stroke="#666"
                     strokeWidth="0.5"
                   />
