@@ -465,8 +465,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    // Only clear selection if clicking directly on the container
-    if (e.target === containerRef.current) {
+    // Check if the click is on the container or its background
+    const target = e.target as HTMLElement;
+    const isContainerClick = target === containerRef.current || 
+                           target.className === 'draggable-container' ||
+                           target.closest('.draggable-container') === containerRef.current;
+    
+    if (isContainerClick) {
       setSelectedItemId(null);
       setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
     }
