@@ -8,7 +8,7 @@ import Grass from './Grass';
 import QuestionBox from './QuestionBox';
 import ContextMenu from './ContextMenu';
 import CommentEditor from './CommentEditor';
-import BoxGlassMeasuringContainer from './box/BoxGlassMeasuringContainer';
+import BoxGridContainer from './box/BoxGridContainer';
 import MapComponent from './map/MapComponent';
 
 interface DraggableContainerProps {
@@ -362,7 +362,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       const containerQuestionBoxes = item.props.children || [];
       return (
         <DraggableItem key={item.id} {...commonProps}>
-          <BoxGlassMeasuringContainer width={item.size.width} height={item.size.height}>
+          <BoxGridContainer width={item.size.width} height={item.size.height}>
             {containerQuestionBoxes.map(qb => (
               <QuestionBox
                 key={qb.id}
@@ -386,7 +386,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 }}
               />
             ))}
-          </BoxGlassMeasuringContainer>
+          </BoxGridContainer>
         </DraggableItem>
       );
     }
