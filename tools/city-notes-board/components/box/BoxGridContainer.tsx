@@ -1,4 +1,5 @@
 import React from 'react';
+import AnimatedColoredBox from './AnimatedColoredBox';
 
 interface BoxGridContainerProps {
   children?: React.ReactNode;
@@ -30,27 +31,22 @@ const BoxGridContainer: React.FC<BoxGridContainerProps> = ({
         userSelect: 'none',
       }}
     >
-      {/* Top row: 4 colored boxes aligned with grid */}
+      {/* Top row: 4 animated colored boxes aligned with grid */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 28px)',
         gap: 10,
         marginBottom: 18,
-        width: '100%',
-        maxWidth: 170,
+        width: 4 * 28 + 3 * 10, // 4 boxes + 3 gaps
+        gridAutoFlow: 'column',
       }}>
         {BOX_COLORS.map((color, i) => (
-          <div
+          <AnimatedColoredBox
             key={color}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              background: color,
-              border: '1.5px solid #e0e0e0',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.07)',
-              gridColumn: i + 1,
-            }}
+            width={28}
+            height={28}
+            color={color}
+            style={{ position: 'static' }}
           />
         ))}
       </div>

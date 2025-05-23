@@ -8,6 +8,7 @@ interface AnimatedColoredBoxProps {
   children?: React.ReactNode;
   isNew?: boolean;
   finalPosition?: { x: number; y: number };
+  style?: React.CSSProperties;
 }
 
 const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
@@ -17,6 +18,7 @@ const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
   children,
   isNew = false,
   finalPosition,
+  style = {},
 }) => {
   const [rotation, setRotation] = useState(0);
   const [shake, setShake] = useState(false);
@@ -69,6 +71,7 @@ const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
         top: 0,
         width,
         height,
+        ...style,
       }}
     >
       <motion.div
