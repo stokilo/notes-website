@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as shiki from 'shiki';
 
 interface ShikiCodeBlockItemProps {
   width?: number;
@@ -18,7 +19,30 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   onContextMenu,
 }) => {
   const [showPreview, setShowPreview] = useState(false);
+  const [highlightedCode, setHighlightedCode] = useState('');
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const highlightCode = async () => {
+      const highlighter = await shiki.createHighlighter({
+        themes: ['github-dark'],
+        langs: ['typescript', 'javascript', 'html', 'css', 'json', 'markdown', 'bash', 'shell'],
+      });
+      
+      const highlighted = highlighter.codeToHtml(code, { 
+        lang: language,
+        themes: {
+          light: 'github-dark',
+          dark: 'github-dark'
+        }
+      });
+      setHighlightedCode(highlighted);
+    };
+
+    if (showPreview) {
+      highlightCode();
+    }
+  }, [code, language, showPreview]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -144,15 +168,9 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               flex: 1,
               overflow: 'auto',
               padding: '16px',
-              fontFamily: 'monospace',
-              fontSize: '14px',
-              lineHeight: '1.5',
-              color: '#d4d4d4',
-              whiteSpace: 'pre',
             }}
-          >
-            {code}
-          </div>
+            dangerouslySetInnerHTML={{ __html: highlightedCode }}
+          />
         </div>
       )}
     </div>
