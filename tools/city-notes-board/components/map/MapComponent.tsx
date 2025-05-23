@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ContextMenu from '../ContextMenu';
 import CommentEditor from '../CommentEditor';
 
@@ -47,6 +47,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [showCommentEditor, setShowCommentEditor] = useState(false);
   const [commentPosition, setCommentPosition] = useState({ x: 0, y: 0 });
   const mapRef = useRef<HTMLDivElement>(null);
+  const [viewport, setViewport] = useState({ x: 0, y: 0, width, height });
 
   // Fetch OpenStreetMap data
   useEffect(() => {
@@ -163,7 +164,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
   };
 
-  const processBuildings = (data: any, bbox: any, width: number, height: number) => {
+  // Optimize building processing with useMemo
+  const processBuildings = useCallback((data: any, bbox: any, width: number, height: number) => {
     const buildings: Building[] = [];
     const nodeMap = new Map();
     
@@ -178,7 +180,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
     data.elements.forEach((element: any) => {
       if (element.type === 'way' && element.tags && element.tags.building && element.nodes) {
         try {
-          // Get coordinates for all nodes in this way
           const points = element.nodes
             .map((nodeId: number) => nodeMap.get(nodeId))
             .filter((node: any) => node && typeof node.lon === 'number' && typeof node.lat === 'number')
@@ -187,12 +188,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
               y: ((bbox.maxLat - node.lat) / (bbox.maxLat - bbox.minLat)) * height,
             }));
 
-          if (points.length < 3) {
-            console.warn('Building has less than 3 valid points, skipping');
-            return;
-          }
+          if (points.length < 3) return;
 
-          // Calculate building bounds
           const bounds = points.reduce((acc: any, point: any) => ({
             minX: Math.min(acc.minX, point.x),
             maxX: Math.max(acc.maxX, point.x),
@@ -200,13 +197,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
             maxY: Math.max(acc.maxY, point.y),
           }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
 
-          // Validate bounds
           if (
             isNaN(bounds.minX) || isNaN(bounds.maxX) || isNaN(bounds.minY) || isNaN(bounds.maxY) ||
             bounds.minX === Infinity || bounds.maxX === -Infinity ||
             bounds.minY === Infinity || bounds.maxY === -Infinity
           ) {
-            console.warn('Invalid bounds calculated for building, skipping');
             return;
           }
 
@@ -215,11 +210,20 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
           // Skip buildings that are too small or too large
           if (buildingWidth < 1 || buildingHeight < 1 || buildingWidth > width || buildingHeight > height) {
-            console.warn('Building dimensions out of bounds, skipping');
             return;
           }
 
-          // Generate random gradient colors
+          // Skip buildings outside viewport with some padding
+          const padding = 50;
+          if (
+            bounds.maxX < viewport.x - padding ||
+            bounds.minX > viewport.x + viewport.width + padding ||
+            bounds.maxY < viewport.y - padding ||
+            bounds.minY > viewport.y + viewport.height + padding
+          ) {
+            return;
+          }
+
           const hue = Math.random() * 360;
           const gradientColors = {
             start: `hsl(${hue}, 70%, 85%)`,
@@ -243,24 +247,22 @@ const MapComponent: React.FC<MapComponentProps> = ({
     });
 
     return buildings;
-  };
+  }, [viewport]);
 
-  const processStreets = (data: any, bbox: any, width: number, height: number) => {
+  // Optimize street processing with useMemo
+  const processStreets = useCallback((data: any, bbox: any, width: number, height: number) => {
     const streets: Street[] = [];
     const nodeMap = new Map();
     
-    // First, create a map of all nodes
     data.elements.forEach((element: any) => {
       if (element.type === 'node') {
         nodeMap.set(element.id, { lat: element.lat, lon: element.lon });
       }
     });
     
-    // Then process ways that are streets
     data.elements.forEach((element: any) => {
       if (element.type === 'way' && element.tags && element.tags.highway && element.nodes) {
         try {
-          // Get coordinates for all nodes in this way
           const points = element.nodes
             .map((nodeId: number) => nodeMap.get(nodeId))
             .filter((node: any) => node && typeof node.lon === 'number' && typeof node.lat === 'number')
@@ -269,24 +271,26 @@ const MapComponent: React.FC<MapComponentProps> = ({
               y: ((bbox.maxLat - node.lat) / (bbox.maxLat - bbox.minLat)) * height,
             }));
 
-          if (points.length < 2) {
-            console.warn('Street has less than 2 valid points, skipping');
+          if (points.length < 2) return;
+
+          // Skip streets outside viewport with some padding
+          const padding = 50;
+          const bounds = points.reduce((acc: any, point: any) => ({
+            minX: Math.min(acc.minX, point.x),
+            maxX: Math.max(acc.maxX, point.x),
+            minY: Math.min(acc.minY, point.y),
+            maxY: Math.max(acc.maxY, point.y),
+          }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+
+          if (
+            bounds.maxX < viewport.x - padding ||
+            bounds.minX > viewport.x + viewport.width + padding ||
+            bounds.maxY < viewport.y - padding ||
+            bounds.minY > viewport.y + viewport.height + padding
+          ) {
             return;
           }
 
-          // Validate points
-          const hasInvalidPoints = points.some(point => 
-            isNaN(point.x) || isNaN(point.y) ||
-            point.x < 0 || point.x > width ||
-            point.y < 0 || point.y > height
-          );
-
-          if (hasInvalidPoints) {
-            console.warn('Street has invalid points, skipping');
-            return;
-          }
-
-          // Generate road style based on highway type
           const roadStyle = getRoadStyle(element.tags.highway);
 
           streets.push({
@@ -305,7 +309,39 @@ const MapComponent: React.FC<MapComponentProps> = ({
     });
 
     return streets;
-  };
+  }, [viewport]);
+
+  // Memoize visible buildings and streets
+  const visibleBuildings = useMemo(() => {
+    return buildings.filter(building => {
+      const padding = 50;
+      return (
+        building.x + building.width + padding >= viewport.x &&
+        building.x - padding <= viewport.x + viewport.width &&
+        building.y + building.height + padding >= viewport.y &&
+        building.y - padding <= viewport.y + viewport.height
+      );
+    });
+  }, [buildings, viewport]);
+
+  const visibleStreets = useMemo(() => {
+    return streets.filter(street => {
+      const padding = 50;
+      const bounds = street.points.reduce((acc: any, point: any) => ({
+        minX: Math.min(acc.minX, point.x),
+        maxX: Math.max(acc.maxX, point.x),
+        minY: Math.min(acc.minY, point.y),
+        maxY: Math.max(acc.maxY, point.y),
+      }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+
+      return (
+        bounds.maxX + padding >= viewport.x &&
+        bounds.minX - padding <= viewport.x + viewport.width &&
+        bounds.maxY + padding >= viewport.y &&
+        bounds.minY - padding <= viewport.y + viewport.height
+      );
+    });
+  }, [streets, viewport]);
 
   const getRoadStyle = (highwayType: string) => {
     switch (highwayType) {
@@ -431,7 +467,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           </div>
         ) : (
           <>
-            {streets.map(street => (
+            {visibleStreets.map(street => (
               <svg
                 key={street.id}
                 style={{
@@ -455,15 +491,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     <stop offset="100%" stopColor={street.gradient.end} />
                   </linearGradient>
                 </defs>
-                {/* Road shadow */}
-                <path
-                  d={`M ${street.points.map(p => `${p.x},${p.y}`).join(' L ')}`}
-                  stroke="rgba(0, 0, 0, 0.2)"
-                  strokeWidth={street.width + 2}
-                  fill="none"
-                  transform="translate(1, 1)"
-                />
-                {/* Road base */}
                 <path
                   d={`M ${street.points.map(p => `${p.x},${p.y}`).join(' L ')}`}
                   stroke={`url(#road-gradient-${street.id})`}
@@ -473,19 +500,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
                   strokeLinejoin="round"
                   strokeDasharray={street.dashArray}
                 />
-                {/* Road highlight */}
-                <path
-                  d={`M ${street.points.map(p => `${p.x},${p.y}`).join(' L ')}`}
-                  stroke="rgba(255, 255, 255, 0.3)"
-                  strokeWidth={street.width - 2}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeDasharray={street.dashArray}
-                />
               </svg>
             ))}
-            {buildings.map(building => (
+            {visibleBuildings.map(building => (
               <div
                 key={building.id}
                 style={{
@@ -495,7 +512,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                   width: building.width,
                   height: building.height,
                   cursor: 'pointer',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  transition: 'transform 0.2s',
                   transform: selectedBuilding === building.id ? 'scale(1.05)' : 'scale(1)',
                   zIndex: selectedBuilding === building.id ? 2 : 1,
                 }}
@@ -522,24 +539,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
                       <stop offset="100%" stopColor={building.color.end} />
                     </linearGradient>
                   </defs>
-                  {/* Building shadow */}
-                  <path
-                    d={`M ${building.points.map(p => `${p.x - building.x},${p.y - building.y}`).join(' L ')} Z`}
-                    fill="rgba(0, 0, 0, 0.2)"
-                    transform="translate(2, 2)"
-                  />
-                  {/* Building base with gradient */}
                   <path
                     d={`M ${building.points.map(p => `${p.x - building.x},${p.y - building.y}`).join(' L ')} Z`}
                     fill={`url(#gradient-${building.id})`}
                     stroke="#666"
-                    strokeWidth="0.5"
-                  />
-                  {/* Building highlights */}
-                  <path
-                    d={`M ${building.points.map(p => `${p.x - building.x},${p.y - building.y}`).join(' L ')} Z`}
-                    fill="rgba(255, 255, 255, 0.1)"
-                    stroke="rgba(255, 255, 255, 0.3)"
                     strokeWidth="0.5"
                   />
                 </svg>
