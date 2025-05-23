@@ -42,13 +42,13 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
         width, 
         height,
         marginTop: comment ? '25px' : '0',
-        opacity: isPlaceholder ? 0.3 : 1,
+        opacity: isPlaceholder && commentLabel ? 0.3 : 1,
       }} 
       onClick={onClick} 
       onContextMenu={onContextMenu}
     >
       {/* Comment indicator with label */}
-      {!isPlaceholder && (
+      {!isPlaceholder && commentLabel && (
         <div
           style={{
             position: 'absolute',
@@ -76,6 +76,7 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
           </div>
         </div>
       )}
+      {/* Always render the box (dot) */}
       <AnimatedColoredBox
         width={width} 
         height={height} 
