@@ -9,7 +9,6 @@ import QuestionBox from './QuestionBox';
 import ContextMenu from './menu/ContextMenu';
 import CommentEditor from './CommentEditor';
 import BoxGridContainer from './box/BoxGridContainer';
-import MapComponent from './map/MapComponent';
 
 interface DraggableContainerProps {
   className?: string;
@@ -393,14 +392,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             comment={item.comment}
             commentLabel={item.commentLabel}
           />
-        ) : item.type === 'map' ? (
-          <MapComponent
-            width={item.size.width}
-            height={item.size.height}
-            label={item.label}
-            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
-          />
-        ) : (
+        )  : (
           <Grass
             {...item.props}
             width={item.size.width}
