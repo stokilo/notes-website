@@ -316,10 +316,31 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       size: { width: 120, height: 40 },
       props: { 
         segments: 3,
-        rotation: 0
+        rotation: 0,
+        isAnimating: false
       },
     };
     setItems(prev => [...prev, newItem]);
+  };
+
+  const handleToggleArrowAnimation = (itemId: string) => {
+    setItems(prevItems => {
+      const updatedItems = prevItems.map(item =>
+        item.id === itemId && item.type === 'arrow'
+          ? {
+              ...item,
+              props: {
+                ...item.props,
+                isAnimating: !item.props.isAnimating
+              }
+            }
+          : item
+      );
+      
+      // Save to localStorage after updating state
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
+      return updatedItems;
+    });
   };
 
   const renderItem = (item: DraggableItem) => {
@@ -381,6 +402,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             height={item.size.height}
             segments={item.props.segments}
             rotation={item.props.rotation}
+            isAnimating={item.props.isAnimating}
           />
         ) : (
           <span>nothing here</span>
@@ -445,9 +467,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               },
             ];
 
-            // Add rotation controls for arrow items
+            // Add rotation and animation controls for arrow items
             if (item.type === 'arrow') {
               return [
+                {
+                  label: item.props.isAnimating ? 'Stop Animation' : 'Start Animation',
+                  onClick: () => handleToggleArrowAnimation(contextMenu.itemId),
+                },
                 {
                   label: 'Rotate 90° Clockwise',
                   onClick: () => handleRotateArrow(contextMenu.itemId, 90),

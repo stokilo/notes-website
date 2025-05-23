@@ -7,6 +7,7 @@ interface ArrowItemProps {
   segments?: number;
   segmentGap?: number;
   rotation?: number; // Rotation in degrees
+  isAnimating?: boolean;
 }
 
 const ArrowItem: React.FC<ArrowItemProps> = ({
@@ -15,6 +16,7 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
   segments = 3,
   segmentGap = 4,
   rotation = 0,
+  isAnimating = false,
 }) => {
   const [colors, setColors] = useState<string[]>([]);
 
@@ -50,13 +52,16 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
           <motion.div
             initial={{ scaleX: 0, opacity: 0 }}
             animate={{ 
-              scaleX: 1, 
-              opacity: 1,
-              transition: {
-                duration: 0.3,
-                delay: index * 0.2,
-                ease: "easeOut"
-              }
+              scaleX: isAnimating ? [0, 1, 1, 0] : 1,
+              opacity: isAnimating ? [0, 1, 1, 0] : 1,
+            }}
+            transition={{
+              duration: 3,
+              repeat: isAnimating ? Infinity : 0,
+              repeatDelay: 0.5,
+              ease: "easeInOut",
+              times: [0, 0.3, 0.7, 1],
+              delay: index * 0.2,
             }}
             style={{
               width: segmentWidth,
@@ -69,13 +74,20 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
           >
             {/* Segment highlight */}
             <motion.div
-              initial={{ opacity: 0 }}
               animate={{ 
-                opacity: [0, 0.5, 0],
-                transition: {
+                opacity: isAnimating ? [0, 0.5, 0] : 0,
+                x: isAnimating ? [0, segmentWidth, 0] : 0,
+              }}
+              transition={{
+                opacity: {
                   duration: 2,
-                  repeat: Infinity,
-                  delay: index * 0.3,
+                  repeat: isAnimating ? Infinity : 0,
+                  ease: "easeInOut",
+                },
+                x: {
+                  duration: 2,
+                  repeat: isAnimating ? Infinity : 0,
+                  ease: "easeInOut",
                 }
               }}
               style={{
@@ -100,14 +112,16 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
       <motion.div
         initial={{ scale: 0, rotate: -45 }}
         animate={{ 
-          scale: 1, 
-          rotate: 0,
-          transition: {
-            duration: 0.3,
-            delay: segments * 0.2,
-            type: "spring",
-            stiffness: 200
-          }
+          scale: isAnimating ? [0, 1, 1, 0] : 1,
+          rotate: isAnimating ? [-45, 0, 0, -45] : 0,
+        }}
+        transition={{
+          duration: 3,
+          repeat: isAnimating ? Infinity : 0,
+          repeatDelay: 0.5,
+          ease: "easeInOut",
+          times: [0, 0.3, 0.7, 1],
+          delay: segments * 0.2,
         }}
         style={{
           width: arrowHeadSize,
@@ -128,17 +142,25 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
             borderRight: `${height * 0.2}px solid ${colors[colors.length - 1]}`,
             transform: 'rotate(45deg)',
             borderRadius: '2px',
+            position: 'relative',
           }}
         >
           {/* Arrow head highlight */}
           <motion.div
-            initial={{ opacity: 0 }}
             animate={{ 
-              opacity: [0, 0.5, 0],
-              transition: {
+              opacity: isAnimating ? [0, 0.5, 0] : 0,
+              scale: isAnimating ? [1, 1.2, 1] : 1,
+            }}
+            transition={{
+              opacity: {
                 duration: 2,
-                repeat: Infinity,
-                delay: segments * 0.2,
+                repeat: isAnimating ? Infinity : 0,
+                ease: "easeInOut",
+              },
+              scale: {
+                duration: 2,
+                repeat: isAnimating ? Infinity : 0,
+                ease: "easeInOut",
               }
             }}
             style={{
