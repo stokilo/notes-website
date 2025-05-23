@@ -31,7 +31,7 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
     setColors(newColors);
 
     // Generate varying segment sizes
-    const baseSize = height * 0.6;
+    const baseSize = height * 0.3;
     const sizes = Array.from({ length: segments }, (_, i) => {
       const variation = baseSize * (0.8 + Math.random() * 0.4); // 80% to 120% of base size
       return variation;
@@ -39,7 +39,7 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
     setSegmentSizes(sizes);
   }, [segments, height]);
 
-  const arrowHeadSize = height * 0.8;
+  const arrowHeadSize = height * 0.72;
 
   return (
     <motion.div
@@ -101,7 +101,28 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
             </svg>
           </motion.div>
           {index < segments - 1 && (
-            <div style={{ width: segmentGap }} />
+            <motion.div
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ 
+                scaleX: isAnimating ? [0, 1, 1, 0] : 1,
+                opacity: isAnimating ? [0, 1, 1, 0] : 1,
+              }}
+              transition={{
+                duration: 3,
+                repeat: isAnimating ? Infinity : 0,
+                repeatDelay: 0.5,
+                ease: "easeInOut",
+                times: [0, 0.3, 0.7, 1],
+                delay: index * 0.2 + 0.1,
+              }}
+              style={{
+                width: segmentGap,
+                height: 2,
+                backgroundColor: color,
+                position: 'relative',
+                transformOrigin: 'left center',
+              }}
+            />
           )}
         </React.Fragment>
       ))}
@@ -125,7 +146,7 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
           width: arrowHeadSize,
           height: arrowHeadSize,
           position: 'relative',
-          marginLeft: segmentGap,
+          marginLeft: segmentGap * 0.5,
         }}
       >
         <svg
