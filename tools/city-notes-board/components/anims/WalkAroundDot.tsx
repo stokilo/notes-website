@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 
 interface WalkAroundDotProps {
@@ -18,26 +18,13 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
   const controls2 = useAnimation();
   const controls3 = useAnimation();
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const animationRef = useRef<{ animate1: () => Promise<void>; animate2: () => Promise<void>; animate3: () => Promise<void>; } | null>(null);
 
-  // Get viewport size and update on resize
-  useEffect(() => {
-    const updateSize = () => {
-      setViewportSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
+  // Animation sequences
+  const createAnimations = useCallback(() => {
+    const { width, height } = viewportSize;
 
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
-
-  // Animation sequence for first circle (clockwise)
-  useEffect(() => {
     const animate1 = async () => {
-      const { width, height } = viewportSize;
-      
       // Start from bottom left
       await controls1.start({
         x: 0,
@@ -93,10 +80,7 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
       }
     };
 
-    // Animation sequence for second circle (counter-clockwise)
     const animate2 = async () => {
-      const { width, height } = viewportSize;
-      
       // Start from bottom right
       await controls2.start({
         x: width - size,
@@ -152,10 +136,7 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
       }
     };
 
-    // Animation sequence for third circle (alternating sides)
     const animate3 = async () => {
-      const { width, height } = viewportSize;
-      
       // Start from bottom left
       await controls3.start({
         x: 0,
@@ -211,12 +192,41 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
       }
     };
 
-    if (viewportSize.width > 0 && viewportSize.height > 0) {
-      animate1();
-      animate2();
-      animate3();
-    }
+    return { animate1, animate2, animate3 };
   }, [controls1, controls2, controls3, viewportSize, size, speed]);
+
+  // Get viewport size and update on resize
+  useEffect(() => {
+    const updateSize = () => {
+      setViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  // Start animations when viewport size changes
+  useEffect(() => {
+    if (viewportSize.width > 0 && viewportSize.height > 0) {
+      // Stop any existing animations
+      controls1.stop();
+      controls2.stop();
+      controls3.stop();
+
+      // Create new animations with updated viewport size
+      const animations = createAnimations();
+      animationRef.current = animations;
+
+      // Start new animations
+      animations.animate1();
+      animations.animate2();
+      animations.animate3();
+    }
+  }, [viewportSize, createAnimations, controls1, controls2, controls3]);
 
   const renderCircle = (controls: any, color: string, borderColor: string) => (
     <motion.div
