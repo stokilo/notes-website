@@ -87,7 +87,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
             left: '50%',
             transform: 'translate(-50%, -50%)',
             zIndex: 1100,
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             width: '80vw',
@@ -102,8 +102,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           <div
             style={{
               padding: '12px 16px',
-              backgroundColor: '#2d2d2d',
-              borderBottom: '1px solid #3d3d3d',
+              backgroundColor: '#3d3d3d',
+              borderBottom: '1px solid #4d4d4d',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -118,7 +118,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 setShowPreview(false);
               }}
               style={{
-                background: '#3d3d3d',
+                background: '#4d4d4d',
                 border: 'none',
                 color: '#fff',
                 cursor: 'pointer',
@@ -128,10 +128,10 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 transition: 'background-color 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#4d4d4d';
+                e.currentTarget.style.backgroundColor = '#5d5d5d';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#3d3d3d';
+                e.currentTarget.style.backgroundColor = '#4d4d4d';
               }}
             >
               Close
