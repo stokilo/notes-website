@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import DraggableItem from './DraggableItem';
 import DebugPanel from '../DebugPanel';
 import ContextPanel from '../context/ContextPanel';
-import BoxSet from '../BoxSet';
+import BoxSetItem from '../items/BoxSetItem';
 import ContextMenu from '../menu/ContextMenu';
 import CommentEditor from '../CommentEditor';
 import BoxGridContainer from '../box/BoxGridContainer';
@@ -380,7 +380,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
         ) : item.type === 'boxSet' ? (
-          <BoxSet
+          <BoxSetItem
             width={item.size.width}
             height={item.size.height}
             comment={item.comment}

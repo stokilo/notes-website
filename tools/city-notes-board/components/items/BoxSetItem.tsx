@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import AnimatedColoredBox from './box/AnimatedColoredBox';
+import AnimatedColoredBox from '../box/AnimatedColoredBox';
 
 interface BoxSetProps {
   width?: number;
@@ -13,7 +13,7 @@ interface BoxSetProps {
   isPlaceholder?: boolean;
 }
 
-const BoxSet: React.FC<BoxSetProps> = ({
+const BoxSetItem: React.FC<BoxSetProps> = ({
   width = 20,
   height = 20,
   comment,
@@ -88,4 +88,4 @@ const BoxSet: React.FC<BoxSetProps> = ({
   );
 };
 
-export default BoxSet;
+export default BoxSetItem;
