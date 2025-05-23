@@ -15,6 +15,7 @@ interface DraggableItemProps {
   isSelected?: boolean;
   disableAnimations?: boolean;
   zoom?: number;
+  onResizeEnd?: () => void;
 }
 
 const DraggableItem: React.FC<DraggableItemProps> = ({
@@ -31,6 +32,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   isSelected = false,
   disableAnimations = false,
   zoom = 1,
+  onResizeEnd,
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [size, setSize] = useState(initialSize);
@@ -55,6 +57,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
 
   // Update size when initialSize changes
   useEffect(() => {
+    console.log('Size update:', { from: size, to: initialSize });
     setSize(initialSize);
   }, [initialSize]);
 
@@ -187,6 +190,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       }
       if (isResizing) {
         setIsResizing(false);
+        onResizeEnd?.();
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -205,7 +209,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isDragging, isResizing, onPositionChange, onSizeChange, onDragEnd]);
+  }, [isDragging, isResizing, onPositionChange, onSizeChange, onDragEnd, onResizeEnd, zoom]);
 
   useEffect(() => {
     if (disableAnimations) return;
@@ -235,12 +239,16 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         scale: hover ? 1.1 : scale,
         x: position.x,
         y: position.y,
+        width: size.width,
+        height: size.height,
       }}
       transition={disableAnimations ? {} : {
         rotate: { duration: 0.5, ease: "easeInOut" },
         scale: { duration: 0.2, ease: "easeInOut" },
         x: { duration: 0.2, ease: "easeInOut" },
-        y: { duration: 0.2, ease: "easeInOut" }
+        y: { duration: 0.2, ease: "easeInOut" },
+        width: { duration: 0.2, ease: "easeInOut" },
+        height: { duration: 0.2, ease: "easeInOut" },
       }}
       whileHover={disableAnimations ? {} : { scale: 1.1 }}
       onHoverStart={() => !disableAnimations && setHover(true)}
@@ -249,8 +257,6 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         position: 'absolute',
         left: 0,
         top: 0,
-        width: size.width,
-        height: size.height,
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         zIndex: isDragging || isResizing ? 1000 : 1,

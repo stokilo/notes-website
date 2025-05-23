@@ -400,7 +400,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           (movedItem.position.x !== startItem.position.x || 
            movedItem.position.y !== startItem.position.y)) {
         console.log('Adding drag end to history - item was moved');
-        addToHistory(items);
+        const currentItems = JSON.parse(JSON.stringify(items));
+        addToHistory(currentItems);
       }
     }
     
@@ -428,10 +429,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleResizeEnd = () => {
-    console.log('Resize end');
+    console.log('Resize end - adding to history');
     setIsResizing(false);
     // Add the final size to history
-    addToHistory(items);
+    const currentItems = JSON.parse(JSON.stringify(items));
+    addToHistory(currentItems);
   };
 
   const addItem = (type: 'box' | 'circle' , position: { x: number; y: number }) => {
