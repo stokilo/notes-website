@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
 
 interface SeparatorItemProps {
   width?: number;
@@ -137,7 +136,7 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
         }}
       >
         {segments.map((segment, index) => (
-          <motion.div
+          <div
             key={index}
             style={{
               position: 'absolute',
@@ -159,16 +158,6 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
               borderRadius: '2px',
               transform: 'perspective(100px) rotateX(5deg)',
             }}
-            animate={{
-              scale: [1, 1.05, 1],
-              opacity: [1, 0.8, 1],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              delay: index * 0.1, // Stagger the animations
-              ease: "easeInOut",
-            }}
           >
             {/* Inner highlight */}
             <div
@@ -185,7 +174,7 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
                 borderRadius: '2px 2px 0 0',
               }}
             />
-          </motion.div>
+          </div>
         ))}
       </div>
       

@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import React from 'react';
 
 interface AnimatedColoredBoxProps {
   width?: number;
@@ -20,74 +19,18 @@ const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
   finalPosition,
   style = {},
 }) => {
-  const [rotation, setRotation] = useState(0);
-  const [shake, setShake] = useState(false);
-  const [scale, setScale] = useState(1);
-  const [hover, setHover] = useState(false);
-  const controls = useAnimation();
-
-  useEffect(() => {
-    // Initial falling animation for new boxes
-    if (isNew && finalPosition) {
-      controls.start({
-        y: finalPosition.y,
-        transition: {
-          type: "spring",
-          damping: 15,
-          stiffness: 100,
-          duration: 1.5
-        }
-      });
-    }
-
-    // Random animation intervals
-    const rotationInterval = setInterval(() => {
-      setRotation(Math.random() * 10 - 5); // Random rotation between -5 and 5 degrees
-    }, 3000);
-
-    const shakeInterval = setInterval(() => {
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-    }, 5000);
-
-    const scaleInterval = setInterval(() => {
-      setScale(1.05);
-      setTimeout(() => setScale(1), 500);
-    }, 7000);
-
-    return () => {
-      clearInterval(rotationInterval);
-      clearInterval(shakeInterval);
-      clearInterval(scaleInterval);
-    };
-  }, [isNew, finalPosition, controls]);
-
   return (
-    <motion.div
-      animate={controls}
+    <div
       style={{
         position: 'absolute',
         left: finalPosition?.x || 0,
-        top: 0,
+        top: finalPosition?.y || 0,
         width,
         height,
         ...style,
       }}
     >
-      <motion.div
-        animate={{
-          rotate: rotation,
-          x: shake ? [0, -3, 3, -3, 3, 0] : 0,
-          scale: hover ? 1.1 : scale,
-        }}
-        transition={{
-          rotate: { duration: 0.5, ease: "easeInOut" },
-          x: { duration: 0.5, ease: "easeInOut" },
-          scale: { duration: 0.2, ease: "easeInOut" }
-        }}
-        whileHover={{ scale: 1.1 }}
-        onHoverStart={() => setHover(true)}
-        onHoverEnd={() => setHover(false)}
+      <div
         style={{
           width,
           height,
@@ -101,19 +44,9 @@ const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
           position: 'relative',
           overflow: 'hidden',
           cursor: 'pointer',
-          transition: 'all 0.3s ease',
         }}
       >
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.8, 1, 0.8],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+        <div
           style={{
             width: '100%',
             height: '100%',
@@ -123,9 +56,9 @@ const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
           }}
         >
           {children}
-        </motion.div>
-      </motion.div>
-    </motion.div>
+        </div>
+      </div>
+    </div>
   );
 };
 
