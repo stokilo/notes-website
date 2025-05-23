@@ -46,6 +46,18 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   const animationFrameRef = useRef<number>();
   const lastPositionRef = useRef(position);
 
+  // Update position when initialPosition changes
+  useEffect(() => {
+    console.log('Position update:', { from: position, to: initialPosition });
+    setPosition(initialPosition);
+    lastPositionRef.current = initialPosition;
+  }, [initialPosition]);
+
+  // Update size when initialSize changes
+  useEffect(() => {
+    setSize(initialSize);
+  }, [initialSize]);
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!itemRef.current) return;
 
@@ -221,18 +233,22 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       animate={disableAnimations ? {} : {
         rotate: rotation,
         scale: hover ? 1.1 : scale,
+        x: position.x,
+        y: position.y,
       }}
       transition={disableAnimations ? {} : {
         rotate: { duration: 0.5, ease: "easeInOut" },
-        scale: { duration: 0.2, ease: "easeInOut" }
+        scale: { duration: 0.2, ease: "easeInOut" },
+        x: { duration: 0.2, ease: "easeInOut" },
+        y: { duration: 0.2, ease: "easeInOut" }
       }}
       whileHover={disableAnimations ? {} : { scale: 1.1 }}
       onHoverStart={() => !disableAnimations && setHover(true)}
       onHoverEnd={() => !disableAnimations && setHover(false)}
       style={{
         position: 'absolute',
-        left: position.x,
-        top: position.y,
+        left: 0,
+        top: 0,
         width: size.width,
         height: size.height,
         cursor: isDragging ? 'grabbing' : 'grab',

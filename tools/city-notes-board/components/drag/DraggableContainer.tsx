@@ -160,26 +160,33 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       return;
     }
     
+    console.log('Adding to history:', {
+      currentHistoryLength: history.length,
+      currentHistoryIndex: historyIndex,
+      newItemsLength: newItems.length,
+      newItems
+    });
+
+    // Create a deep copy of the new state
+    const stateToAdd = JSON.parse(JSON.stringify(newItems));
+    
     setHistory(prevHistory => {
       // Remove any future states if we're not at the end of history
       const newHistory = prevHistory.slice(0, historyIndex + 1);
+      
       // Add new state
-      newHistory.push(JSON.parse(JSON.stringify(newItems)));
+      newHistory.push(stateToAdd);
+      
       // Keep only last 50 states to prevent memory issues
       const trimmedHistory = newHistory.slice(-50);
       
-      // Adjust history index based on trimming
-      const itemsRemoved = newHistory.length - trimmedHistory.length;
-      if (itemsRemoved > 0) {
-        setHistoryIndex(prev => Math.max(0, prev - itemsRemoved));
-      } else {
-        setHistoryIndex(prev => prev + 1);
-      }
-
+      // Update history index
+      setHistoryIndex(trimmedHistory.length - 1);
+      
       console.log('History updated', { 
         newHistoryLength: trimmedHistory.length,
-        itemsRemoved,
-        newHistoryIndex: historyIndex + 1 - itemsRemoved
+        newHistoryIndex: trimmedHistory.length - 1,
+        addedState: stateToAdd
       });
       
       return trimmedHistory;
@@ -189,27 +196,33 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   // Handle undo
   const handleUndo = () => {
     console.log('Undo triggered', { historyIndex, historyLength: history.length });
+    
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       const previousState = history[newIndex];
+      
       console.log('Previous state found', { 
         newIndex, 
         previousState,
         historyLength: history.length,
-        historyContent: history
+        currentItems: items
       });
+      
       if (previousState) {
+        // Create a deep copy of the previous state
+        const restoredState = JSON.parse(JSON.stringify(previousState));
+        
+        // Update both states atomically
         setHistoryIndex(newIndex);
-        setItems(JSON.parse(JSON.stringify(previousState)));
-        console.log('State restored to previous version');
-      } else {
-        console.log('Invalid state found at index', newIndex);
-        // Reset history if we encounter an invalid state
-        setHistory([items]);
-        setHistoryIndex(0);
+        setItems(restoredState);
+        
+        console.log('State restored to previous version', {
+          from: items,
+          to: restoredState
+        });
       }
     } else {
-      console.log('Cannot undo - no history available', { historyIndex, historyLength: history.length });
+      console.log('Cannot undo - no history available');
     }
   };
 
@@ -218,19 +231,17 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItems(prevItems => {
       const nextItems = typeof newItems === 'function' ? newItems(prevItems) : newItems;
       
-      // Only add to history if:
-      // 1. Not currently dragging (drag end will handle history)
-      // 2. There are actual changes
-      // 3. Not a continuous operation (like resizing)
-      if (!isDragging && 
-          JSON.stringify(nextItems) !== JSON.stringify(prevItems) &&
-          !isResizing) {
-        console.log('Adding to history', { 
+      // Only add to history if there are actual changes
+      if (JSON.stringify(nextItems) !== JSON.stringify(prevItems)) {
+        console.log('Adding to history via setItemsWithHistory', { 
           prevItemsLength: prevItems.length, 
-          nextItemsLength: nextItems.length 
+          nextItemsLength: nextItems.length,
+          prevItems,
+          nextItems
         });
         addToHistory(nextItems);
       }
+      
       return nextItems;
     });
   };
@@ -278,7 +289,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check for CMD+Z (Mac) or CTRL+Z (Windows)
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
-        console.log('CMD+Z/CTRL+Z detected');
+        console.log('CMD+Z/CTRL+Z detected', {
+          historyIndex,
+          historyLength: history.length,
+          currentItems: items
+        });
         e.preventDefault();
         handleUndo();
       }
@@ -339,7 +354,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemId, copiedItem, items, historyIndex, history]);
+  }, [selectedItemId, copiedItem, items, historyIndex, history, handleUndo]);
 
   // Add wheel zoom handler
   useEffect(() => {
@@ -368,12 +383,14 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   }, []); // Empty dependency array since we only need to set up the listener once
 
   const handleDragStart = (id: string, position: { x: number; y: number }) => {
+    console.log('Drag start:', { id, position });
     setIsDragging(true);
     dragStartPosition.current = position;
     dragStartItems.current = JSON.parse(JSON.stringify(items));
   };
 
   const handleDragEnd = (id: string, position: { x: number; y: number }) => {
+    console.log('Drag end:', { id, position, isDragging });
     if (isDragging && dragStartPosition.current) {
       // Only add to history if the item was actually moved
       const movedItem = items.find(item => item.id === id);
@@ -382,7 +399,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       if (movedItem && startItem && 
           (movedItem.position.x !== startItem.position.x || 
            movedItem.position.y !== startItem.position.y)) {
-        console.log('Adding drag end to history');
+        console.log('Adding drag end to history - item was moved');
         addToHistory(items);
       }
     }
@@ -401,6 +418,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleSizeChange = (id: string, newSize: { width: number; height: number }) => {
+    console.log('Size change:', { id, newSize });
     setIsResizing(true);
     setItems(prevItems =>
       prevItems.map(item =>
@@ -410,6 +428,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleResizeEnd = () => {
+    console.log('Resize end');
     setIsResizing(false);
     // Add the final size to history
     addToHistory(items);
