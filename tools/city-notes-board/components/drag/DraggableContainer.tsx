@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import DraggableItem from './DraggableItem';
 import DebugPanel from '../DebugPanel';
 import ContextPanel from '../context/ContextPanel';
-import Grass from '../Grass';
 import QuestionBox from '../QuestionBox';
 import ContextMenu from '../menu/ContextMenu';
 import CommentEditor from '../CommentEditor';
@@ -391,13 +390,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             commentLabel={item.commentLabel}
           />
         )  : (
-          <Grass
-            {...item.props}
-            width={item.size.width}
-            height={item.size.height}
-            label={item.label}
-            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
-          />
+          <span>nothing here</span>
         )}
       </DraggableItem>
     );
