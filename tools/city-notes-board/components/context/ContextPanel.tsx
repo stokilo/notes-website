@@ -42,7 +42,7 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
       />
       <ContextButton
         onClick={onAddBoxSet}
-        icon="/box.svg"
+        icon="/box-set.svg"
         text="Add Box Set"
       />
       <ContextButton
