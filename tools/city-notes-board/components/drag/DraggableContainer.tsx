@@ -184,6 +184,32 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedItemId, copiedItem, items]); // Add items to dependencies
 
+  // Add wheel zoom handler
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      // Check if Ctrl/Cmd is pressed
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault(); // Prevent default browser zoom
+        
+        // Calculate zoom delta based on wheel direction
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        
+        setZoom(prev => {
+          const newZoom = prev + delta;
+          // Clamp zoom between 0.5 and 2
+          return Math.min(Math.max(newZoom, 0.5), 2);
+        });
+      }
+    };
+
+    // Add wheel event listener to the container
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => container.removeEventListener('wheel', handleWheel);
+    }
+  }, []); // Empty dependency array since we only need to set up the listener once
+
   const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
     setItems(prevItems =>
       prevItems.map(item =>
