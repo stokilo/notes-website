@@ -228,7 +228,7 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
     }
   }, [viewportSize, createAnimations, controls1, controls2, controls3]);
 
-  const renderCircle = (controls: any, color: string, borderColor: string) => (
+  const renderCircle = (controls: any, color: string, borderColor: string, pulseDuration: number) => (
     <motion.div
       animate={controls}
       style={{
@@ -241,6 +241,15 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
     >
       {/* Outer circle */}
       <motion.div
+        animate={{
+          scale: [1, 1.05, 1],
+          opacity: [0.9, 1, 0.9],
+        }}
+        transition={{
+          duration: pulseDuration,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
         style={{
           width: size,
           height: size,
@@ -249,17 +258,16 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
           border: `2px solid ${borderColor}`,
           boxShadow: '0 0 10px rgba(0,0,0,0.2)',
           position: 'relative',
-          opacity: 1,
         }}
       >
         {/* Inner circle */}
         <motion.div
           animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.9, 1, 0.9],
+            scale: [1, 1.1, 1],
+            opacity: [0.8, 1, 0.8],
           }}
           transition={{
-            duration: 2,
+            duration: pulseDuration * 0.8,
             repeat: Infinity,
             ease: "easeInOut",
           }}
@@ -272,7 +280,6 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
             height: size * 0.6,
             borderRadius: '50%',
             backgroundColor: borderColor,
-            opacity: 1,
           }}
         />
       </motion.div>
@@ -281,9 +288,9 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
 
   return (
     <>
-      {renderCircle(controls1, '#4a90e2', '#ffffff')}
-      {renderCircle(controls2, '#50E3C2', '#ffffff')}
-      {renderCircle(controls3, '#F5A623', '#ffffff')}
+      {renderCircle(controls1, '#4a90e2', '#ffffff', 2.5)}
+      {renderCircle(controls2, '#50E3C2', '#ffffff', 3)}
+      {renderCircle(controls3, '#F5A623', '#ffffff', 3.5)}
     </>
   );
 };
