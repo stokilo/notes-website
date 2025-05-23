@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import DraggableItem from './DraggableItem';
 import DebugPanel from '../DebugPanel';
 import ContextPanel from '../context/ContextPanel';
-import QuestionBox from '../QuestionBox';
+import BoxSet from '../BoxSet';
 import ContextMenu from '../menu/ContextMenu';
 import CommentEditor from '../CommentEditor';
 import BoxGridContainer from '../box/BoxGridContainer';
@@ -15,7 +15,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'questionBox' | 'questionBoxContainer';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -164,18 +164,17 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItems(prev => [...prev, newItem]);
   };
 
-  const addQuestionBox = (position: { x: number; y: number }) => {
+  const addBoxSet = (position: { x: number; y: number }) => {
     // Find existing container for this position
     const existingContainer = items.find(item => 
-      item.type === 'questionBoxContainer' && 
+      item.type === 'boxSetContainer' && 
       Math.abs(item.position.x - position.x) < 50
     );
 
     if (existingContainer) {
-      // Calculate final position for the new question box
       const existingBoxes = existingContainer.props.children || [];
-      const boxWidth = 20; // Width of each question box
-      const boxHeight = 20; // Height of each question box
+      const boxWidth = 20;
+      const boxHeight = 20;
       const boxSpacing = 5; // Spacing between boxes
       const containerPadding = 5; // Padding from container edges
       const containerWidth = existingContainer.size.width - 25; // Available width for boxes
@@ -192,9 +191,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       const finalY = containerPadding + row * (boxHeight + boxSpacing);
 
       // Add to existing container's children
-      const newQuestionBox = {
-        id: `questionBox-${Date.now()}`,
-        type: 'questionBox',
+      const newboxSet = {
+        id: `boxSet-${Date.now()}`,
+        type: 'boxSet',
         position: { x: 0, y: containerPadding }, // Start at top
         finalPosition: { x: finalX, y: finalY }, // Store final position for animation
         size: { width: boxWidth, height: boxHeight },
@@ -211,18 +210,17 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 ...item, 
                 props: { 
                   ...item.props,
-                  children: [...(item.props.children || []), newQuestionBox]
+                  children: [...(item.props.children || []), newboxSet]
                 }
               }
             : item
         )
       );
     } else {
-      // Create new container with initial question box
-      const containerId = `questionBoxContainer-${Date.now()}`;
-      const initialQuestionBox = {
-        id: `questionBox-${Date.now()}`,
-        type: 'questionBox',
+      const containerId = `boxSetContainer-${Date.now()}`;
+      const initialboxSet = {
+        id: `boxSet-${Date.now()}`,
+        type: 'boxSet',
         position: { x: 0, y: 5 }, // Start with padding from top
         finalPosition: { x: 5, y: 5 }, // Same as position for initial box
         size: { width: 20, height: 20 },
@@ -234,7 +232,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
       const containerItem: DraggableItem = {
         id: containerId,
-        type: 'questionBoxContainer',
+        type: 'boxSetContainer',
         position,
         size: { width: 200, height: 220 },
         props: {
@@ -242,7 +240,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             // Add placeholder boxes at the bottom first
             ...Array.from({ length: 3 }).map((_, i) => ({
               id: `placeholder-${Date.now()}-${i}`,
-              type: 'questionBox',
+              type: 'boxSet',
               position: { x: 0, y: 5 },
               finalPosition: { 
                 x: 5, 
@@ -257,7 +255,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             })),
             // Add the initial active box at the top
             {
-              ...initialQuestionBox,
+              ...initialboxSet,
               position: { x: 0, y: 5 },
               finalPosition: { x: 5, y: 5 },
             }
@@ -272,8 +270,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const handleCommentChange = (itemId: string, comment: string, label: string) => {
     setItems(prevItems => {
       const updatedItems = prevItems.map(item => {
-        // Check if this is a container that might have the question box as a child
-        if (item.type === 'questionBoxContainer' && item.props.children) {
+        if (item.type === 'boxSetContainer' && item.props.children) {
           const updatedChildren = item.props.children.map(child => 
             child.id === itemId 
               ? { ...child, comment, commentLabel: label }
@@ -354,8 +351,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       isSelected: item.id === selectedItemId,
     };
 
-    if (item.type === 'questionBoxContainer') {
-      const containerQuestionBoxes = item.props.children || [];
+    if (item.type === 'boxSetContainer') {
+      const containerboxSetes = item.props.children || [];
       return (
         <DraggableItem key={item.id} {...commonProps}>
           <BoxGridContainer width={item.size.width} height={item.size.height} containerId={item.id}>
@@ -382,8 +379,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             label={item.label} 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
-        ) : item.type === 'questionBox' ? (
-          <QuestionBox
+        ) : item.type === 'boxSet' ? (
+          <BoxSet
             width={item.size.width}
             height={item.size.height}
             comment={item.comment}
@@ -447,21 +444,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               },
             ];
 
-            // Check if the item is a question box in a container
-            const containerWithQuestionBox = items.find(container => 
-              container.type === 'questionBoxContainer' && 
+            const containerWithboxSet = items.find(container =>
+              container.type === 'boxSetContainer' && 
               container.props.children?.some(child => child.id === contextMenu.itemId)
             );
 
-            if (containerWithQuestionBox) {
-              const questionBox = containerWithQuestionBox.props.children.find(
+            if (containerWithboxSet) {
+              const boxSet = containerWithboxSet.props.children.find(
                 child => child.id === contextMenu.itemId
               );
               
-              if (questionBox) {
+              if (boxSet) {
                 return [
                   {
-                    label: questionBox.comment ? 'View Comment' : 'Add Comment',
+                    label: boxSet.comment ? 'View Comment' : 'Add Comment',
                     onClick: () => {
                       setCommentEditor({
                         show: true,
@@ -476,7 +472,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               }
             }
 
-            if (item.type === 'questionBox') {
+            if (item.type === 'boxSet') {
               return [
                 {
                   label: item.comment ? 'View Comment' : 'Add Comment',
@@ -501,14 +497,14 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 },
               },
               {
-                label: 'Add Question Box',
+                label: 'Add Box Set',
                 onClick: () => {
                   const offset = 50;
                   const newPosition = {
                     x: item.position.x + item.size.width + offset,
                     y: item.position.y,
                   };
-                  addQuestionBox(newPosition);
+                  addBoxSet(newPosition);
                 },
               },
               ...baseItems,
@@ -521,7 +517,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       {commentEditor.show && (
         <CommentEditor
           initialContent={(() => {
-            // First check if it's a standalone question box
             const standaloneBox = items.find(i => i.id === commentEditor.itemId);
             if (standaloneBox) {
               return standaloneBox.comment;
@@ -529,21 +524,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             
             // If not found, check if it's in a container
             const containerWithBox = items.find(container => 
-              container.type === 'questionBoxContainer' && 
+              container.type === 'boxSetContainer' && 
               container.props.children?.some(child => child.id === commentEditor.itemId)
             );
             
             if (containerWithBox) {
-              const questionBox = containerWithBox.props.children.find(
+              const boxSet = containerWithBox.props.children.find(
                 child => child.id === commentEditor.itemId
               );
-              return questionBox?.comment;
+              return boxSet?.comment;
             }
             
             return '';
           })()}
           initialLabel={(() => {
-            // First check if it's a standalone question box
             const standaloneBox = items.find(i => i.id === commentEditor.itemId);
             if (standaloneBox) {
               return standaloneBox.commentLabel;
@@ -551,15 +545,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             
             // If not found, check if it's in a container
             const containerWithBox = items.find(container => 
-              container.type === 'questionBoxContainer' && 
+              container.type === 'boxSetContainer' && 
               container.props.children?.some(child => child.id === commentEditor.itemId)
             );
             
             if (containerWithBox) {
-              const questionBox = containerWithBox.props.children.find(
+              const boxSet = containerWithBox.props.children.find(
                 child => child.id === commentEditor.itemId
               );
-              return questionBox?.commentLabel;
+              return boxSet?.commentLabel;
             }
             
             return '';

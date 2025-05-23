@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AnimatedColoredBox from './box/AnimatedColoredBox';
 
-interface QuestionBoxProps {
+interface BoxSetProps {
   width?: number;
   height?: number;
   comment?: string;
@@ -13,7 +13,7 @@ interface QuestionBoxProps {
   isPlaceholder?: boolean;
 }
 
-const QuestionBox: React.FC<QuestionBoxProps> = ({
+const BoxSet: React.FC<BoxSetProps> = ({
   width = 20,
   height = 20,
   comment,
@@ -77,8 +77,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
           </div>
         </div>
       )}
-      {/* Question Box */}
-      <AnimatedColoredBox 
+      <AnimatedColoredBox
         width={width} 
         height={height} 
         color={isPlaceholder ? '#e0e0e0' : boxColor}
@@ -89,4 +88,4 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   );
 };
 
-export default QuestionBox; 
+export default BoxSet;
