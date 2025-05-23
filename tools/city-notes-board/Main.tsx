@@ -2,12 +2,16 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import DraggableContainer from './components/drag/DraggableContainer';
+import WalkAroundDot from './components/anims/WalkAroundDot';
 
 const Main: React.FC = () => {
   return (
-    <div className="app-container">
-      <DraggableContainer />
-    </div>
+    <>
+      <div className="app-container">
+        <DraggableContainer />
+      </div>
+      <WalkAroundDot size={16} speed={2.9} />
+    </>
   );
 };
 
