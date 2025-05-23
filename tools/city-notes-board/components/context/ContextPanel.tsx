@@ -5,12 +5,14 @@ interface ContextPanelProps {
   onAddBox: () => void;
   onAddCircle: () => void;
   onClearScene: () => void;
+  onAddBoxSet: () => void;
 }
 
 const ContextPanel: React.FC<ContextPanelProps> = ({
   onAddBox,
   onAddCircle,
   onClearScene,
+  onAddBoxSet,
 }) => {
   return (
     <div
@@ -37,6 +39,11 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         onClick={onAddCircle}
         icon="/street.svg"
         text="Add Street"
+      />
+      <ContextButton
+        onClick={onAddBoxSet}
+        icon="/box.svg"
+        text="Add Box Set"
       />
       <ContextButton
         onClick={onClearScene}

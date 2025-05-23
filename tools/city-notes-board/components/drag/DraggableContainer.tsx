@@ -412,6 +412,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       <ContextPanel
         onAddBox={() => addItem('box', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
         onAddCircle={() => addItem('circle', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+        onAddBoxSet={() => addBoxSet({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 110 })}
         onClearScene={() => {
           if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
             setItems([]);
