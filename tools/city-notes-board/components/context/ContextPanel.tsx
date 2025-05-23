@@ -45,7 +45,7 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         onClick={onAddCodeBlock}
         icon="/code.svg"
         text="Add Code"
-        backgroundColor="#2d2d2d"
+        backgroundColor="transparent"
         textColor="white"
       />
       <ContextButton

@@ -97,7 +97,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'transparent',
           borderRadius: '4px',
         }}
       >
