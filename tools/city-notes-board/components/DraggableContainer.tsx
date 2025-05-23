@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DraggableItem from './DraggableItem';
 import DebugPanel from './DebugPanel';
-import ContextPanel from './ContextPanel';
+import ContextPanel from './context/ContextPanel';
 import IsometricBuilding from './IsometricBuilding';
 import IsometricStreet from './IsometricStreet';
 import Grass from './Grass';
