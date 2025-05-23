@@ -141,12 +141,13 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           {/* Header */}
           <div
             style={{
-              padding: '12px 16px',
-              backgroundColor: '#3d3d3d',
+              padding: `${Math.max(1, Math.floor(height * 0.1))}px ${Math.max(2, Math.floor(width * 0.1))}px`,
+              backgroundColor: '#4a90e2',
               borderBottom: '1px solid #4d4d4d',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
             }}
           >
             <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
@@ -163,7 +164,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 onClosePreview?.();
               }}
               style={{
-                background: '#4d4d4d',
+                background: '#3d3d3d',
                 border: 'none',
                 color: '#fff',
                 cursor: 'pointer',
@@ -173,10 +174,10 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 transition: 'background-color 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#5d5d5d';
+                e.currentTarget.style.backgroundColor = '#4d4d4d';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#4d4d4d';
+                e.currentTarget.style.backgroundColor = '#3d3d3d';
               }}
             >
               Close
