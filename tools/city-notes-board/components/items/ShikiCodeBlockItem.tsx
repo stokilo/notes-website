@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 
 interface ShikiCodeBlockItemProps {
   width?: number;
@@ -19,7 +18,6 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   onContextMenu,
 }) => {
   const [showPreview, setShowPreview] = useState(false);
-  const [formattedCode, setFormattedCode] = useState('');
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -124,21 +122,25 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               {language.toUpperCase()} Code Preview
             </div>
             <button
-              onClick={() => setShowPreview(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPreview(false);
+              }}
               style={{
-                background: 'none',
+                background: '#3d3d3d',
                 border: 'none',
                 color: '#fff',
                 cursor: 'pointer',
-                padding: '4px 8px',
+                padding: '6px 12px',
                 borderRadius: '4px',
                 fontSize: '14px',
+                transition: 'background-color 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#3d3d3d';
+                e.currentTarget.style.backgroundColor = '#4d4d4d';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.backgroundColor = '#3d3d3d';
               }}
             >
               Close
