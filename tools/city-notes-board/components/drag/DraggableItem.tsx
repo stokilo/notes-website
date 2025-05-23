@@ -50,14 +50,12 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
 
   // Update position when initialPosition changes
   useEffect(() => {
-    console.log('Position update:', { from: position, to: initialPosition });
     setPosition(initialPosition);
     lastPositionRef.current = initialPosition;
   }, [initialPosition]);
 
   // Update size when initialSize changes
   useEffect(() => {
-    console.log('Size update:', { from: size, to: initialSize });
     setSize(initialSize);
   }, [initialSize]);
 
