@@ -5,6 +5,7 @@ interface ShikiCodeBlockItemProps {
   width?: number;
   height?: number;
   code?: string;
+  url?: string;
   language?: string;
   onClick?: (e: React.MouseEvent) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
@@ -14,35 +15,58 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   width = 40,
   height = 40,
   code = '',
+  url,
   language = 'typescript',
   onClick,
   onContextMenu,
 }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [highlightedCode, setHighlightedCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const highlightCode = async () => {
-      const highlighter = await shiki.createHighlighter({
-        themes: ['github-dark'],
-        langs: ['typescript', 'javascript', 'html', 'css', 'json', 'markdown', 'bash', 'shell'],
-      });
-      
-      const highlighted = highlighter.codeToHtml(code, { 
-        lang: language,
-        themes: {
-          light: 'github-dark',
-          dark: 'github-dark'
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // If URL is provided, fetch the code
+        let codeToHighlight = code;
+        if (url) {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch code from URL: ${response.statusText}`);
+          }
+          codeToHighlight = await response.text();
         }
-      });
-      setHighlightedCode(highlighted);
+
+        const highlighter = await shiki.createHighlighter({
+          themes: ['github-dark'],
+          langs: ['typescript', 'javascript', 'html', 'css', 'json', 'markdown', 'bash', 'shell', 'java', 'kotlin', 'scala', 'groovy'],
+        });
+        
+        const highlighted = highlighter.codeToHtml(codeToHighlight, { 
+          lang: language,
+          themes: {
+            light: 'github-dark',
+            dark: 'github-dark'
+          }
+        });
+        setHighlightedCode(highlighted);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load code');
+        setHighlightedCode('');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     if (showPreview) {
       highlightCode();
     }
-  }, [code, language, showPreview]);
+  }, [code, url, language, showPreview]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -135,6 +159,11 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           >
             <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
               {language.toUpperCase()} Code Preview
+              {url && (
+                <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
+                  from {url}
+                </span>
+              )}
             </div>
             <button
               onClick={(e) => {
@@ -168,9 +197,31 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               flex: 1,
               overflow: 'auto',
               padding: '16px',
+              position: 'relative',
             }}
-            dangerouslySetInnerHTML={{ __html: highlightedCode }}
-          />
+          >
+            {isLoading ? (
+              <div style={{ 
+                color: '#fff', 
+                textAlign: 'center', 
+                padding: '20px',
+                fontSize: '14px'
+              }}>
+                Loading code...
+              </div>
+            ) : error ? (
+              <div style={{ 
+                color: '#ff6b6b', 
+                textAlign: 'center', 
+                padding: '20px',
+                fontSize: '14px'
+              }}>
+                {error}
+              </div>
+            ) : (
+              <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+            )}
+          </div>
         </div>
       )}
     </div>

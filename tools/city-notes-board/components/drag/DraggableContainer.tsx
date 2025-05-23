@@ -355,8 +355,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       position,
       size: { width: 40, height: 40 },
       props: {
-        code: '// Your code here\nconst example = "Hello, World!";',
-        language: 'typescript',
+        url: 'https://raw.githubusercontent.com/stokilo/notes-website/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/SecurityConfig.java',
+        language: 'java',
       },
     };
     setItems([...items, newItem]);
@@ -391,6 +391,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             width={item.size.width}
             height={item.size.height}
             code={item.props.code}
+            url={item.props.url}
             language={item.props.language}
           />
         </DraggableItem>
