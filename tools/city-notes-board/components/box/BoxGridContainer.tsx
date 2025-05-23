@@ -10,8 +10,8 @@ const BOX_COLORS = ['#FFD700', '#4A90E2', '#50E3C2', '#F5A623'];
 
 const BoxGridContainer: React.FC<BoxGridContainerProps> = ({
   children,
-  width = 220,
-  height = 220,
+  width = 200,
+  height = 200,
 }) => {
   return (
     <div
