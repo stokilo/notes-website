@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-interface IsometricBuildingProps {
+interface RectangleItemProps {
   label?: string;
   onLabelChange?: (newLabel: string) => void;
   size?: number;
@@ -8,7 +8,7 @@ interface IsometricBuildingProps {
   height?: number;
 }
 
-const RectangleItem: React.FC<IsometricBuildingProps> = ({
+const RectangleItem: React.FC<RectangleItemProps> = ({
   label,
   onLabelChange,
   size = 50,
@@ -128,7 +128,7 @@ const RectangleItem: React.FC<IsometricBuildingProps> = ({
           )}
         </div>
       )}
-      {/* Isometric image with randomized colors */}
+      {}
       <img
         src="/box.svg"
         alt="House"

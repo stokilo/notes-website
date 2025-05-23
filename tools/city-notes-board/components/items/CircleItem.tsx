@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-interface IsometricStreetProps {
+interface CircleItemProps {
   width?: number;
   length?: number;
   color?: string;
@@ -10,7 +10,7 @@ interface IsometricStreetProps {
   onLabelChange?: (newLabel: string) => void;
 }
 
-const CircleItem: React.FC<IsometricStreetProps> = ({
+const CircleItem: React.FC<CircleItemProps> = ({
   width = 100,
   length = 200,
   color = '#4a4a4a',
