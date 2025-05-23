@@ -13,6 +13,7 @@ import SeparatorItem from '../items/SeparatorItem';
 import ArrowItem from '../items/ArrowItem';
 import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 import CirclesPathItem from '../items/CirclesPathItem';
+import TwoPointsPathItem from '../items/TwoPointsPathItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -27,7 +28,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath' | 'twoPointsPath';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -629,6 +630,70 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
+  const addTwoPointsPath = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: `twoPointsPath-${Date.now()}`,
+      type: 'twoPointsPath',
+      position,
+      size: { width: 200, height: 100 },
+      props: { 
+        isAnimating: true
+      },
+      circlePositions: [
+        { x: 40, y: 50 },
+        { x: 160, y: 50 }
+      ]
+    };
+    setItemsWithHistory(prev => [...prev, newItem]);
+  };
+
+  const handleToggleTwoPointsPathAnimation = (itemId: string) => {
+    setItemsWithHistory(prevItems => {
+      const updatedItems = prevItems.map(item =>
+        item.id === itemId && item.type === 'twoPointsPath'
+          ? {
+              ...item,
+              props: {
+                ...item.props,
+                isAnimating: !item.props.isAnimating
+              }
+            }
+          : item
+      );
+      return updatedItems;
+    });
+  };
+
+  const handleTwoPointsPathPositionChange = (id: string, newPosition: { x: number; y: number }) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === id
+          ? { ...item, position: newPosition }
+          : item
+      )
+    );
+  };
+
+  const handleTwoPointsPathCirclePositionsChange = (id: string, newPositions: Array<{ x: number; y: number }>) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === id
+          ? { ...item, circlePositions: newPositions }
+          : item
+      )
+    );
+  };
+
+  const handleAttachTwoPointsPath = (twoPointsPathId: string, targetId: string) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === twoPointsPathId
+          ? { ...item, attachedTo: targetId }
+          : item
+      )
+    );
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -681,6 +746,22 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           position={item.position}
           onPositionChange={(pos) => handleCirclesPathPositionChange(item.id, pos)}
           onCirclePositionChange={(positions) => handleCirclesPathCirclePositionsChange(item.id, positions)}
+          initialCirclePositions={item.circlePositions}
+          attachedTo={item.attachedTo}
+        />
+      );
+    }
+
+    if (item.type === 'twoPointsPath') {
+      return (
+        <TwoPointsPathItem
+          key={item.id}
+          width={item.size.width}
+          height={item.size.height}
+          isAnimating={item.props.isAnimating}
+          position={item.position}
+          onPositionChange={(pos) => handleTwoPointsPathPositionChange(item.id, pos)}
+          onCirclePositionChange={(positions) => handleTwoPointsPathCirclePositionsChange(item.id, positions)}
           initialCirclePositions={item.circlePositions}
           attachedTo={item.attachedTo}
         />
@@ -775,6 +856,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onAddSeparator={() => addSeparator({ x: window.innerWidth / 2 - 1, y: window.innerHeight / 2 - 50 })}
           onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
           onAddCirclesPath={() => addCirclesPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
+          onAddTwoPointsPath={() => addTwoPointsPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
         />
         <div
           style={{

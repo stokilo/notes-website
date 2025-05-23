@@ -4,12 +4,14 @@ import BoxSetItem from '../items/BoxSetItem';
 import SeparatorItem from '../items/SeparatorItem';
 import ArrowItem from '../items/ArrowItem';
 import CirclesPathItem from '../items/CirclesPathItem';
+import TwoPointsPathItem from '../items/TwoPointsPathItem';
 
 interface TopContextPanelProps {
   onAddSingleBoxSet: () => void;
   onAddSeparator: () => void;
   onAddArrow: () => void;
   onAddCirclesPath: () => void;
+  onAddTwoPointsPath: () => void;
 }
 
 const TopContextPanel: React.FC<TopContextPanelProps> = ({
@@ -17,6 +19,7 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
   onAddSeparator,
   onAddArrow,
   onAddCirclesPath,
+  onAddTwoPointsPath,
 }) => {
   return (
     <div
@@ -131,6 +134,37 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
       >
         <div style={{ width: 48, height: 24, position: 'relative' }}>
           <CirclesPathItem 
+            width={48} 
+            height={24} 
+            isAnimating={true}
+            position={{ x: 0, y: 0 }}
+          />
+        </div>
+      </div>
+      <div
+        onClick={onAddTwoPointsPath}
+        style={{
+          cursor: 'pointer',
+          padding: '8px',
+          borderRadius: '8px',
+          backgroundColor: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          transition: 'all 0.2s ease',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+        }}
+      >
+        <div style={{ width: 48, height: 24, position: 'relative' }}>
+          <TwoPointsPathItem 
             width={48} 
             height={24} 
             isAnimating={true}
