@@ -14,18 +14,10 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
   borderColor = '#ffffff',
   speed = 0.5,
 }) => {
-  const [time, setTime] = useState(new Date());
-  const controls = useAnimation();
+  const controls1 = useAnimation();
+  const controls2 = useAnimation();
+  const controls3 = useAnimation();
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
-
-  // Update time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
 
   // Get viewport size and update on resize
   useEffect(() => {
@@ -41,23 +33,25 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Animation sequence
+  // Animation sequence for first circle (clockwise)
   useEffect(() => {
-    const animate = async () => {
+    const animate1 = async () => {
       const { width, height } = viewportSize;
       
       // Start from bottom left
-      await controls.start({
+      await controls1.start({
         x: 0,
         y: height - size,
+        rotate: 0,
         transition: { duration: 0 }
       });
 
       while (true) {
         // Bottom left to bottom right
-        await controls.start({
+        await controls1.start({
           x: width - size,
           y: height - size,
+          rotate: 0,
           transition: {
             duration: speed * 2,
             ease: "linear",
@@ -65,9 +59,10 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
         });
 
         // Bottom right to top right
-        await controls.start({
+        await controls1.start({
           x: width - size,
           y: 0,
+          rotate: 90,
           transition: {
             duration: speed,
             ease: "linear",
@@ -75,9 +70,10 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
         });
 
         // Top right to top left
-        await controls.start({
+        await controls1.start({
           x: 0,
           y: 0,
+          rotate: 180,
           transition: {
             duration: speed,
             ease: "linear",
@@ -85,9 +81,10 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
         });
 
         // Top left to bottom left
-        await controls.start({
+        await controls1.start({
           x: 0,
           y: height - size,
+          rotate: 270,
           transition: {
             duration: speed,
             ease: "linear",
@@ -96,12 +93,110 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
       }
     };
 
-    if (viewportSize.width > 0 && viewportSize.height > 0) {
-      animate();
-    }
-  }, [controls, viewportSize, size, speed]);
+    // Animation sequence for second circle (counter-clockwise)
+    const animate2 = async () => {
+      const { width, height } = viewportSize;
+      
+      // Start from bottom right
+      await controls2.start({
+        x: width - size,
+        y: height - size,
+        rotate: 0,
+        transition: { duration: 0 }
+      });
 
-  return (
+      while (true) {
+        // Bottom right to bottom left
+        await controls2.start({
+          x: 0,
+          y: height - size,
+          rotate: 180,
+          transition: {
+            duration: speed * 2,
+            ease: "linear",
+          },
+        });
+
+        // Bottom left to top left
+        await controls2.start({
+          x: 0,
+          y: 0,
+          rotate: 270,
+          transition: {
+            duration: speed,
+            ease: "linear",
+          },
+        });
+
+        // Top left to top right
+        await controls2.start({
+          x: width - size,
+          y: 0,
+          rotate: 0,
+          transition: {
+            duration: speed,
+            ease: "linear",
+          },
+        });
+
+        // Top right to bottom right
+        await controls2.start({
+          x: width - size,
+          y: height - size,
+          rotate: 90,
+          transition: {
+            duration: speed,
+            ease: "linear",
+          },
+        });
+      }
+    };
+
+    // Animation sequence for third circle (diagonal)
+    const animate3 = async () => {
+      const { width, height } = viewportSize;
+      
+      // Start from bottom left
+      await controls3.start({
+        x: 0,
+        y: height - size,
+        rotate: 45,
+        transition: { duration: 0 }
+      });
+
+      while (true) {
+        // Bottom left to top right
+        await controls3.start({
+          x: width - size,
+          y: 0,
+          rotate: 45,
+          transition: {
+            duration: speed * 1.5,
+            ease: "linear",
+          },
+        });
+
+        // Top right to bottom left
+        await controls3.start({
+          x: 0,
+          y: height - size,
+          rotate: 225,
+          transition: {
+            duration: speed * 1.5,
+            ease: "linear",
+          },
+        });
+      }
+    };
+
+    if (viewportSize.width > 0 && viewportSize.height > 0) {
+      animate1();
+      animate2();
+      animate3();
+    }
+  }, [controls1, controls2, controls3, viewportSize, size, speed]);
+
+  const renderCircle = (controls: any, color: string, borderColor: string) => (
     <motion.div
       animate={controls}
       style={{
@@ -112,26 +207,6 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
         top: 0,
       }}
     >
-      {/* Time display */}
-      <div
-        style={{
-          position: 'absolute',
-          left: -60,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          fontSize: '12px',
-          color: '#666',
-          whiteSpace: 'nowrap',
-          fontFamily: 'monospace',
-          textShadow: '0 0 4px rgba(255,255,255,0.8)',
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-          padding: '2px 4px',
-          borderRadius: '4px',
-        }}
-      >
-        {time.toLocaleTimeString()}
-      </div>
-
       {/* Outer circle */}
       <motion.div
         style={{
@@ -142,13 +217,14 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
           border: `2px solid ${borderColor}`,
           boxShadow: '0 0 10px rgba(0,0,0,0.2)',
           position: 'relative',
+          opacity: 1,
         }}
       >
         {/* Inner circle */}
         <motion.div
           animate={{
             scale: [1, 1.2, 1],
-            opacity: [0.8, 1, 0.8],
+            opacity: [0.9, 1, 0.9],
           }}
           transition={{
             duration: 2,
@@ -164,11 +240,19 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
             height: size * 0.6,
             borderRadius: '50%',
             backgroundColor: borderColor,
-            opacity: 0.8,
+            opacity: 1,
           }}
         />
       </motion.div>
     </motion.div>
+  );
+
+  return (
+    <>
+      {renderCircle(controls1, '#4a90e2', '#ffffff')}
+      {renderCircle(controls2, '#50E3C2', '#ffffff')}
+      {renderCircle(controls3, '#F5A623', '#ffffff')}
+    </>
   );
 };
 
