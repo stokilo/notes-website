@@ -152,7 +152,7 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
       }
     };
 
-    // Animation sequence for third circle (diagonal)
+    // Animation sequence for third circle (alternating sides)
     const animate3 = async () => {
       const { width, height } = viewportSize;
       
@@ -160,29 +160,51 @@ const WalkAroundDot: React.FC<WalkAroundDotProps> = ({
       await controls3.start({
         x: 0,
         y: height - size,
-        rotate: 45,
+        rotate: 0,
         transition: { duration: 0 }
       });
 
       while (true) {
-        // Bottom left to top right
+        // Bottom left to top left
         await controls3.start({
-          x: width - size,
+          x: 0,
           y: 0,
-          rotate: 45,
+          rotate: 90,
           transition: {
-            duration: speed * 1.5,
+            duration: speed,
             ease: "linear",
           },
         });
 
-        // Top right to bottom left
+        // Top left to top right
+        await controls3.start({
+          x: width - size,
+          y: 0,
+          rotate: 180,
+          transition: {
+            duration: speed,
+            ease: "linear",
+          },
+        });
+
+        // Top right to bottom right
+        await controls3.start({
+          x: width - size,
+          y: height - size,
+          rotate: 270,
+          transition: {
+            duration: speed,
+            ease: "linear",
+          },
+        });
+
+        // Bottom right to bottom left
         await controls3.start({
           x: 0,
           y: height - size,
-          rotate: 225,
+          rotate: 0,
           transition: {
-            duration: speed * 1.5,
+            duration: speed,
             ease: "linear",
           },
         });

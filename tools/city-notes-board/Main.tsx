@@ -10,7 +10,7 @@ const Main: React.FC = () => {
       <div className="app-container">
         <DraggableContainer />
       </div>
-      <WalkAroundDot size={16} speed={10.9} />
+      <WalkAroundDot size={16} speed={40.0} />
     </>
   );
 };
