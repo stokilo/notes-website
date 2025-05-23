@@ -91,44 +91,13 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
                   <stop offset="0%" style={{ stopColor: color, stopOpacity: 0.8 }} />
                   <stop offset="100%" style={{ stopColor: color, stopOpacity: 1 }} />
                 </radialGradient>
-                <filter id={`glow-${index}`}>
-                  <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
-                  <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
               </defs>
               <circle
                 cx="50%"
                 cy="50%"
                 r="45%"
                 fill={`url(#gradient-${index})`}
-                filter={`url(#glow-${index})`}
               />
-              {isAnimating && (
-                <motion.circle
-                  cx="50%"
-                  cy="50%"
-                  r="45%"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.6)"
-                  strokeWidth="2"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ 
-                    pathLength: [0, 1, 1, 0],
-                    opacity: [0, 0.8, 0.8, 0]
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    repeatDelay: 0.5,
-                    ease: "easeInOut",
-                    times: [0, 0.3, 0.7, 1],
-                    delay: index * 0.2,
-                  }}
-                />
-              )}
             </svg>
           </motion.div>
           {index < segments - 1 && (
@@ -173,40 +142,11 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
               <stop offset="0%" style={{ stopColor: colors[colors.length - 1], stopOpacity: 0.8 }} />
               <stop offset="100%" style={{ stopColor: colors[colors.length - 1], stopOpacity: 1 }} />
             </linearGradient>
-            <filter id="arrow-glow">
-              <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
           </defs>
           <path
             d={`M ${arrowHeadSize * 0.2},0 L ${arrowHeadSize},${arrowHeadSize/2} L ${arrowHeadSize * 0.2},${arrowHeadSize} Z`}
             fill="url(#arrow-gradient)"
-            filter="url(#arrow-glow)"
           />
-          {isAnimating && (
-            <motion.path
-              d={`M ${arrowHeadSize * 0.2},0 L ${arrowHeadSize},${arrowHeadSize/2} L ${arrowHeadSize * 0.2},${arrowHeadSize} Z`}
-              fill="none"
-              stroke="rgba(255,255,255,0.6)"
-              strokeWidth="2"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ 
-                pathLength: [0, 1, 1, 0],
-                opacity: [0, 0.8, 0.8, 0]
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                repeatDelay: 0.5,
-                ease: "easeInOut",
-                times: [0, 0.3, 0.7, 1],
-                delay: segments * 0.2,
-              }}
-            />
-          )}
         </svg>
       </motion.div>
     </motion.div>
