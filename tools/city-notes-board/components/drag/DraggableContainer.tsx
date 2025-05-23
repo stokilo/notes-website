@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import DraggableItem from './DraggableItem';
 import DebugPanel from '../DebugPanel';
 import ContextPanel from '../context/ContextPanel';
+import TopContextPanel from '../context/TopContextPanel';
 import BoxSetItem from '../items/BoxSetItem';
 import ContextMenu from '../menu/ContextMenu';
 import CommentEditor from '../CommentEditor';
@@ -339,6 +340,18 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
   };
 
+  const addSingleBoxSet = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: `boxSet-${Date.now()}`,
+      type: 'boxSet',
+      position,
+      size: { width: 20, height: 20 },
+      props: {},
+      label: undefined,
+    };
+    setItems(prev => [...prev, newItem]);
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -422,6 +435,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             localStorage.removeItem(STORAGE_KEY);
           }
         }}
+      />
+      <TopContextPanel
+        onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
       />
       {contextMenu.show && (
         <ContextMenu
