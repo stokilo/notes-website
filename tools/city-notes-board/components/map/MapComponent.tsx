@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import ContextMenu from '../ContextMenu';
+import ContextMenu from '../menu/ContextMenu';
 import CommentEditor from '../CommentEditor';
 
 interface MapComponentProps {

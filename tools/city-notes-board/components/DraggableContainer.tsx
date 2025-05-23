@@ -6,7 +6,7 @@ import IsometricBuilding from './IsometricBuilding';
 import IsometricStreet from './IsometricStreet';
 import Grass from './Grass';
 import QuestionBox from './QuestionBox';
-import ContextMenu from './ContextMenu';
+import ContextMenu from './menu/ContextMenu';
 import CommentEditor from './CommentEditor';
 import BoxGridContainer from './box/BoxGridContainer';
 import MapComponent from './map/MapComponent';
