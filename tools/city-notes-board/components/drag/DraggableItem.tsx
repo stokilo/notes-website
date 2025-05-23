@@ -14,6 +14,7 @@ interface DraggableItemProps {
   onClick?: (e: React.MouseEvent) => void;
   isSelected?: boolean;
   disableAnimations?: boolean;
+  zoom?: number;
 }
 
 const DraggableItem: React.FC<DraggableItemProps> = ({
@@ -29,6 +30,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   onClick,
   isSelected = false,
   disableAnimations = false,
+  zoom = 1,
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [size, setSize] = useState(initialSize);
@@ -48,9 +50,20 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
     if (!itemRef.current) return;
 
     const rect = itemRef.current.getBoundingClientRect();
+    const containerRect = itemRef.current.parentElement?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    // Calculate position relative to the container
+    const containerX = e.clientX - containerRect.left;
+    const containerY = e.clientY - containerRect.top;
+
+    // Convert to unzoomed coordinates
+    const unzoomedX = containerX / zoom;
+    const unzoomedY = containerY / zoom;
+
     dragOffset.current = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: unzoomedX - position.x,
+      y: unzoomedY - position.y,
     };
     setIsDragging(true);
     onDragStart?.({ x: e.clientX, y: e.clientY });
@@ -60,11 +73,21 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
     e.stopPropagation();
     if (!itemRef.current) return;
 
-    const rect = itemRef.current.getBoundingClientRect();
+    const containerRect = itemRef.current.parentElement?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    // Calculate position relative to the container
+    const containerX = e.clientX - containerRect.left;
+    const containerY = e.clientY - containerRect.top;
+
+    // Convert to unzoomed coordinates
+    const unzoomedX = containerX / zoom;
+    const unzoomedY = containerY / zoom;
+
     resizeStartSize.current = { ...size };
     resizeStartPos.current = {
-      x: e.clientX,
-      y: e.clientY,
+      x: unzoomedX,
+      y: unzoomedY,
     };
     setIsResizing(true);
   };
@@ -77,10 +100,21 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
 
   useEffect(() => {
     const updatePosition = (e: MouseEvent) => {
-      if (!isDragging) return;
+      if (!isDragging || !itemRef.current) return;
 
-      const newX = e.clientX - dragOffset.current.x;
-      const newY = e.clientY - dragOffset.current.y;
+      const containerRect = itemRef.current.parentElement?.getBoundingClientRect();
+      if (!containerRect) return;
+
+      // Calculate position relative to the container
+      const containerX = e.clientX - containerRect.left;
+      const containerY = e.clientY - containerRect.top;
+
+      // Convert to unzoomed coordinates
+      const unzoomedX = containerX / zoom;
+      const unzoomedY = containerY / zoom;
+
+      const newX = unzoomedX - dragOffset.current.x;
+      const newY = unzoomedY - dragOffset.current.y;
 
       if (
         Math.abs(newX - lastPositionRef.current.x) > 1 ||
@@ -100,10 +134,21 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
     };
 
     const updateSize = (e: MouseEvent) => {
-      if (!isResizing) return;
+      if (!isResizing || !itemRef.current) return;
 
-      const deltaX = e.clientX - resizeStartPos.current.x;
-      const deltaY = e.clientY - resizeStartPos.current.y;
+      const containerRect = itemRef.current.parentElement?.getBoundingClientRect();
+      if (!containerRect) return;
+
+      // Calculate position relative to the container
+      const containerX = e.clientX - containerRect.left;
+      const containerY = e.clientY - containerRect.top;
+
+      // Convert to unzoomed coordinates
+      const unzoomedX = containerX / zoom;
+      const unzoomedY = containerY / zoom;
+
+      const deltaX = unzoomedX - resizeStartPos.current.x;
+      const deltaY = unzoomedY - resizeStartPos.current.y;
       
       const newWidth = Math.max(10, resizeStartSize.current.width + deltaX);
       const newHeight = Math.max(10, resizeStartSize.current.height + deltaY);

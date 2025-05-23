@@ -413,6 +413,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, item.id),
       onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
       isSelected: item.id === selectedItemId,
+      zoom: zoom,
     };
 
     if (item.type === 'boxSetContainer') {
