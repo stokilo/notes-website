@@ -9,6 +9,7 @@ import CommentEditor from '../CommentEditor';
 import BoxGridContainer from '../box/BoxGridContainer';
 import RectangleItem from "../items/RectangleItem";
 import CircleItem from "../items/CircleItem";
+import SeparatorItem from '../items/SeparatorItem';
 
 interface DraggableContainerProps {
   className?: string;
@@ -16,7 +17,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -250,6 +251,17 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItems(prev => [...prev, newItem]);
   };
 
+  const addSeparator = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: `separator-${Date.now()}`,
+      type: 'separator',
+      position,
+      size: { width: 2, height: 100 }, // Default size for separator
+      props: { color: '#e0e0e0' },
+    };
+    setItems(prev => [...prev, newItem]);
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -297,7 +309,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             comment={item.comment}
             commentLabel={item.commentLabel}
           />
-        )  : (
+        ) : item.type === 'separator' ? (
+          <SeparatorItem
+            width={item.size.width}
+            height={item.size.height}
+            color={item.props.color}
+          />
+        ) : (
           <span>nothing here</span>
         )}
       </DraggableItem>
@@ -335,6 +353,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       />
       <TopContextPanel
         onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
+        onAddSeparator={() => addSeparator({ x: window.innerWidth / 2 - 1, y: window.innerHeight / 2 - 50 })}
       />
       {contextMenu.show && (
         <ContextMenu
