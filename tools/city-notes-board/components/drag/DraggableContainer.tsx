@@ -14,6 +14,7 @@ import ArrowItem from '../items/ArrowItem';
 import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 
 const STORAGE_KEY = 'draggable-items';
+const HISTORY_STORAGE_KEY = 'draggable-items-history';
 
 const generateId = () => {
   return Math.random().toString(36).substr(2, 9);
@@ -41,6 +42,8 @@ interface DraggableItem {
 
 const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' }) => {
   const [items, setItems] = useState<DraggableItem[]>([]);
+  const [history, setHistory] = useState<DraggableItem[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
   const [contextMenu, setContextMenu] = useState<{
     show: boolean;
     x: number;
@@ -57,31 +60,180 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     position: { x: number; y: number };
   }>({ show: false, itemId: '', position: { x: 0, y: 0 } });
   const [zoom, setZoom] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
+  const dragStartItems = useRef<DraggableItem[]>([]);
 
-  // Load scene from localStorage on initial mount
+  // Load scene and history from localStorage on initial mount
   useEffect(() => {
     console.log('Attempting to load saved scene...');
     const savedScene = localStorage.getItem(STORAGE_KEY);
+    const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+    
     if (savedScene) {
       try {
         const parsedScene = JSON.parse(savedScene);
         console.log('Successfully loaded scene:', parsedScene);
         setItems(parsedScene);
+        // Initialize history with the loaded scene
+        setHistory([parsedScene]);
+        setHistoryIndex(0);
       } catch (error) {
         console.error('Error loading saved scene:', error);
+        // Reset to empty state if loading fails
+        setItems([]);
+        setHistory([[]]);
+        setHistoryIndex(0);
       }
     } else {
       console.log('No saved scene found in localStorage');
+      // Initialize with empty state
+      setItems([]);
+      setHistory([[]]);
+      setHistoryIndex(0);
+    }
+
+    // Only load history if it matches the current scene
+    if (savedHistory) {
+      try {
+        const parsedHistory = JSON.parse(savedHistory);
+        if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
+          // Check if the last history state matches the current scene
+          const lastHistoryState = parsedHistory[parsedHistory.length - 1];
+          const currentScene = JSON.parse(savedScene || '[]');
+          if (JSON.stringify(lastHistoryState) === JSON.stringify(currentScene)) {
+            setHistory(parsedHistory);
+            setHistoryIndex(parsedHistory.length - 1);
+          } else {
+            // If history doesn't match, reset it
+            setHistory([currentScene]);
+            setHistoryIndex(0);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading saved history:', error);
+        // Reset history if loading fails
+        setHistory([JSON.parse(savedScene || '[]')]);
+        setHistoryIndex(0);
+      }
     }
   }, []);
 
-  // Save scene to localStorage whenever items change
+  // Save scene and history to localStorage whenever they change
   useEffect(() => {
     if (items.length > 0) {
       console.log('Saving scene to localStorage:', items);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
     }
   }, [items]);
+
+  useEffect(() => {
+    if (history.length > 0) {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+    } else {
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+    }
+  }, [history]);
+
+  // Handle scene reset
+  const handleClearScene = () => {
+    if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
+      setItems([]);
+      setSelectedItemId(null);
+      setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+      setCopiedItem(null);
+      // Reset history when clearing scene
+      setHistory([[]]);
+      setHistoryIndex(0);
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+    }
+  };
+
+  // Add current state to history
+  const addToHistory = (newItems: DraggableItem[]) => {
+    if (!newItems) {
+      console.log('Cannot add to history - newItems is undefined');
+      return;
+    }
+    
+    setHistory(prevHistory => {
+      // Remove any future states if we're not at the end of history
+      const newHistory = prevHistory.slice(0, historyIndex + 1);
+      // Add new state
+      newHistory.push(JSON.parse(JSON.stringify(newItems)));
+      // Keep only last 50 states to prevent memory issues
+      const trimmedHistory = newHistory.slice(-50);
+      
+      // Adjust history index based on trimming
+      const itemsRemoved = newHistory.length - trimmedHistory.length;
+      if (itemsRemoved > 0) {
+        setHistoryIndex(prev => Math.max(0, prev - itemsRemoved));
+      } else {
+        setHistoryIndex(prev => prev + 1);
+      }
+
+      console.log('History updated', { 
+        newHistoryLength: trimmedHistory.length,
+        itemsRemoved,
+        newHistoryIndex: historyIndex + 1 - itemsRemoved
+      });
+      
+      return trimmedHistory;
+    });
+  };
+
+  // Handle undo
+  const handleUndo = () => {
+    console.log('Undo triggered', { historyIndex, historyLength: history.length });
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      const previousState = history[newIndex];
+      console.log('Previous state found', { 
+        newIndex, 
+        previousState,
+        historyLength: history.length,
+        historyContent: history
+      });
+      if (previousState) {
+        setHistoryIndex(newIndex);
+        setItems(JSON.parse(JSON.stringify(previousState)));
+        console.log('State restored to previous version');
+      } else {
+        console.log('Invalid state found at index', newIndex);
+        // Reset history if we encounter an invalid state
+        setHistory([items]);
+        setHistoryIndex(0);
+      }
+    } else {
+      console.log('Cannot undo - no history available', { historyIndex, historyLength: history.length });
+    }
+  };
+
+  // Wrap setItems to automatically add to history
+  const setItemsWithHistory = (newItems: DraggableItem[] | ((prev: DraggableItem[]) => DraggableItem[])) => {
+    setItems(prevItems => {
+      const nextItems = typeof newItems === 'function' ? newItems(prevItems) : newItems;
+      
+      // Only add to history if:
+      // 1. Not currently dragging (drag end will handle history)
+      // 2. There are actual changes
+      // 3. Not a continuous operation (like resizing)
+      if (!isDragging && 
+          JSON.stringify(nextItems) !== JSON.stringify(prevItems) &&
+          !isResizing) {
+        console.log('Adding to history', { 
+          prevItemsLength: prevItems.length, 
+          nextItemsLength: nextItems.length 
+        });
+        addToHistory(nextItems);
+      }
+      return nextItems;
+    });
+  };
 
   const handleCopy = (itemId: string) => {
     const itemToCopy = items.find(item => item.id === itemId);
@@ -118,14 +270,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       position: newPosition,
     };
 
-    setItems(prev => [...prev, newItem]);
+    setItemsWithHistory(prev => [...prev, newItem]);
     console.log('Item pasted:', newItem);
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for CMD+Z (Mac) or CTRL+Z (Windows)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        console.log('CMD+Z/CTRL+Z detected');
+        e.preventDefault();
+        handleUndo();
+      }
       // Check for CMD+C (Mac) or CTRL+C (Windows)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
         e.preventDefault();
         if (selectedItemId) {
           handleCopy(selectedItemId);
@@ -179,10 +337,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       }
     };
 
-    // Add event listener to the document instead of window
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemId, copiedItem, items]); // Add items to dependencies
+  }, [selectedItemId, copiedItem, items, historyIndex, history]);
 
   // Add wheel zoom handler
   useEffect(() => {
@@ -210,6 +367,31 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   }, []); // Empty dependency array since we only need to set up the listener once
 
+  const handleDragStart = (id: string, position: { x: number; y: number }) => {
+    setIsDragging(true);
+    dragStartPosition.current = position;
+    dragStartItems.current = JSON.parse(JSON.stringify(items));
+  };
+
+  const handleDragEnd = (id: string, position: { x: number; y: number }) => {
+    if (isDragging && dragStartPosition.current) {
+      // Only add to history if the item was actually moved
+      const movedItem = items.find(item => item.id === id);
+      const startItem = dragStartItems.current.find(item => item.id === id);
+      
+      if (movedItem && startItem && 
+          (movedItem.position.x !== startItem.position.x || 
+           movedItem.position.y !== startItem.position.y)) {
+        console.log('Adding drag end to history');
+        addToHistory(items);
+      }
+    }
+    
+    setIsDragging(false);
+    dragStartPosition.current = null;
+    dragStartItems.current = [];
+  };
+
   const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
     setItems(prevItems =>
       prevItems.map(item =>
@@ -219,11 +401,18 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleSizeChange = (id: string, newSize: { width: number; height: number }) => {
+    setIsResizing(true);
     setItems(prevItems =>
       prevItems.map(item =>
         item.id === id ? { ...item, size: newSize } : item
       )
     );
+  };
+
+  const handleResizeEnd = () => {
+    setIsResizing(false);
+    // Add the final size to history
+    addToHistory(items);
   };
 
   const addItem = (type: 'box' | 'circle' , position: { x: number; y: number }) => {
@@ -239,12 +428,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         : { width: 100, height: 100 },
       label: undefined
     };
-    setItems(prev => [...prev, newItem]);
+    setItemsWithHistory(prev => [...prev, newItem]);
   };
 
-
   const handleCommentChange = (itemId: string, comment: string, label: string) => {
-    setItems(prevItems => {
+    setItemsWithHistory(prevItems => {
       const updatedItems = prevItems.map(item => {
         if (item.type === 'boxSetContainer' && item.props.children) {
           const updatedChildren = item.props.children.map(child => 
@@ -253,7 +441,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               : child
           );
           
-          // If we found and updated the child, return the updated container
           if (updatedChildren.some(child => child.id === itemId)) {
             return {
               ...item,
@@ -265,14 +452,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           }
         }
         
-        // If this is the item itself (not a child of a container)
         return item.id === itemId 
           ? { ...item, comment, commentLabel: label }
           : item;
       });
 
-      // Save to localStorage after updating state
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
       return updatedItems;
     });
   };
@@ -290,7 +474,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleRotateArrow = (itemId: string, degrees: number) => {
-    setItems(prevItems =>
+    setItemsWithHistory(prevItems =>
       prevItems.map(item =>
         item.id === itemId && item.type === 'arrow'
           ? {
@@ -319,7 +503,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleLabelChange = (itemId: string, newLabel: string) => {
-    setItems(prevItems =>
+    setItemsWithHistory(prevItems =>
       prevItems.map(item =>
         item.id === itemId ? { ...item, label: newLabel } : item
       )
@@ -327,7 +511,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleDeleteItem = (itemId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+    setItemsWithHistory(prevItems => prevItems.filter(item => item.id !== itemId));
     setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
   };
 
@@ -340,7 +524,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       props: {},
       label: undefined,
     };
-    setItems(prev => [...prev, newItem]);
+    setItemsWithHistory(prev => [...prev, newItem]);
   };
 
   const addSeparator = (position: { x: number; y: number }) => {
@@ -348,10 +532,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       id: `separator-${Date.now()}`,
       type: 'separator',
       position,
-      size: { width: 2, height: 100 }, // Default size for separator
+      size: { width: 2, height: 100 },
       props: { color: '#e0e0e0' },
     };
-    setItems(prev => [...prev, newItem]);
+    setItemsWithHistory(prev => [...prev, newItem]);
   };
 
   const addArrow = (position: { x: number; y: number }) => {
@@ -366,11 +550,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         isAnimating: false
       },
     };
-    setItems(prev => [...prev, newItem]);
+    setItemsWithHistory(prev => [...prev, newItem]);
   };
 
   const handleToggleArrowAnimation = (itemId: string) => {
-    setItems(prevItems => {
+    setItemsWithHistory(prevItems => {
       const updatedItems = prevItems.map(item =>
         item.id === itemId && item.type === 'arrow'
           ? {
@@ -382,9 +566,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             }
           : item
       );
-      
-      // Save to localStorage after updating state
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
       return updatedItems;
     });
   };
@@ -400,7 +581,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         language: 'java',
       },
     };
-    setItems([...items, newItem]);
+    setItemsWithHistory([...items, newItem]);
   };
 
   const renderItem = (item: DraggableItem) => {
@@ -410,6 +591,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       initialSize: item.size,
       onPositionChange: (pos: { x: number; y: number }) => handlePositionChange(item.id, pos),
       onSizeChange: (size: { width: number; height: number }) => handleSizeChange(item.id, size),
+      onResizeEnd: handleResizeEnd,
+      onDragStart: (pos: { x: number; y: number }) => handleDragStart(item.id, pos),
+      onDragEnd: (pos: { x: number; y: number }) => handleDragEnd(item.id, pos),
       onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, item.id),
       onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
       isSelected: item.id === selectedItemId,
@@ -523,15 +707,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onAddBox={() => addItem('box', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
           onAddCircle={() => addItem('circle', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
           onAddCodeBlock={() => addCodeBlock({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
-          onClearScene={() => {
-            if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
-              setItems([]);
-              setSelectedItemId(null);
-              setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
-              setCopiedItem(null);
-              localStorage.removeItem(STORAGE_KEY);
-            }
-          }}
+          onClearScene={handleClearScene}
         />
         <TopContextPanel
           onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
