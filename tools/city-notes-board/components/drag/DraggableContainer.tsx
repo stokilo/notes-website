@@ -165,108 +165,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItems(prev => [...prev, newItem]);
   };
 
-  const addBoxSet = (position: { x: number; y: number }) => {
-    // Find existing container for this position
-    const existingContainer = items.find(item => 
-      item.type === 'boxSetContainer' && 
-      Math.abs(item.position.x - position.x) < 50
-    );
-
-    if (existingContainer) {
-      const existingBoxes = existingContainer.props.children || [];
-      const boxWidth = 20;
-      const boxHeight = 20;
-      const boxSpacing = 5; // Spacing between boxes
-      const containerPadding = 5; // Padding from container edges
-      const containerWidth = existingContainer.size.width - 25; // Available width for boxes
-      
-      // Calculate how many boxes can fit in a row
-      const boxesPerRow = Math.floor((containerWidth - containerPadding * 2) / (boxWidth + boxSpacing));
-      
-      // Calculate row and column for the new box
-      const row = Math.floor(existingBoxes.length / boxesPerRow);
-      const col = existingBoxes.length % boxesPerRow;
-      
-      // Calculate final position
-      const finalX = containerPadding + col * (boxWidth + boxSpacing);
-      const finalY = containerPadding + row * (boxHeight + boxSpacing);
-
-      // Add to existing container's children
-      const newboxSet = {
-        id: `boxSet-${Date.now()}`,
-        type: 'boxSet',
-        position: { x: 0, y: containerPadding }, // Start at top
-        finalPosition: { x: finalX, y: finalY }, // Store final position for animation
-        size: { width: boxWidth, height: boxHeight },
-        props: {},
-        label: undefined,
-        parentId: existingContainer.id,
-        isNew: true // Flag to indicate this is a new box that needs animation
-      };
-      
-      setItems(prevItems => 
-        prevItems.map(item => 
-          item.id === existingContainer.id 
-            ? { 
-                ...item, 
-                props: { 
-                  ...item.props,
-                  children: [...(item.props.children || []), newboxSet]
-                }
-              }
-            : item
-        )
-      );
-    } else {
-      const containerId = `boxSetContainer-${Date.now()}`;
-      const initialboxSet = {
-        id: `boxSet-${Date.now()}`,
-        type: 'boxSet',
-        position: { x: 0, y: 5 }, // Start with padding from top
-        finalPosition: { x: 5, y: 5 }, // Same as position for initial box
-        size: { width: 20, height: 20 },
-        props: {},
-        label: undefined,
-        parentId: containerId,
-        isNew: true
-      };
-
-      const containerItem: DraggableItem = {
-        id: containerId,
-        type: 'boxSetContainer',
-        position,
-        size: { width: 200, height: 220 },
-        props: {
-          children: [
-            // Add placeholder boxes at the bottom first
-            ...Array.from({ length: 3 }).map((_, i) => ({
-              id: `placeholder-${Date.now()}-${i}`,
-              type: 'boxSet',
-              position: { x: 0, y: 5 },
-              finalPosition: { 
-                x: 5, 
-                y: 400 - 25 - (i * 25) // Position from bottom up
-              },
-              size: { width: 20, height: 20 },
-              props: {},
-              label: undefined,
-              parentId: containerId,
-              isNew: true,
-              isPlaceholder: true
-            })),
-            // Add the initial active box at the top
-            {
-              ...initialboxSet,
-              position: { x: 0, y: 5 },
-              finalPosition: { x: 5, y: 5 },
-            }
-          ]
-        },
-      };
-
-      setItems(prev => [...prev, containerItem]);
-    }
-  };
 
   const handleCommentChange = (itemId: string, comment: string, label: string) => {
     setItems(prevItems => {
@@ -425,7 +323,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       <ContextPanel
         onAddBox={() => addItem('box', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
         onAddCircle={() => addItem('circle', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-        onAddBoxSet={() => addBoxSet({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 110 })}
         onClearScene={() => {
           if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
             setItems([]);
