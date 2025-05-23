@@ -240,7 +240,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         id: containerId,
         type: 'questionBoxContainer',
         position,
-        size: { width: 200, height: 400 },
+        size: { width: 200, height: 220 },
         props: {
           children: [
             // Add placeholder boxes at the bottom first
@@ -363,29 +363,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       return (
         <DraggableItem key={item.id} {...commonProps}>
           <BoxGridContainer width={item.size.width} height={item.size.height}>
-            {containerQuestionBoxes.map(qb => (
-              <QuestionBox
-                key={qb.id}
-                width={qb.size.width}
-                height={qb.size.height}
-                comment={qb.comment}
-                commentLabel={qb.commentLabel}
-                onClick={e => {
-                  e.stopPropagation();
-                  setSelectedItemId(qb.id);
-                }}
-                onContextMenu={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setSelectedItemId(qb.id);
-                  setCommentEditor({
-                    show: true,
-                    itemId: qb.id,
-                    position: { x: e.clientX, y: e.clientY },
-                  });
-                }}
-              />
-            ))}
           </BoxGridContainer>
         </DraggableItem>
       );
