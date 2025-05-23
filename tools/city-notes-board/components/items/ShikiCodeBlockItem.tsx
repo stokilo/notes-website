@@ -7,8 +7,8 @@ interface ShikiCodeBlockItemProps {
   code?: string;
   url?: string;
   language?: string;
-  onClick?: (e: React.MouseEvent) => void;
-  onContextMenu?: (e: React.MouseEvent) => void;
+  showPreview?: boolean;
+  onClosePreview?: () => void;
 }
 
 const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
@@ -17,10 +17,9 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   code = '',
   url,
   language = 'typescript',
-  onClick,
-  onContextMenu,
+  showPreview = false,
+  onClosePreview,
 }) => {
-  const [showPreview, setShowPreview] = useState(false);
   const [highlightedCode, setHighlightedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,19 +70,15 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowPreview(false);
+        onClosePreview?.();
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowPreview(true);
-    onClick?.(e);
-  };
+    if (showPreview) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showPreview, onClosePreview]);
 
   return (
     <div 
@@ -92,9 +87,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         position: 'relative', 
         width, 
         height,
-      }} 
-      onClick={handleClick} 
-      onContextMenu={onContextMenu}
+      }}
     >
       {/* Code icon */}
       <div
@@ -106,7 +99,6 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           justifyContent: 'center',
           backgroundColor: '#2d2d2d',
           borderRadius: '4px',
-          cursor: 'pointer',
         }}
       >
         <svg
@@ -168,7 +160,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setShowPreview(false);
+                onClosePreview?.();
               }}
               style={{
                 background: '#4d4d4d',

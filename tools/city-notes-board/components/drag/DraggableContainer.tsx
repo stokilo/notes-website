@@ -49,6 +49,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   }>({ show: false, x: 0, y: 0, itemId: '' });
   const [copiedItem, setCopiedItem] = useState<DraggableItem | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [codePreviewItemId, setCodePreviewItemId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [commentEditor, setCommentEditor] = useState<{
     show: boolean;
@@ -393,6 +394,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             code={item.props.code}
             url={item.props.url}
             language={item.props.language}
+            showPreview={item.id === codePreviewItemId}
+            onClosePreview={() => setCodePreviewItemId(null)}
           />
         </DraggableItem>
       );
@@ -566,6 +569,19 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                       itemId: contextMenu.itemId,
                       position: { x: contextMenu.x, y: contextMenu.y },
                     });
+                    setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+                  },
+                },
+                ...baseItems,
+              ];
+            }
+
+            if (item.type === 'codeBlock') {
+              return [
+                {
+                  label: 'Show Code',
+                  onClick: () => {
+                    setCodePreviewItemId(contextMenu.itemId);
                     setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
                   },
                 },
