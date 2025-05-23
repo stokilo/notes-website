@@ -1,4 +1,5 @@
 import React from 'react';
+import ContextButton from './ContextButton';
 
 interface ContextPanelProps {
   onAddBuilding: () => void;
@@ -29,106 +30,23 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         zIndex: 1000,
       }}
     >
-      <button
+      <ContextButton
         onClick={onAddBuilding}
-        style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '12px',
-          border: 'none',
-          backgroundColor: 'white',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s ease',
-          padding: 0,
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-        }}
-      >
-        <img
-          src="/box.svg"
-          alt="Add Building"
-          style={{
-            width: '56px',
-            height: '56px',
-          }}
-        />
-      </button>
-      <button
+        icon="/box.svg"
+        text="Add Building"
+      />
+      <ContextButton
         onClick={onAddStreet}
-        style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '12px',
-          border: 'none',
-          backgroundColor: 'white',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s ease',
-          padding: 0,
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-        }}
-      >
-        <img
-          src="/street.svg"
-          alt="Add Street"
-          style={{
-            width: '56px',
-            height: '56px',
-          }}
-        />
-      </button>
-      <button
+        icon="/street.svg"
+        text="Add Street"
+      />
+      <ContextButton
         onClick={onClearScene}
-        style={{
-          width: '80px',
-          height: '40px',
-          borderRadius: '12px',
-          border: 'none',
-          backgroundColor: '#ff4444',
-          color: 'white',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s ease',
-          padding: 0,
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-          e.currentTarget.style.backgroundColor = '#ff6666';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-          e.currentTarget.style.backgroundColor = '#ff4444';
-        }}
-      >
-        Clear Scene
-      </button>
+        text="Clear"
+        backgroundColor="#ff4444"
+        textColor="white"
+        height="40px"
+      />
     </div>
   );
 };
