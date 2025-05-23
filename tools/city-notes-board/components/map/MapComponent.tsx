@@ -19,6 +19,7 @@ interface Building {
   comment?: string;
   commentLabel?: string;
   originalData?: any;
+  points: { x: number; y: number }[];
 }
 
 interface Street {
@@ -106,6 +107,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           width: 40 + Math.random() * 40,
           height: 40 + Math.random() * 40,
           color: `hsl(${Math.random() * 360}, 70%, 80%)`,
+          points: [],
         }));
         setBuildings(fallbackBuildings);
         setStreets([]);
@@ -214,14 +216,32 @@ const MapComponent: React.FC<MapComponentProps> = ({
             return;
           }
 
+          // Generate a more realistic building color based on building type
+          const buildingType = element.tags.building;
+          let baseColor;
+          switch (buildingType) {
+            case 'residential':
+              baseColor = `hsl(${Math.random() * 30 + 180}, 70%, 85%)`; // Blue-ish tones
+              break;
+            case 'commercial':
+              baseColor = `hsl(${Math.random() * 30 + 200}, 70%, 80%)`; // Purple-ish tones
+              break;
+            case 'industrial':
+              baseColor = `hsl(${Math.random() * 30 + 30}, 70%, 80%)`; // Orange-ish tones
+              break;
+            default:
+              baseColor = `hsl(${Math.random() * 30 + 150}, 70%, 85%)`; // Green-ish tones
+          }
+
           buildings.push({
             id: `building-${element.id}`,
             x: bounds.minX,
             y: bounds.minY,
             width: buildingWidth,
             height: buildingHeight,
-            color: `hsl(${Math.random() * 360}, 70%, 80%)`,
+            color: baseColor,
             originalData: element,
+            points: points, // Store the original points for better rendering
           });
         } catch (error) {
           console.warn('Error processing building:', error);
@@ -390,15 +410,43 @@ const MapComponent: React.FC<MapComponentProps> = ({
                   top: building.y,
                   width: building.width,
                   height: building.height,
-                  backgroundColor: building.color,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   transform: selectedBuilding === building.id ? 'scale(1.05)' : 'scale(1)',
                   zIndex: selectedBuilding === building.id ? 2 : 1,
                 }}
                 onClick={(e) => handleBuildingClick(building.id, e)}
               >
+                <svg
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                  }}
+                >
+                  {/* Building shadow */}
+                  <path
+                    d={`M ${building.points.map(p => `${p.x - building.x},${p.y - building.y}`).join(' L ')} Z`}
+                    fill="rgba(0, 0, 0, 0.2)"
+                    transform="translate(2, 2)"
+                  />
+                  {/* Building base */}
+                  <path
+                    d={`M ${building.points.map(p => `${p.x - building.x},${p.y - building.y}`).join(' L ')} Z`}
+                    fill={building.color}
+                    stroke="#666"
+                    strokeWidth="0.5"
+                  />
+                  {/* Building highlights */}
+                  <path
+                    d={`M ${building.points.map(p => `${p.x - building.x},${p.y - building.y}`).join(' L ')} Z`}
+                    fill="rgba(255, 255, 255, 0.1)"
+                    stroke="rgba(255, 255, 255, 0.3)"
+                    strokeWidth="0.5"
+                  />
+                </svg>
                 {building.comment && (
                   <div
                     style={{
