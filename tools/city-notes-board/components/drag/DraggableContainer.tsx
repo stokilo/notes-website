@@ -71,70 +71,73 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const savedScene = localStorage.getItem(STORAGE_KEY);
     const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
     
-    if (savedScene) {
-      try {
+    try {
+      if (savedScene) {
         const parsedScene = JSON.parse(savedScene);
         console.log('Successfully loaded scene:', parsedScene);
-        setItems(parsedScene);
+        
         // Initialize history with the loaded scene
-        setHistory([parsedScene]);
-        setHistoryIndex(0);
-      } catch (error) {
-        console.error('Error loading saved scene:', error);
-        // Reset to empty state if loading fails
-        setItems([]);
-        setHistory([[]]);
-        setHistoryIndex(0);
-      }
-    } else {
-      console.log('No saved scene found in localStorage');
-      // Initialize with empty state
-      setItems([]);
-      setHistory([[]]);
-      setHistoryIndex(0);
-    }
-
-    // Only load history if it matches the current scene
-    if (savedHistory) {
-      try {
-        const parsedHistory = JSON.parse(savedHistory);
-        if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
-          // Check if the last history state matches the current scene
-          const lastHistoryState = parsedHistory[parsedHistory.length - 1];
-          const currentScene = JSON.parse(savedScene || '[]');
-          if (JSON.stringify(lastHistoryState) === JSON.stringify(currentScene)) {
+        if (savedHistory) {
+          const parsedHistory = JSON.parse(savedHistory);
+          if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
+            console.log('Loading saved history:', parsedHistory);
+            // Set history first to ensure proper state
             setHistory(parsedHistory);
             setHistoryIndex(parsedHistory.length - 1);
+            // Then set items to match the last history state
+            setItems(parsedScene);
           } else {
-            // If history doesn't match, reset it
-            setHistory([currentScene]);
+            console.log('No valid history found, initializing with current scene');
+            const initialHistory = [parsedScene];
+            setHistory(initialHistory);
             setHistoryIndex(0);
+            setItems(parsedScene);
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(initialHistory));
           }
+        } else {
+          console.log('No saved history found, initializing with current scene');
+          const initialHistory = [parsedScene];
+          setHistory(initialHistory);
+          setHistoryIndex(0);
+          setItems(parsedScene);
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(initialHistory));
         }
-      } catch (error) {
-        console.error('Error loading saved history:', error);
-        // Reset history if loading fails
-        setHistory([JSON.parse(savedScene || '[]')]);
+      } else {
+        console.log('No saved scene found, initializing empty state');
+        const emptyHistory = [[]];
+        setHistory(emptyHistory);
         setHistoryIndex(0);
+        setItems([]);
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(emptyHistory));
       }
+    } catch (error) {
+      console.error('Error loading saved state:', error);
+      // Reset to empty state if loading fails
+      const emptyHistory = [[]];
+      setHistory(emptyHistory);
+      setHistoryIndex(0);
+      setItems([]);
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(emptyHistory));
     }
-  }, []);
+  }, []); // Empty dependency array to ensure this only runs once on mount
 
-  // Save scene and history to localStorage whenever they change
+  // Save scene to localStorage whenever items change
   useEffect(() => {
     if (items.length > 0) {
       console.log('Saving scene to localStorage:', items);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } else {
+    } else if (items.length === 0 && history.length > 0 && history[historyIndex]?.length === 0) {
+      // Only remove from localStorage if we're intentionally in an empty state
+      console.log('Removing empty scene from localStorage');
       localStorage.removeItem(STORAGE_KEY);
     }
-  }, [items]);
+  }, [items, history, historyIndex]);
 
+  // Save history to localStorage whenever it changes
   useEffect(() => {
     if (history.length > 0) {
+      console.log('Saving history to localStorage:', history);
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-    } else {
-      localStorage.removeItem(HISTORY_STORAGE_KEY);
     }
   }, [history]);
 
@@ -150,6 +153,41 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       setHistoryIndex(0);
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(HISTORY_STORAGE_KEY);
+    }
+  };
+
+  // Handle undo
+  const handleUndo = () => {
+    console.log('Undo triggered', { historyIndex, historyLength: history.length });
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      const previousState = history[newIndex];
+      
+      console.log('Previous state found', { 
+        newIndex, 
+        previousState,
+        historyLength: history.length,
+        currentItems: items
+      });
+      
+      if (previousState) {
+        // Create a deep copy of the previous state
+        const restoredState = JSON.parse(JSON.stringify(previousState));
+        
+        // Update both states atomically
+        setHistoryIndex(newIndex);
+        setItems(restoredState);
+        
+        // Save the restored state to localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(restoredState));
+        
+        console.log('State restored to previous version', {
+          from: items,
+          to: restoredState
+        });
+      }
+    } else {
+      console.log('Cannot undo - no history available');
     }
   };
 
@@ -183,6 +221,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       // Update history index
       setHistoryIndex(trimmedHistory.length - 1);
       
+      // Save the updated history to localStorage
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(trimmedHistory));
+      
       console.log('History updated', { 
         newHistoryLength: trimmedHistory.length,
         newHistoryIndex: trimmedHistory.length - 1,
@@ -191,39 +232,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       
       return trimmedHistory;
     });
-  };
-
-  // Handle undo
-  const handleUndo = () => {
-    console.log('Undo triggered', { historyIndex, historyLength: history.length });
-    
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      const previousState = history[newIndex];
-      
-      console.log('Previous state found', { 
-        newIndex, 
-        previousState,
-        historyLength: history.length,
-        currentItems: items
-      });
-      
-      if (previousState) {
-        // Create a deep copy of the previous state
-        const restoredState = JSON.parse(JSON.stringify(previousState));
-        
-        // Update both states atomically
-        setHistoryIndex(newIndex);
-        setItems(restoredState);
-        
-        console.log('State restored to previous version', {
-          from: items,
-          to: restoredState
-        });
-      }
-    } else {
-      console.log('Cannot undo - no history available');
-    }
   };
 
   // Wrap setItems to automatically add to history
