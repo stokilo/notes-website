@@ -359,7 +359,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       const containerQuestionBoxes = item.props.children || [];
       return (
         <DraggableItem key={item.id} {...commonProps}>
-          <BoxGridContainer width={item.size.width} height={item.size.height}>
+          <BoxGridContainer width={item.size.width} height={item.size.height} containerId={item.id}>
           </BoxGridContainer>
         </DraggableItem>
       );
