@@ -430,9 +430,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       {items.map(renderItem)}
       <DebugPanel />
       <ContextPanel
-        onAddBuilding={() => addItem('building', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-        onAddStreet={() => addItem('street', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-        onAddMap={() => addItem('map', { x: window.innerWidth / 2 - 200, y: window.innerHeight / 2 - 200 })}
+        onAddBox={() => addItem('building', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+        onAddCircle={() => addItem('street', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
         onClearScene={() => {
           if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
             setItems([]);

@@ -2,16 +2,14 @@ import React from 'react';
 import ContextButton from './ContextButton';
 
 interface ContextPanelProps {
-  onAddBuilding: () => void;
-  onAddStreet: () => void;
-  onAddMap: () => void;
+  onAddBox: () => void;
+  onAddCircle: () => void;
   onClearScene: () => void;
 }
 
 const ContextPanel: React.FC<ContextPanelProps> = ({
-  onAddBuilding,
-  onAddStreet,
-  onAddMap,
+  onAddBox,
+  onAddCircle,
   onClearScene,
 }) => {
   return (
@@ -31,12 +29,12 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
       }}
     >
       <ContextButton
-        onClick={onAddBuilding}
+        onClick={onAddBox}
         icon="/box.svg"
         text="Add Building"
       />
       <ContextButton
-        onClick={onAddStreet}
+        onClick={onAddCircle}
         icon="/street.svg"
         text="Add Street"
       />
