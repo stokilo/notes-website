@@ -130,7 +130,7 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
       )}
       {/* Isometric image with randomized colors */}
       <img
-        src="/house.svg"
+        src="/box.svg"
         alt="House"
         draggable="false"
         onDragStart={handleDragStart}

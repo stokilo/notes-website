@@ -55,7 +55,7 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         }}
       >
         <img
-          src="/house.svg"
+          src="/box.svg"
           alt="Add Building"
           style={{
             width: '56px',

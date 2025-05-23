@@ -1,54 +1,31 @@
-<svg width="600" height="500" viewBox="0 0 600 500" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <rect width="100%" height="100%" opacity="0"/>
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer circle -->
+  <circle cx="150" cy="150" r="135"
+          fill="#fff0f6"
+          stroke="#dba8f0"
+          stroke-width="10"/>
 
-  <!-- Grass area -->
-  <polygon points="100,280 500,280 600,380 200,380" fill="#7CFC00"/>
+  <!-- Middle circle -->
+  <circle cx="150" cy="150" r="115"
+          fill="#fbe4f5"
+          stroke="#e2b5e9"
+          stroke-width="6"/>
 
-  <!-- Road base -->
-  <polygon points="180,280 420,280 520,380 280,380" fill="#2f2f2f"/>
+  <!-- Inner circle -->
+  <circle cx="150" cy="150" r="95"
+          fill="#fdf6ff"
+          stroke="#dbb4ef"
+          stroke-width="4"/>
 
-  <!-- Center lane markings -->
-  <line x1="210" y1="300" x2="250" y2="340" stroke="#ffffff" stroke-width="4" stroke-dasharray="12,8"/>
-  <line x1="250" y1="300" x2="290" y2="340" stroke="#ffffff" stroke-width="4" stroke-dasharray="12,8"/>
-  <line x1="290" y1="300" x2="330" y2="340" stroke="#ffffff" stroke-width="4" stroke-dasharray="12,8"/>
+  <!-- Glow filter -->
+  <defs>
+    <filter id="glowCircle" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#f3c4f3" flood-opacity="0.8"/>
+    </filter>
+  </defs>
 
-  <!-- Sidewalk Left -->
-  <polygon points="170,275 180,280 280,380 270,375" fill="#d3d3d3"/>
-  <!-- Curb shadow -->
-  <polygon points="180,280 185,282 285,382 280,380" fill="#a9a9a9"/>
-
-  <!-- Sidewalk Right -->
-  <polygon points="420,280 430,275 330,375 320,380" fill="#d3d3d3"/>
-  <!-- Curb shadow -->
-  <polygon points="420,280 425,282 325,382 320,380" fill="#a9a9a9"/>
-
-  <!-- Manhole cover -->
-  <ellipse cx="350" cy="340" rx="10" ry="6" fill="#555" stroke="#333" stroke-width="1"/>
-
-  <!-- Gutter grates -->
-  <rect x="295" y="350" width="12" height="6" fill="#444"/>
-  <rect x="305" y="360" width="12" height="6" fill="#444"/>
-
-  <!-- Flowers and bushes -->
-  <circle cx="160" cy="360" r="5" fill="#FF69B4"/>
-  <circle cx="170" cy="370" r="5" fill="#FFD700"/>
-  <circle cx="430" cy="360" r="5" fill="#00FA9A"/>
-  <ellipse cx="150" cy="350" rx="10" ry="6" fill="#228B22"/>
-  <ellipse cx="440" cy="350" rx="10" ry="6" fill="#228B22"/>
-
-  <!-- Tree left -->
-  <rect x="120" y="310" width="12" height="35" fill="#8B4513"/>
-  <circle cx="126" cy="295" r="25" fill="#2e8b57"/>
-  <ellipse cx="115" cy="335" rx="20" ry="8" fill="#00000033"/>
-
-  <!-- Tree right -->
-  <rect x="470" y="310" width="12" height="35" fill="#8B4513"/>
-  <circle cx="476" cy="295" r="25" fill="#2e8b57"/>
-  <ellipse cx="465" cy="335" rx="20" ry="8" fill="#00000033"/>
-
-  <!-- Isometric light post -->
-  <rect x="220" y="290" width="4" height="40" fill="#666"/>
-  <polygon points="222,290 230,282 232,284 224,292" fill="#cccccc"/>
-  <circle cx="230" cy="282" r="3" fill="#ffff99" stroke="#999" stroke-width="1"/>
+  <!-- Apply glow to inner circle -->
+  <circle cx="150" cy="150" r="95"
+          fill="none"
+          filter="url(#glowCircle)"/>
 </svg>
