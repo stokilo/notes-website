@@ -48,7 +48,7 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
       onContextMenu={onContextMenu}
     >
       {/* Comment indicator with label */}
-      {comment && !isPlaceholder && (
+      {!isPlaceholder && (
         <div
           style={{
             position: 'absolute',
@@ -72,7 +72,7 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
               boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
             }}
           >
-            {commentLabel || 'Comment'}
+            {commentLabel}
           </div>
         </div>
       )}
