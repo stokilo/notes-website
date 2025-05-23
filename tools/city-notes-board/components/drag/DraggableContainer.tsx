@@ -11,6 +11,13 @@ import RectangleItem from "../items/RectangleItem";
 import CircleItem from "../items/CircleItem";
 import SeparatorItem from '../items/SeparatorItem';
 import ArrowItem from '../items/ArrowItem';
+import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
+
+const STORAGE_KEY = 'draggable-items';
+
+const generateId = () => {
+  return Math.random().toString(36).substr(2, 9);
+};
 
 interface DraggableContainerProps {
   className?: string;
@@ -18,7 +25,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -31,8 +38,6 @@ interface DraggableItem {
   isPlaceholder?: boolean;
   rotation?: number;
 }
-
-const STORAGE_KEY = 'city-notes-scene';
 
 const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' }) => {
   const [items, setItems] = useState<DraggableItem[]>([]);
@@ -343,6 +348,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     });
   };
 
+  const addCodeBlock = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: generateId(),
+      type: 'codeBlock',
+      position,
+      size: { width: 40, height: 40 },
+      props: {
+        code: '// Your code here\nconst example = "Hello, World!";',
+        language: 'typescript',
+      },
+    };
+    setItems([...items, newItem]);
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -361,6 +380,19 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         <DraggableItem key={item.id} {...commonProps}>
           <BoxGridContainer width={item.size.width} height={item.size.height} containerId={item.id}>
           </BoxGridContainer>
+        </DraggableItem>
+      );
+    }
+
+    if (item.type === 'codeBlock') {
+      return (
+        <DraggableItem key={item.id} {...commonProps}>
+          <ShikiCodeBlockItem
+            width={item.size.width}
+            height={item.size.height}
+            code={item.props.code}
+            language={item.props.language}
+          />
         </DraggableItem>
       );
     }
@@ -430,6 +462,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       <ContextPanel
         onAddBox={() => addItem('box', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
         onAddCircle={() => addItem('circle', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+        onAddCodeBlock={() => addCodeBlock({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
         onClearScene={() => {
           if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
             setItems([]);

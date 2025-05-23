@@ -1,15 +1,18 @@
 import React from 'react';
 import ContextButton from './ContextButton';
+import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 
 interface ContextPanelProps {
   onAddBox: () => void;
   onAddCircle: () => void;
+  onAddCodeBlock: () => void;
   onClearScene: () => void;
 }
 
 const ContextPanel: React.FC<ContextPanelProps> = ({
   onAddBox,
   onAddCircle,
+  onAddCodeBlock,
   onClearScene,
 }) => {
   return (
@@ -37,6 +40,12 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         onClick={onAddCircle}
         icon="/street.svg"
         text="Add Street"
+      />
+      <ContextButton
+        onClick={onAddCodeBlock}
+        text="Add Code"
+        backgroundColor="#2d2d2d"
+        textColor="white"
       />
       <ContextButton
         onClick={onClearScene}
