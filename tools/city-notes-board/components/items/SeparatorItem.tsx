@@ -16,6 +16,20 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
   const endCapSize = width * 3;
   const innerPadding = width * 0.5;
   
+  // Vibrant color palette
+  const colorPalette = [
+    '#FF6B6B', // Coral Red
+    '#4ECDC4', // Turquoise
+    '#45B7D1', // Sky Blue
+    '#96CEB4', // Sage Green
+    '#FFEEAD', // Cream Yellow
+    '#D4A5A5', // Dusty Rose
+    '#9B59B6', // Purple
+    '#3498DB', // Blue
+    '#E74C3C', // Red
+    '#2ECC71', // Green
+  ];
+
   // Generate gradient colors based on the base color
   const getGradientColors = (baseColor: string) => {
     return {
@@ -26,23 +40,9 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
     };
   };
 
-  const colors = getGradientColors(color);
-
-  // Function to generate a slightly different color
-  const getVariedColor = (baseColor: string, index: number) => {
-    // Convert hex to RGB
-    const r = parseInt(baseColor.slice(1, 3), 16);
-    const g = parseInt(baseColor.slice(3, 5), 16);
-    const b = parseInt(baseColor.slice(5, 7), 16);
-
-    // Add variation based on index
-    const variation = Math.sin(index * 0.5) * 20; // Creates a wave pattern
-    const newR = Math.min(255, Math.max(0, r + variation));
-    const newG = Math.min(255, Math.max(0, g + variation));
-    const newB = Math.min(255, Math.max(0, b + variation));
-
-    // Convert back to hex
-    return `#${Math.round(newR).toString(16).padStart(2, '0')}${Math.round(newG).toString(16).padStart(2, '0')}${Math.round(newB).toString(16).padStart(2, '0')}`;
+  // Function to generate a color from the palette based on position
+  const getColorFromPalette = (index: number) => {
+    return colorPalette[index % colorPalette.length];
   };
 
   // Generate random segments for the separator
@@ -63,18 +63,18 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
         const gapHeight = Math.floor(Math.random() * (maxGap - minGap + 1)) + minGap;
         currentTop += gapHeight;
       } else {
-        // Create a segment with a varied color
+        // Create a segment with a color from the palette
         segments.push({
           top: currentTop,
           height: segmentHeight,
-          color: getVariedColor(color, segments.length),
+          color: getColorFromPalette(segments.length),
         });
         currentTop += segmentHeight + minGap;
       }
     }
     
     return segments;
-  }, [height, endCapSize, color]);
+  }, [height, endCapSize]);
 
   return (
     <div
@@ -106,7 +106,7 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
             position: 'absolute',
             width: '100%',
             height: '100%',
-            background: `radial-gradient(circle at center, ${colors.light} 0%, transparent 70%)`,
+            background: `radial-gradient(circle at center, ${colorPalette[0]}33 0%, transparent 70%)`,
             filter: 'blur(4px)',
             opacity: 0.7,
           }}
@@ -116,7 +116,7 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
           style={{
             width: '80%',
             height: '80%',
-            background: `radial-gradient(circle at 30% 30%, ${colors.solid}, ${colors.dark})`,
+            background: `radial-gradient(circle at 30% 30%, ${colorPalette[0]}, ${colorPalette[1]})`,
             borderRadius: '50%',
             boxShadow: `
               0 2px 4px rgba(0, 0, 0, 0.1),
@@ -206,7 +206,7 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
             position: 'absolute',
             width: '100%',
             height: '100%',
-            background: `radial-gradient(circle at center, ${colors.light} 0%, transparent 70%)`,
+            background: `radial-gradient(circle at center, ${colorPalette[colorPalette.length - 1]}33 0%, transparent 70%)`,
             filter: 'blur(4px)',
             opacity: 0.7,
           }}
@@ -216,7 +216,7 @@ const SeparatorItem: React.FC<SeparatorItemProps> = ({
           style={{
             width: '80%',
             height: '80%',
-            background: `radial-gradient(circle at 70% 70%, ${colors.solid}, ${colors.dark})`,
+            background: `radial-gradient(circle at 70% 70%, ${colorPalette[colorPalette.length - 1]}, ${colorPalette[colorPalette.length - 2]})`,
             borderRadius: '50%',
             boxShadow: `
               0 2px 4px rgba(0, 0, 0, 0.1),
