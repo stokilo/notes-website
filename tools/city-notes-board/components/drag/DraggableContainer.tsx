@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DraggableItem from './DraggableItem';
-import DebugPanel from './DebugPanel';
-import ContextPanel from './context/ContextPanel';
-import Grass from './Grass';
-import QuestionBox from './QuestionBox';
-import ContextMenu from './menu/ContextMenu';
-import CommentEditor from './CommentEditor';
-import BoxGridContainer from './box/BoxGridContainer';
-import RectangleItem from "./items/RectangleItem";
-import CircleItem from "./items/CircleItem";
+import DebugPanel from '../DebugPanel';
+import ContextPanel from '../context/ContextPanel';
+import Grass from '../Grass';
+import QuestionBox from '../QuestionBox';
+import ContextMenu from '../menu/ContextMenu';
+import CommentEditor from '../CommentEditor';
+import BoxGridContainer from '../box/BoxGridContainer';
+import RectangleItem from "../items/RectangleItem";
+import CircleItem from "../items/CircleItem";
 
 interface DraggableContainerProps {
   className?: string;

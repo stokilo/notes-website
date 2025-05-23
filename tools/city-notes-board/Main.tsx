@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
-import DraggableContainer from './components/DraggableContainer';
+import DraggableContainer from './components/drag/DraggableContainer';
 
 const Main: React.FC = () => {
   return (
