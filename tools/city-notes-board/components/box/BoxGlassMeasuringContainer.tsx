@@ -143,30 +143,61 @@ const BoxGlassMeasuringContainer: React.FC<BoxGlassMeasuringContainerProps> = ({
           height: beakerHeight - 25,
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          gap: '10px',
+          alignItems: 'flex-start',
+          gap: '5px',
           overflowY: 'auto',
           zIndex: 1,
           pointerEvents: 'auto',
+          padding: '5px',
         }}
       >
+        {/* Placeholder grid */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, 25px)',
+            gridAutoRows: '25px',
+            gap: '5px',
+            padding: '5px',
+            pointerEvents: 'none',
+            alignContent: 'end',
+          }}
+        >
+          {Array.from({ length: 16 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                border: '1px dashed rgba(0,0,0,0.1)',
+                borderRadius: '3px',
+                backgroundColor: 'rgba(0,0,0,0.02)',
+              }}
+            />
+          ))}
+        </div>
         {React.Children.map(children, (child, idx) => (
           <motion.div
             key={idx}
-            initial={{ opacity: 0, y: -50 }}
+            initial={{ opacity: 0, y: -200 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ 
               delay: idx * 0.1,
               type: "spring",
-              damping: 12,
-              stiffness: 80,
-              duration: 1
+              damping: 15,
+              stiffness: 100,
+              duration: 1.5
             }}
             style={{ 
-              width: '100%', 
+              width: 'auto', 
               display: 'flex', 
-              justifyContent: 'center',
-              position: 'relative'
+              justifyContent: 'flex-start',
+              position: 'relative',
+              marginBottom: '5px',
+              zIndex: 2,
             }}
           >
             {child}

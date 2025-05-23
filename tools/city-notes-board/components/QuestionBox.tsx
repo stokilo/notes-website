@@ -10,6 +10,7 @@ interface QuestionBoxProps {
   onContextMenu?: (e: React.MouseEvent) => void;
   isNew?: boolean;
   finalPosition?: { x: number; y: number };
+  isPlaceholder?: boolean;
 }
 
 const QuestionBox: React.FC<QuestionBoxProps> = ({
@@ -21,16 +22,18 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
   onContextMenu,
   isNew,
   finalPosition,
+  isPlaceholder = false,
 }) => {
   const [boxColor, setBoxColor] = useState('#FFD700');
 
   useEffect(() => {
-    // Generate random colors for the box
-    const hue = Math.floor(Math.random() * 360);
-    const mainColor = `hsl(${hue}, 70%, 85%)`; // Lighter, more pastel color
-    
-    setBoxColor(mainColor);
-  }, []);
+    if (!isPlaceholder) {
+      // Generate random colors for the box
+      const hue = Math.floor(Math.random() * 360);
+      const mainColor = `hsl(${hue}, 70%, 85%)`; // Lighter, more pastel color
+      setBoxColor(mainColor);
+    }
+  }, [isPlaceholder]);
 
   return (
     <div 
@@ -38,13 +41,14 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
         position: 'relative', 
         width, 
         height,
-        marginTop: comment ? '25px' : '0' // Add margin when there's a comment to make space for the label
+        marginTop: comment ? '25px' : '0',
+        opacity: isPlaceholder ? 0.3 : 1,
       }} 
       onClick={onClick} 
       onContextMenu={onContextMenu}
     >
       {/* Comment indicator with label */}
-      {comment && (
+      {comment && !isPlaceholder && (
         <div
           style={{
             position: 'absolute',
@@ -52,7 +56,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1001,
-            pointerEvents: 'none', // Prevent the label from interfering with clicks
+            pointerEvents: 'none',
           }}
         >
           <div
@@ -66,7 +70,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
               maxWidth: '200px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)', // Add shadow for better visibility
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             }}
           >
             {commentLabel || 'Comment'}
@@ -77,7 +81,7 @@ const QuestionBox: React.FC<QuestionBoxProps> = ({
       <AnimatedColoredBox 
         width={width} 
         height={height} 
-        color={boxColor}
+        color={isPlaceholder ? '#e0e0e0' : boxColor}
         isNew={isNew}
         finalPosition={finalPosition}
       />

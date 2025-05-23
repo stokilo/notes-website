@@ -26,6 +26,7 @@ interface DraggableItem {
   parentId?: string;
   finalPosition?: { x: number; y: number };
   isNew?: boolean;
+  isPlaceholder?: boolean;
 }
 
 const STORAGE_KEY = 'city-notes-scene';
@@ -174,18 +175,30 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     if (existingContainer) {
       // Calculate final position for the new question box
       const existingBoxes = existingContainer.props.children || [];
+      const boxWidth = 20; // Width of each question box
       const boxHeight = 20; // Height of each question box
-      const boxSpacing = 10; // Spacing between boxes
-      const containerPadding = 15; // Padding from container edges
-      const finalY = containerPadding + (existingBoxes.length * (boxHeight + boxSpacing));
+      const boxSpacing = 5; // Spacing between boxes
+      const containerPadding = 5; // Padding from container edges
+      const containerWidth = existingContainer.size.width - 25; // Available width for boxes
+      
+      // Calculate how many boxes can fit in a row
+      const boxesPerRow = Math.floor((containerWidth - containerPadding * 2) / (boxWidth + boxSpacing));
+      
+      // Calculate row and column for the new box
+      const row = Math.floor(existingBoxes.length / boxesPerRow);
+      const col = existingBoxes.length % boxesPerRow;
+      
+      // Calculate final position
+      const finalX = containerPadding + col * (boxWidth + boxSpacing);
+      const finalY = containerPadding + row * (boxHeight + boxSpacing);
 
-      // Add to existing container's children, starting at the top
+      // Add to existing container's children
       const newQuestionBox = {
         id: `questionBox-${Date.now()}`,
         type: 'questionBox',
         position: { x: 0, y: containerPadding }, // Start at top
-        finalPosition: { x: 0, y: finalY }, // Store final position for animation
-        size: { width: 20, height: 20 },
+        finalPosition: { x: finalX, y: finalY }, // Store final position for animation
+        size: { width: boxWidth, height: boxHeight },
         props: {},
         label: undefined,
         parentId: existingContainer.id,
@@ -211,8 +224,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       const initialQuestionBox = {
         id: `questionBox-${Date.now()}`,
         type: 'questionBox',
-        position: { x: 0, y: 15 }, // Start with padding from top
-        finalPosition: { x: 0, y: 15 }, // Same as position for initial box
+        position: { x: 0, y: 5 }, // Start with padding from top
+        finalPosition: { x: 5, y: 5 }, // Same as position for initial box
         size: { width: 20, height: 20 },
         props: {},
         label: undefined,
@@ -226,7 +239,30 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         position,
         size: { width: 200, height: 400 },
         props: {
-          children: [initialQuestionBox]
+          children: [
+            // Add placeholder boxes at the bottom first
+            ...Array.from({ length: 3 }).map((_, i) => ({
+              id: `placeholder-${Date.now()}-${i}`,
+              type: 'questionBox',
+              position: { x: 0, y: 5 },
+              finalPosition: { 
+                x: 5, 
+                y: 400 - 25 - (i * 25) // Position from bottom up
+              },
+              size: { width: 20, height: 20 },
+              props: {},
+              label: undefined,
+              parentId: containerId,
+              isNew: true,
+              isPlaceholder: true
+            })),
+            // Add the initial active box at the top
+            {
+              ...initialQuestionBox,
+              position: { x: 0, y: 5 },
+              finalPosition: { x: 5, y: 5 },
+            }
+          ]
         },
       };
 
