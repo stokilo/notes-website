@@ -16,7 +16,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'building' | 'street' | 'grass' | 'questionBox' | 'questionBoxContainer' | 'map';
+  type: 'box' | 'circle' | 'questionBox' | 'questionBoxContainer';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -149,17 +149,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
-  const addItem = (type: 'building' | 'street' | 'grass' | 'map', position: { x: number; y: number }) => {
+  const addItem = (type: 'box' | 'circle' , position: { x: number; y: number }) => {
     const newItem: DraggableItem = {
       id: `${type}-${Date.now()}`,
       type,
       position,
-      size: type === 'map' 
-        ? { width: 400, height: 400 }
-        : { width: 100, height: 100 },
-      props: type === 'building' 
+      size: { width: 100, height: 100 },
+      props: type === 'box'
         ? { color: '#4a90e2', size: 100, height: 80 } 
-        : type === 'street'
+        : type === 'circle'
         ? { width: 100, length: 200 }
         : { width: 100, height: 100 },
       label: undefined
@@ -369,7 +367,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
     return (
       <DraggableItem key={item.id} {...commonProps}>
-        {item.type === 'building' ? (
+        {item.type === 'box' ? (
           <IsometricBuilding 
             {...item.props} 
             width={item.size.width}
@@ -377,7 +375,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             label={item.label} 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
-        ) : item.type === 'street' ? (
+        ) : item.type === 'circle' ? (
           <IsometricStreet 
             {...item.props} 
             width={item.size.width}
@@ -422,8 +420,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       {items.map(renderItem)}
       <DebugPanel />
       <ContextPanel
-        onAddBox={() => addItem('building', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-        onAddCircle={() => addItem('street', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+        onAddBox={() => addItem('box', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+        onAddCircle={() => addItem('circle', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
         onClearScene={() => {
           if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
             setItems([]);
