@@ -2,15 +2,18 @@ import React from 'react';
 import ContextButton from './ContextButton';
 import BoxSetItem from '../items/BoxSetItem';
 import SeparatorItem from '../items/SeparatorItem';
+import ArrowItem from '../items/ArrowItem';
 
 interface TopContextPanelProps {
   onAddSingleBoxSet: () => void;
   onAddSeparator: () => void;
+  onAddArrow: () => void;
 }
 
 const TopContextPanel: React.FC<TopContextPanelProps> = ({
   onAddSingleBoxSet,
   onAddSeparator,
+  onAddArrow,
 }) => {
   return (
     <div
@@ -76,6 +79,30 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
         }}
       >
         <SeparatorItem width={2} height={24} />
+      </div>
+      <div
+        onClick={onAddArrow}
+        style={{
+          cursor: 'pointer',
+          padding: '8px',
+          borderRadius: '8px',
+          backgroundColor: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          transition: 'all 0.2s ease',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+        }}
+      >
+        <ArrowItem width={48} height={16} segments={3} />
       </div>
     </div>
   );

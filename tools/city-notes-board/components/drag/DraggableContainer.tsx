@@ -10,6 +10,7 @@ import BoxGridContainer from '../box/BoxGridContainer';
 import RectangleItem from "../items/RectangleItem";
 import CircleItem from "../items/CircleItem";
 import SeparatorItem from '../items/SeparatorItem';
+import ArrowItem from '../items/ArrowItem';
 
 interface DraggableContainerProps {
   className?: string;
@@ -17,7 +18,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -262,6 +263,17 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItems(prev => [...prev, newItem]);
   };
 
+  const addArrow = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: `arrow-${Date.now()}`,
+      type: 'arrow',
+      position,
+      size: { width: 120, height: 40 },
+      props: { segments: 3 },
+    };
+    setItems(prev => [...prev, newItem]);
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -315,6 +327,12 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             height={item.size.height}
             color={item.props.color}
           />
+        ) : item.type === 'arrow' ? (
+          <ArrowItem
+            width={item.size.width}
+            height={item.size.height}
+            segments={item.props.segments}
+          />
         ) : (
           <span>nothing here</span>
         )}
@@ -354,6 +372,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       <TopContextPanel
         onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
         onAddSeparator={() => addSeparator({ x: window.innerWidth / 2 - 1, y: window.innerHeight / 2 - 50 })}
+        onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
       />
       {contextMenu.show && (
         <ContextMenu
