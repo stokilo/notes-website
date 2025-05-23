@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import DraggableItem from './DraggableItem';
 import DebugPanel from './DebugPanel';
 import ContextPanel from './context/ContextPanel';
-import IsometricBuilding from './IsometricBuilding';
-import IsometricStreet from './IsometricStreet';
+import RectangleItem from './items/RectangleItem';
+import CircleItem from './items/CircleItem';
 import Grass from './Grass';
 import QuestionBox from './QuestionBox';
 import ContextMenu from './menu/ContextMenu';
@@ -368,7 +368,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     return (
       <DraggableItem key={item.id} {...commonProps}>
         {item.type === 'box' ? (
-          <IsometricBuilding 
+          <RectangleItem
             {...item.props} 
             width={item.size.width}
             height={item.size.height}
@@ -376,7 +376,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
         ) : item.type === 'circle' ? (
-          <IsometricStreet 
+          <CircleItem
             {...item.props} 
             width={item.size.width}
             height={item.size.height}

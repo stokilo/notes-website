@@ -1,19 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-interface IsometricBuildingProps {
+interface IsometricStreetProps {
+  width?: number;
+  length?: number;
+  color?: string;
+  hasSidewalk?: boolean;
+  hasMarkings?: boolean;
   label?: string;
   onLabelChange?: (newLabel: string) => void;
-  size?: number;
-  width?: number;
-  height?: number;
 }
 
-const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
+const CircleItem: React.FC<IsometricStreetProps> = ({
+  width = 100,
+  length = 200,
+  color = '#4a4a4a',
+  hasSidewalk = true,
+  hasMarkings = true,
   label,
   onLabelChange,
-  size = 50,
-  width,
-  height,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label || '');
@@ -21,7 +25,6 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
   const [saturate, setSaturate] = useState(100);
   const [brightness, setBrightness] = useState(100);
   const inputRef = useRef<HTMLInputElement>(null);
-  const actualSize = width || size;
 
   useEffect(() => {
     // Randomize colors on component mount
@@ -63,7 +66,7 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
   };
 
   return (
-    <div style={{ position: 'relative', width: actualSize, height: actualSize }}>
+    <div style={{ position: 'relative', width, height: width }}>
       {/* Label */}
       {(label !== undefined || isEditing) && (
         <div
@@ -128,15 +131,15 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
           )}
         </div>
       )}
-      {/* Isometric image with randomized colors */}
+      {/* Street image with randomized colors */}
       <img
-        src="/box.svg"
-        alt="House"
+        src="/street.svg"
+        alt="Street"
         draggable="false"
         onDragStart={handleDragStart}
         style={{
-          width: actualSize,
-          height: actualSize,
+          width: '100%',
+          height: '100%',
           display: 'block',
           userSelect: 'none',
           WebkitUserSelect: 'none',
@@ -150,4 +153,4 @@ const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
   );
 };
 
-export default IsometricBuilding; 
+export default CircleItem;

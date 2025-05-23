@@ -1,23 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-interface IsometricStreetProps {
-  width?: number;
-  length?: number;
-  color?: string;
-  hasSidewalk?: boolean;
-  hasMarkings?: boolean;
+interface IsometricBuildingProps {
   label?: string;
   onLabelChange?: (newLabel: string) => void;
+  size?: number;
+  width?: number;
+  height?: number;
 }
 
-const IsometricStreet: React.FC<IsometricStreetProps> = ({
-  width = 100,
-  length = 200,
-  color = '#4a4a4a',
-  hasSidewalk = true,
-  hasMarkings = true,
+const RectangleItem: React.FC<IsometricBuildingProps> = ({
   label,
   onLabelChange,
+  size = 50,
+  width,
+  height,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label || '');
@@ -25,6 +21,7 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
   const [saturate, setSaturate] = useState(100);
   const [brightness, setBrightness] = useState(100);
   const inputRef = useRef<HTMLInputElement>(null);
+  const actualSize = width || size;
 
   useEffect(() => {
     // Randomize colors on component mount
@@ -66,7 +63,7 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
   };
 
   return (
-    <div style={{ position: 'relative', width, height: width }}>
+    <div style={{ position: 'relative', width: actualSize, height: actualSize }}>
       {/* Label */}
       {(label !== undefined || isEditing) && (
         <div
@@ -131,15 +128,15 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
           )}
         </div>
       )}
-      {/* Street image with randomized colors */}
+      {/* Isometric image with randomized colors */}
       <img
-        src="/street.svg"
-        alt="Street"
+        src="/box.svg"
+        alt="House"
         draggable="false"
         onDragStart={handleDragStart}
         style={{
-          width: '100%',
-          height: '100%',
+          width: actualSize,
+          height: actualSize,
           display: 'block',
           userSelect: 'none',
           WebkitUserSelect: 'none',
@@ -153,4 +150,4 @@ const IsometricStreet: React.FC<IsometricStreetProps> = ({
   );
 };
 
-export default IsometricStreet; 
+export default RectangleItem;
