@@ -12,6 +12,7 @@ import CircleItem from "../items/CircleItem";
 import SeparatorItem from '../items/SeparatorItem';
 import ArrowItem from '../items/ArrowItem';
 import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
+import CirclesPathItem from '../items/CirclesPathItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -26,7 +27,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -38,6 +39,8 @@ interface DraggableItem {
   isNew?: boolean;
   isPlaceholder?: boolean;
   rotation?: number;
+  attachedTo?: string;
+  circlePositions?: Array<{ x: number; y: number }>;
 }
 
 const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' }) => {
@@ -613,6 +616,71 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItemsWithHistory([...items, newItem]);
   };
 
+  const addCirclesPath = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: `circlesPath-${Date.now()}`,
+      type: 'circlesPath',
+      position,
+      size: { width: 200, height: 100 },
+      props: { 
+        isAnimating: true
+      },
+      circlePositions: [
+        { x: 40, y: 50 },
+        { x: 100, y: 20 },
+        { x: 160, y: 50 }
+      ]
+    };
+    setItemsWithHistory(prev => [...prev, newItem]);
+  };
+
+  const handleToggleCirclesPathAnimation = (itemId: string) => {
+    setItemsWithHistory(prevItems => {
+      const updatedItems = prevItems.map(item =>
+        item.id === itemId && item.type === 'circlesPath'
+          ? {
+              ...item,
+              props: {
+                ...item.props,
+                isAnimating: !item.props.isAnimating
+              }
+            }
+          : item
+      );
+      return updatedItems;
+    });
+  };
+
+  const handleCirclesPathPositionChange = (id: string, newPosition: { x: number; y: number }) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === id
+          ? { ...item, position: newPosition }
+          : item
+      )
+    );
+  };
+
+  const handleCirclesPathCirclePositionsChange = (id: string, newPositions: Array<{ x: number; y: number }>) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === id
+          ? { ...item, circlePositions: newPositions }
+          : item
+      )
+    );
+  };
+
+  const handleAttachCirclesPath = (circlesPathId: string, targetId: string) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === circlesPathId
+          ? { ...item, attachedTo: targetId }
+          : item
+      )
+    );
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -652,6 +720,22 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             onClosePreview={() => setCodePreviewItemId(null)}
           />
         </DraggableItem>
+      );
+    }
+
+    if (item.type === 'circlesPath') {
+      return (
+        <CirclesPathItem
+          key={item.id}
+          width={item.size.width}
+          height={item.size.height}
+          isAnimating={item.props.isAnimating}
+          position={item.position}
+          onPositionChange={(pos) => handleCirclesPathPositionChange(item.id, pos)}
+          onCirclePositionChange={(positions) => handleCirclesPathCirclePositionsChange(item.id, positions)}
+          initialCirclePositions={item.circlePositions}
+          attachedTo={item.attachedTo}
+        />
       );
     }
 
@@ -742,6 +826,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
           onAddSeparator={() => addSeparator({ x: window.innerWidth / 2 - 1, y: window.innerHeight / 2 - 50 })}
           onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
+          onAddCirclesPath={() => addCirclesPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
         />
         <div
           style={{
@@ -898,6 +983,26 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                     setCodePreviewItemId(contextMenu.itemId);
                     setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
                   },
+                },
+                ...baseItems,
+              ];
+            }
+
+            if (item.type === 'circlesPath') {
+              return [
+                {
+                  label: item.props.isAnimating ? 'Stop Animation' : 'Start Animation',
+                  onClick: () => handleToggleCirclesPathAnimation(contextMenu.itemId),
+                },
+                {
+                  label: 'Attach to...',
+                  onClick: () => {}, // Add empty onClick to satisfy MenuItem type
+                  submenu: items
+                    .filter(i => i.id !== contextMenu.itemId && i.type !== 'circlesPath')
+                    .map(targetItem => ({
+                      label: `Attach to ${targetItem.type} ${targetItem.id}`,
+                      onClick: () => handleAttachCirclesPath(contextMenu.itemId, targetItem.id),
+                    })),
                 },
                 ...baseItems,
               ];
