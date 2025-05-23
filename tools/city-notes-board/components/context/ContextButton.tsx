@@ -57,8 +57,8 @@ const ContextButton: React.FC<ContextButtonProps> = ({
           src={icon}
           alt={text || 'Button icon'}
           style={{
-            width: '56px',
-            height: '56px',
+            width: '32px',
+            height: '32px',
           }}
         />
       ) : (

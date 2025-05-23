@@ -43,12 +43,14 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
       />
       <ContextButton
         onClick={onAddCodeBlock}
+        icon="/code.svg"
         text="Add Code"
         backgroundColor="#2d2d2d"
         textColor="white"
       />
       <ContextButton
         onClick={onClearScene}
+        icon="/trash.svg"
         text="Clear"
         backgroundColor="#ff4444"
         textColor="white"
