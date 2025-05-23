@@ -129,7 +129,14 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
           e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
         }}
       >
-        <CirclesPathItem width={48} height={24} isAnimating={true} />
+        <div style={{ width: 48, height: 24, position: 'relative' }}>
+          <CirclesPathItem 
+            width={48} 
+            height={24} 
+            isAnimating={true}
+            position={{ x: 0, y: 0 }}
+          />
+        </div>
       </div>
     </div>
   );
