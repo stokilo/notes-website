@@ -9,6 +9,7 @@ import QuestionBox from './QuestionBox';
 import ContextMenu from './ContextMenu';
 import CommentEditor from './CommentEditor';
 import BoxGlassMeasuringContainer from './box/BoxGlassMeasuringContainer';
+import MapComponent from './map/MapComponent';
 
 interface DraggableContainerProps {
   className?: string;
@@ -16,7 +17,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'building' | 'street' | 'grass' | 'questionBox' | 'questionBoxContainer';
+  type: 'building' | 'street' | 'grass' | 'questionBox' | 'questionBoxContainer' | 'map';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -149,12 +150,14 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
-  const addItem = (type: 'building' | 'street' | 'grass', position: { x: number; y: number }) => {
+  const addItem = (type: 'building' | 'street' | 'grass' | 'map', position: { x: number; y: number }) => {
     const newItem: DraggableItem = {
       id: `${type}-${Date.now()}`,
       type,
       position,
-      size: { width: 100, height: 100 },
+      size: type === 'map' 
+        ? { width: 400, height: 400 }
+        : { width: 100, height: 100 },
       props: type === 'building' 
         ? { color: '#4a90e2', size: 100, height: 80 } 
         : type === 'street'
@@ -413,6 +416,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             comment={item.comment}
             commentLabel={item.commentLabel}
           />
+        ) : item.type === 'map' ? (
+          <MapComponent
+            width={item.size.width}
+            height={item.size.height}
+            label={item.label}
+            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
+          />
         ) : (
           <Grass
             {...item.props}
@@ -445,6 +455,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       <ContextPanel
         onAddBuilding={() => addItem('building', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
         onAddStreet={() => addItem('street', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
+        onAddMap={() => addItem('map', { x: window.innerWidth / 2 - 200, y: window.innerHeight / 2 - 200 })}
         onClearScene={() => {
           if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
             setItems([]);
