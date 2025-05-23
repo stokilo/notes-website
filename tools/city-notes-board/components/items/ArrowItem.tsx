@@ -6,6 +6,7 @@ interface ArrowItemProps {
   height?: number;
   segments?: number;
   segmentGap?: number;
+  rotation?: number; // Rotation in degrees
 }
 
 const ArrowItem: React.FC<ArrowItemProps> = ({
@@ -13,6 +14,7 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
   height = 40,
   segments = 3,
   segmentGap = 4,
+  rotation = 0,
 }) => {
   const [colors, setColors] = useState<string[]>([]);
 
@@ -31,13 +33,15 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
   const arrowHeadSize = height * 0.8;
 
   return (
-    <div
+    <motion.div
       style={{
         width,
         height,
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
+        transformOrigin: 'center',
+        transform: `rotate(${rotation}deg)`,
       }}
     >
       {/* Arrow segments */}
@@ -149,7 +153,7 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
           />
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
 

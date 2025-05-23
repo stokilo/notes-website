@@ -29,6 +29,7 @@ interface DraggableItem {
   finalPosition?: { x: number; y: number };
   isNew?: boolean;
   isPlaceholder?: boolean;
+  rotation?: number;
 }
 
 const STORAGE_KEY = 'city-notes-scene';
@@ -128,6 +129,34 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         e.preventDefault();
         handlePaste();
       }
+      // Add rotation keyboard shortcuts
+      else if (selectedItemId) {
+        const selectedItem = items.find(item => item.id === selectedItemId);
+        if (selectedItem?.type === 'arrow') {
+          switch (e.key) {
+            case 'r':
+              if (e.shiftKey) {
+                // Shift + R: Rotate 90° counter-clockwise
+                handleRotateArrow(selectedItemId, -90);
+              } else {
+                // R: Rotate 90° clockwise
+                handleRotateArrow(selectedItemId, 90);
+              }
+              e.preventDefault();
+              break;
+            case 'e':
+              if (e.shiftKey) {
+                // Shift + E: Rotate 45° counter-clockwise
+                handleRotateArrow(selectedItemId, -45);
+              } else {
+                // E: Rotate 45° clockwise
+                handleRotateArrow(selectedItemId, 45);
+              }
+              e.preventDefault();
+              break;
+          }
+        }
+      }
     };
 
     // Add event listener to the document instead of window
@@ -214,6 +243,22 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     });
   };
 
+  const handleRotateArrow = (itemId: string, degrees: number) => {
+    setItems(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId && item.type === 'arrow'
+          ? {
+              ...item,
+              props: {
+                ...item.props,
+                rotation: (item.props.rotation || 0) + degrees
+              }
+            }
+          : item
+      )
+    );
+  };
+
   const handleClick = (e: React.MouseEvent) => {
     // Only clear selection if clicking directly on the container
     if (e.target === containerRef.current) {
@@ -269,7 +314,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       type: 'arrow',
       position,
       size: { width: 120, height: 40 },
-      props: { segments: 3 },
+      props: { 
+        segments: 3,
+        rotation: 0
+      },
     };
     setItems(prev => [...prev, newItem]);
   };
@@ -332,6 +380,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             width={item.size.width}
             height={item.size.height}
             segments={item.props.segments}
+            rotation={item.props.rotation}
           />
         ) : (
           <span>nothing here</span>
@@ -395,6 +444,29 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 onClick: () => handleDeleteItem(contextMenu.itemId),
               },
             ];
+
+            // Add rotation controls for arrow items
+            if (item.type === 'arrow') {
+              return [
+                {
+                  label: 'Rotate 90° Clockwise',
+                  onClick: () => handleRotateArrow(contextMenu.itemId, 90),
+                },
+                {
+                  label: 'Rotate 90° Counter-clockwise',
+                  onClick: () => handleRotateArrow(contextMenu.itemId, -90),
+                },
+                {
+                  label: 'Rotate 45° Clockwise',
+                  onClick: () => handleRotateArrow(contextMenu.itemId, 45),
+                },
+                {
+                  label: 'Rotate 45° Counter-clockwise',
+                  onClick: () => handleRotateArrow(contextMenu.itemId, -45),
+                },
+                ...baseItems,
+              ];
+            }
 
             const containerWithboxSet = items.find(container =>
               container.type === 'boxSetContainer' && 
