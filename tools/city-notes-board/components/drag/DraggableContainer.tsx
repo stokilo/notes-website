@@ -497,17 +497,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                   handleLabelChange(contextMenu.itemId, '');
                 },
               },
-              {
-                label: 'Add Box Set',
-                onClick: () => {
-                  const offset = 50;
-                  const newPosition = {
-                    x: item.position.x + item.size.width + offset,
-                    y: item.position.y,
-                  };
-                  addBoxSet(newPosition);
-                },
-              },
               ...baseItems,
             ];
           })()}
