@@ -17,18 +17,8 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label || '');
-  const [hueRotate, setHueRotate] = useState(0);
-  const [saturate, setSaturate] = useState(100);
-  const [brightness, setBrightness] = useState(100);
   const inputRef = useRef<HTMLInputElement>(null);
   const actualSize = width || size;
-
-  useEffect(() => {
-    // Randomize colors on component mount
-    setHueRotate(Math.random() * 360); // Random hue rotation (0-360)
-    setSaturate(80 + Math.random() * 40); // Random saturation (80-120%)
-    setBrightness(90 + Math.random() * 20); // Random brightness (90-110%)
-  }, []);
 
   useEffect(() => {
     if (label === '') {
@@ -146,7 +136,7 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
           MozUserSelect: 'none',
           msUserSelect: 'none',
           pointerEvents: 'none',
-          filter: `hue-rotate(${hueRotate}deg) saturate(${saturate}%) brightness(${brightness}%)`,
+          filter: 'hue-rotate(0deg) saturate(100%) brightness(100%)',
         }}
       />
     </div>
