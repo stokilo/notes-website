@@ -18,7 +18,8 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label || '');
   const inputRef = useRef<HTMLInputElement>(null);
-  const actualSize = width || size;
+  const actualWidth = width || size;
+  const actualHeight = height || size;
 
   useEffect(() => {
     if (label === '') {
@@ -53,7 +54,7 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
   };
 
   return (
-    <div style={{ position: 'relative', width: actualSize, height: actualSize }}>
+    <div style={{ position: 'relative', width: actualWidth, height: actualHeight }}>
       {/* Label */}
       {(label !== undefined || isEditing) && (
         <div
@@ -64,11 +65,11 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
             transform: 'translateX(-50%)',
             backgroundColor: '#4a90e2',
             color: 'white',
-            padding: `${Math.max(1, Math.floor(actualSize * 0.1))}px ${Math.max(2, Math.floor(actualSize * 0.1))}px`,
+            padding: `${Math.max(1, Math.floor(actualWidth * 0.1))}px ${Math.max(2, Math.floor(actualWidth * 0.1))}px`,
             borderRadius: '2px',
-            fontSize: `${Math.max(8, Math.floor(actualSize * 0.1))}px`,
+            fontSize: `${Math.max(8, Math.floor(actualWidth * 0.1))}px`,
             whiteSpace: 'nowrap',
-            maxWidth: `${actualSize * 3}px`,
+            maxWidth: `${actualWidth * 3}px`,
             textAlign: 'center',
             boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
             zIndex: 1000,
@@ -128,8 +129,8 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
         draggable="false"
         onDragStart={handleDragStart}
         style={{
-          width: actualSize,
-          height: actualSize,
+          width: actualWidth,
+          height: actualHeight,
           display: 'block',
           userSelect: 'none',
           WebkitUserSelect: 'none',
