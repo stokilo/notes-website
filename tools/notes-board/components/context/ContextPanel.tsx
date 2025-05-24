@@ -38,7 +38,7 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
       />
       <ContextButton
         onClick={onAddCircle}
-        icon="/street.svg"
+        icon="/circle.svg"
         text="Add Street"
       />
       <ContextButton

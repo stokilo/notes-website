@@ -126,7 +126,7 @@ const CircleItem: React.FC<CircleItemProps> = ({
       )}
       {/* Street image with randomized colors */}
       <img
-        src="/street.svg"
+        src="/circle.svg"
         alt="Street"
         draggable="false"
         onDragStart={handleDragStart}
