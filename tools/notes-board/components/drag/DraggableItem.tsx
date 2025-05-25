@@ -269,6 +269,11 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         transform: 'translate3d(0, 0, 0)',
         outline: isSelected ? '2px solid #4a90e2' : 'none',
         outlineOffset: '2px',
+        ...(disableAnimations ? {
+          transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+          width: size.width,
+          height: size.height,
+        } : {})
       }}
       onMouseDown={handleMouseDown}
       onContextMenu={onContextMenu}

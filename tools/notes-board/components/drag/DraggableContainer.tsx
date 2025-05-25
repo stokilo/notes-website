@@ -708,6 +708,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
       isSelected: item.id === selectedItemId,
       zoom: zoom,
+      disableAnimations: true,
     };
 
     if (item.type === 'boxSetContainer') {
@@ -769,7 +770,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
 
     return (
-      <DraggableItem disableAnimations={true} key={item.id} {...commonProps}>
+      <DraggableItem  key={item.id} {...commonProps}>
         {item.type === 'box' ? (
           <RectangleItem
             {...item.props} 
