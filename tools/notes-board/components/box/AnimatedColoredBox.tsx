@@ -22,41 +22,31 @@ const AnimatedColoredBox: React.FC<AnimatedColoredBoxProps> = ({
   return (
     <div
       style={{
-        position: 'absolute',
-        left: finalPosition?.x || 0,
-        top: finalPosition?.y || 0,
         width,
         height,
+        backgroundColor: color,
+        border: `1px solid ${color}20`,
+        borderRadius: '3px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: 'pointer',
         ...style,
       }}
     >
       <div
         style={{
-          width,
-          height,
-          backgroundColor: color,
-          border: `1px solid ${color}20`,
-          borderRadius: '3px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)',
+          width: '100%',
+          height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          cursor: 'pointer',
         }}
       >
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   );
