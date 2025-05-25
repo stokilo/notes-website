@@ -299,6 +299,12 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         const allItemIds = items.map(item => item.id);
         setSelectedItemIds(allItemIds);
       }
+      // Add Escape key handler to deselect all items
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        setSelectedItemIds([]);
+        setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+      }
       // Add zoom keyboard shortcuts
       else if ((e.metaKey || e.ctrlKey) && e.key === '=') {
         e.preventDefault();
