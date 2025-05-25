@@ -930,7 +930,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       id: `markdown-${Date.now()}`,
       type: 'markdown',
       position,
-      size: { width: 40, height: 40 },
+      size: { width: 300, height: 200 },
       props: {
         initialContent: '',
       },
@@ -1062,6 +1062,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             width={item.size.width}
             height={item.size.height}
             initialContent={item.props.initialContent}
+            showPreview={false}
+            onClosePreview={() => {}}
           />
         ) : (
           <span>nothing here</span>

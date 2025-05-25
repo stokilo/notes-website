@@ -18,33 +18,41 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
 }) => {
   const [content, setContent] = useState(initialContent);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        setIsDialogOpen(false);
         onClosePreview?.();
       }
     };
 
-    if (showPreview) {
+    if (isDialogOpen) {
       document.addEventListener('keydown', handleEscape);
       return () => document.removeEventListener('keydown', handleEscape);
     }
-  }, [showPreview, onClosePreview]);
+  }, [isDialogOpen, onClosePreview]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsDialogOpen(false);
         onClosePreview?.();
       }
     };
 
-    if (showPreview) {
+    if (isDialogOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showPreview, onClosePreview]);
+  }, [isDialogOpen, onClosePreview]);
+
+  const handleIconClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event from bubbling up to DraggableItem
+    setIsDialogOpen(true);
+  };
 
   return (
     <div 
@@ -57,6 +65,7 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
     >
       {/* Markdown icon */}
       <div
+        onClick={handleIconClick}
         style={{
           width: '100%',
           height: '100%',
@@ -65,6 +74,7 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
           justifyContent: 'center',
           backgroundColor: 'transparent',
           borderRadius: '4px',
+          cursor: 'pointer',
         }}
       >
         <svg
@@ -85,7 +95,7 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
       </div>
 
       {/* Markdown editor dialog */}
-      {showPreview && (
+      {isDialogOpen && (
         <div
           style={{
             position: 'fixed',
@@ -146,7 +156,7 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
               </button>
             </div>
             <button
-              onClick={onClosePreview}
+              onClick={() => setIsDialogOpen(false)}
               style={{
                 background: '#3d3d3d',
                 border: 'none',
