@@ -24,6 +24,7 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartPos = useRef({ x: 0, y: 0 });
   const resizeStartSize = useRef({ width: 0, height: 0 });
+  const labelInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -35,6 +36,12 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
+
+  useEffect(() => {
+    if (labelInputRef.current) {
+      labelInputRef.current.focus();
+    }
+  }, []);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -166,6 +173,7 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
               onChange={(e) => setLabel(e.target.value)}
               onKeyDown={handleLabelKeyDown}
               placeholder="Enter a label for this comment"
+              ref={labelInputRef}
               style={{
                 width: '100%',
                 padding: '8px',
