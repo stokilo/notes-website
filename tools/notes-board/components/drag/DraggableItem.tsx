@@ -269,6 +269,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         transform: 'translate3d(0, 0, 0)',
         outline: isSelected ? '2px solid #4a90e2' : 'none',
         outlineOffset: '2px',
+        boxShadow: isSelected ? '0 0 8px rgba(74, 144, 226, 0.5)' : 'none',
         ...(disableAnimations ? {
           transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
           width: size.width,
@@ -279,31 +280,21 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       onContextMenu={onContextMenu}
       onClick={handleClick}
     >
-      {disableAnimations ? (
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {children}
-        </div>
-      ) : (
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {children}
-        </div>
-      )}
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: isSelected ? 'rgba(74, 144, 226, 0.1)' : 'transparent',
+          transition: 'background-color 0.2s ease',
+          borderRadius: '4px',
+          border: isSelected ? '1px solid rgba(74, 144, 226, 0.3)' : 'none',
+        }}
+      >
+        {children}
+      </div>
       {/* Resize handle */}
       <div
         style={{
@@ -312,14 +303,14 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
           bottom: -6,
           width: 12,
           height: 12,
-          backgroundColor: '#4a90e2',
+          backgroundColor: isSelected ? '#4a90e2' : '#999',
           borderRadius: '50%',
           cursor: 'nwse-resize',
           border: '2px solid white',
           boxShadow: '0 0 4px rgba(0,0,0,0.2)',
           zIndex: 1001,
-          opacity: 0,
-          transition: 'opacity 0.2s ease',
+          opacity: isSelected ? 1 : 0,
+          transition: 'opacity 0.2s ease, background-color 0.2s ease',
         }}
         onMouseDown={handleResizeStart}
       />

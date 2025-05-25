@@ -44,6 +44,12 @@ interface DraggableItem {
   circlePositions?: Array<{ x: number; y: number }>;
 }
 
+interface SelectionArea {
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+  isSelecting: boolean;
+}
+
 const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' }) => {
   const [items, setItems] = useState<DraggableItem[]>([]);
   const [history, setHistory] = useState<DraggableItem[][]>([]);
@@ -55,7 +61,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     itemId: string;
   }>({ show: false, x: 0, y: 0, itemId: '' });
   const [copiedItem, setCopiedItem] = useState<DraggableItem | null>(null);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [codePreviewItemId, setCodePreviewItemId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [commentEditor, setCommentEditor] = useState<{
@@ -68,6 +74,14 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const [isResizing, setIsResizing] = useState(false);
   const dragStartPosition = useRef<{ x: number; y: number } | null>(null);
   const dragStartItems = useRef<DraggableItem[]>([]);
+  const [selectionArea, setSelectionArea] = useState<SelectionArea>({
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 0 },
+    isSelecting: false
+  });
+  const [isDraggingSelection, setIsDraggingSelection] = useState(false);
+  const isSelectingRef = useRef(false);
+  const dragStartPositions = useRef<{ [key: string]: { x: number; y: number } }>({});
 
   // Load scene and history from localStorage on initial mount
   useEffect(() => {
@@ -139,7 +153,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const handleClearScene = () => {
     if (window.confirm('Are you sure you want to clear the entire scene? This action cannot be undone.')) {
       setItems([]);
-      setSelectedItemId(null);
+      setSelectedItemIds([]);
       setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
       setCopiedItem(null);
       // Reset history when clearing scene
@@ -260,14 +274,21 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       // Check for CMD+C (Mac) or CTRL+C (Windows)
       else if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
         e.preventDefault();
-        if (selectedItemId) {
-          handleCopy(selectedItemId);
+        if (selectedItemIds.length > 0) {
+          selectedItemIds.forEach(id => handleCopy(id));
         }
       }
       // Check for CMD+V (Mac) or CTRL+V (Windows)
       else if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
         e.preventDefault();
         handlePaste();
+      }
+      // Check for CMD+A (Mac) or CTRL+A (Windows)
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        e.preventDefault();
+        const allItemIds = items.map(item => item.id);
+        console.log('Selecting all items:', allItemIds);
+        setSelectedItemIds(allItemIds);
       }
       // Add zoom keyboard shortcuts
       else if ((e.metaKey || e.ctrlKey) && e.key === '=') {
@@ -283,38 +304,40 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         setZoom(1);
       }
       // Add rotation keyboard shortcuts
-      else if (selectedItemId) {
-        const selectedItem = items.find(item => item.id === selectedItemId);
-        if (selectedItem?.type === 'arrow') {
-          switch (e.key) {
-            case 'r':
-              if (e.shiftKey) {
-                // Shift + R: Rotate 90° counter-clockwise
-                handleRotateArrow(selectedItemId, -90);
-              } else {
-                // R: Rotate 90° clockwise
-                handleRotateArrow(selectedItemId, 90);
-              }
-              e.preventDefault();
-              break;
-            case 'e':
-              if (e.shiftKey) {
-                // Shift + E: Rotate 45° counter-clockwise
-                handleRotateArrow(selectedItemId, -45);
-              } else {
-                // E: Rotate 45° clockwise
-                handleRotateArrow(selectedItemId, 45);
-              }
-              e.preventDefault();
-              break;
+      else if (selectedItemIds.length > 0) {
+        const selectedItems = items.filter(item => selectedItemIds.includes(item.id));
+        selectedItems.forEach(item => {
+          if (item.type === 'arrow') {
+            switch (e.key) {
+              case 'r':
+                if (e.shiftKey) {
+                  // Shift + R: Rotate 90° counter-clockwise
+                  handleRotateArrow(item.id, -90);
+                } else {
+                  // R: Rotate 90° clockwise
+                  handleRotateArrow(item.id, 90);
+                }
+                e.preventDefault();
+                break;
+              case 'e':
+                if (e.shiftKey) {
+                  // Shift + E: Rotate 45° counter-clockwise
+                  handleRotateArrow(item.id, -45);
+                } else {
+                  // E: Rotate 45° clockwise
+                  handleRotateArrow(item.id, 45);
+                }
+                e.preventDefault();
+                break;
+            }
           }
-        }
+        });
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemId, copiedItem, items, historyIndex, history, handleUndo]);
+  }, [selectedItemIds, copiedItem, items, historyIndex, history, handleUndo]);
 
   // Add wheel zoom handler
   useEffect(() => {
@@ -342,37 +365,253 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   }, []); // Empty dependency array since we only need to set up the listener once
 
+  const handleSelectionEnd = () => {
+    if (!isSelectingRef.current) return;
+
+    // Calculate the selection rectangle
+    const selectionRect = {
+      left: Math.min(selectionArea.start.x, selectionArea.end.x),
+      right: Math.max(selectionArea.start.x, selectionArea.end.x),
+      top: Math.min(selectionArea.start.y, selectionArea.end.y),
+      bottom: Math.max(selectionArea.start.y, selectionArea.end.y)
+    };
+
+    console.log('Final selection rectangle:', {
+      start: selectionArea.start,
+      end: selectionArea.end,
+      rect: selectionRect,
+      width: selectionRect.right - selectionRect.left,
+      height: selectionRect.bottom - selectionRect.top
+    });
+
+    const selectedIds = items
+      .filter(item => {
+        // Calculate item's rectangle in the same coordinate space
+        const itemRect = {
+          left: item.position.x,
+          right: item.position.x + item.size.width,
+          top: item.position.y,
+          bottom: item.position.y + item.size.height
+        };
+
+        // Check if the item is at least partially within the selection area
+        const isInSelection = (
+          itemRect.left <= selectionRect.right &&
+          itemRect.right >= selectionRect.left &&
+          itemRect.top <= selectionRect.bottom &&
+          itemRect.bottom >= selectionRect.top
+        );
+
+        console.log('Item intersection check:', {
+          itemId: item.id,
+          itemPosition: item.position,
+          itemSize: item.size,
+          itemRect,
+          selectionRect,
+          isInSelection,
+          // Detailed intersection checks
+          leftCheck: itemRect.left <= selectionRect.right,
+          rightCheck: itemRect.right >= selectionRect.left,
+          topCheck: itemRect.top <= selectionRect.bottom,
+          bottomCheck: itemRect.bottom >= selectionRect.top
+        });
+
+        return isInSelection;
+      })
+      .map(item => item.id);
+
+    console.log('Final selected items:', selectedIds);
+    setSelectedItemIds(selectedIds);
+    setSelectionArea(prev => ({ ...prev, isSelecting: false }));
+    isSelectingRef.current = false;
+  };
+
+  const handleSelectionStart = (e: React.MouseEvent) => {
+    // Only handle left mouse button
+    if (e.button !== 0) return;
+
+    // Don't start selection if clicking on an item
+    const target = e.target as HTMLElement;
+    if (target.closest('.draggable-item')) {
+      console.log('Not starting selection - clicked on item');
+      return;
+    }
+
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    // Calculate position relative to the container and account for zoom
+    const startX = (e.clientX - containerRect.left) / zoom;
+    const startY = (e.clientY - containerRect.top) / zoom;
+
+    console.log('Starting selection at:', { x: startX, y: startY });
+    isSelectingRef.current = true;
+    setSelectionArea({
+      start: { x: startX, y: startY },
+      end: { x: startX, y: startY },
+      isSelecting: true
+    });
+  };
+
+  const handleSelectionMove = (e: MouseEvent) => {
+    if (!isSelectingRef.current || !containerRef.current) return;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const endX = (e.clientX - containerRect.left) / zoom;
+    const endY = (e.clientY - containerRect.top) / zoom;
+
+    setSelectionArea(prev => {
+      const newArea = {
+        ...prev,
+        end: { x: endX, y: endY }
+      };
+      console.log('Selection area update:', {
+        start: newArea.start,
+        end: newArea.end,
+        width: Math.abs(endX - newArea.start.x),
+        height: Math.abs(endY - newArea.start.y)
+      });
+      return newArea;
+    });
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Don't handle clicks during selection
+    if (isSelectingRef.current) {
+      console.log('Ignoring container click during selection');
+      return;
+    }
+
+    const target = e.target as HTMLElement;
+    const isContainerClick = target === containerRef.current || 
+                           target.className === 'draggable-container' ||
+                           target.closest('.draggable-container') === containerRef.current;
+    
+    if (isContainerClick) {
+      console.log('Clearing selection on container click');
+      setSelectedItemIds([]);
+      setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+    }
+  };
+
+  // Add back handleItemClick function
+  const handleItemClick = (e: React.MouseEvent, itemId: string) => {
+    e.stopPropagation();
+    
+    // Don't handle clicks during selection
+    if (isSelectingRef.current) {
+      console.log('Ignoring click during selection');
+      return;
+    }
+
+    if (e.shiftKey) {
+      setSelectedItemIds(prev => {
+        const newSelection = prev.includes(itemId) 
+          ? prev.filter(id => id !== itemId)
+          : [...prev, itemId];
+        console.log('Shift-click selection:', newSelection);
+        return newSelection;
+      });
+    } else {
+      console.log('Single item selection:', itemId);
+      setSelectedItemIds([itemId]);
+    }
+  };
+
+  // Add back useEffect for selection area mouse events
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isSelectingRef.current) {
+        handleSelectionMove(e);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isSelectingRef.current) {
+        handleSelectionEnd();
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [selectionArea.start, zoom]); // Add dependencies
+
   const handleDragStart = (id: string, position: { x: number; y: number }) => {
     setIsDragging(true);
     dragStartPosition.current = position;
     dragStartItems.current = JSON.parse(JSON.stringify(items));
+
+    // Store initial positions of all selected items
+    if (selectedItemIds.includes(id)) {
+      const positions: { [key: string]: { x: number; y: number } } = {};
+      selectedItemIds.forEach(itemId => {
+        const item = items.find(i => i.id === itemId);
+        if (item) {
+          positions[itemId] = { ...item.position };
+        }
+      });
+      dragStartPositions.current = positions;
+      setIsDraggingSelection(true);
+    }
+  };
+
+  const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
+    if (isDraggingSelection && selectedItemIds.includes(id)) {
+      const deltaX = newPosition.x - dragStartPositions.current[id].x;
+      const deltaY = newPosition.y - dragStartPositions.current[id].y;
+
+      setItems(prevItems =>
+        prevItems.map(item => {
+          if (selectedItemIds.includes(item.id)) {
+            const startPos = dragStartPositions.current[item.id];
+            return {
+              ...item,
+              position: {
+                x: startPos.x + deltaX,
+                y: startPos.y + deltaY
+              }
+            };
+          }
+          return item;
+        })
+      );
+    } else {
+      setItems(prevItems =>
+        prevItems.map(item =>
+          item.id === id ? { ...item, position: newPosition } : item
+        )
+      );
+    }
   };
 
   const handleDragEnd = (id: string, position: { x: number; y: number }) => {
     if (isDragging && dragStartPosition.current) {
-      // Only add to history if the item was actually moved
-      const movedItem = items.find(item => item.id === id);
-      const startItem = dragStartItems.current.find(item => item.id === id);
-      
-      if (movedItem && startItem && 
-          (movedItem.position.x !== startItem.position.x || 
-           movedItem.position.y !== startItem.position.y)) {
+      if (isDraggingSelection) {
         const currentItems = JSON.parse(JSON.stringify(items));
         addToHistory(currentItems);
+        setIsDraggingSelection(false);
+        dragStartPositions.current = {};
+      } else {
+        const movedItem = items.find(item => item.id === id);
+        const startItem = dragStartItems.current.find(item => item.id === id);
+        
+        if (movedItem && startItem && 
+            (movedItem.position.x !== startItem.position.x || 
+             movedItem.position.y !== startItem.position.y)) {
+          const currentItems = JSON.parse(JSON.stringify(items));
+          addToHistory(currentItems);
+        }
       }
     }
     
     setIsDragging(false);
     dragStartPosition.current = null;
     dragStartItems.current = [];
-  };
-
-  const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
-    setItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, position: newPosition } : item
-      )
-    );
   };
 
   const handleSizeChange = (id: string, newSize: { width: number; height: number }) => {
@@ -440,7 +679,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    setSelectedItemId(itemId);
+    setSelectedItemIds([itemId]);
     setContextMenu({
       show: true,
       x: e.clientX,
@@ -463,24 +702,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           : item
       )
     );
-  };
-
-  const handleClick = (e: React.MouseEvent) => {
-    // Check if the click is on the container or its background
-    const target = e.target as HTMLElement;
-    const isContainerClick = target === containerRef.current || 
-                           target.className === 'draggable-container' ||
-                           target.closest('.draggable-container') === containerRef.current;
-    
-    if (isContainerClick) {
-      setSelectedItemId(null);
-      setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
-    }
-  };
-
-  const handleItemClick = (e: React.MouseEvent, itemId: string) => {
-    e.stopPropagation();
-    setSelectedItemId(itemId);
   };
 
   const handleLabelChange = (itemId: string, newLabel: string) => {
@@ -706,7 +927,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       onDragEnd: (pos: { x: number; y: number }) => handleDragEnd(item.id, pos),
       onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, item.id),
       onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
-      isSelected: item.id === selectedItemId,
+      isSelected: selectedItemIds.includes(item.id),
       zoom: zoom,
       disableAnimations: true,
     };
@@ -827,6 +1048,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         backgroundColor: '#f0f0f0',
       }}
       onClick={handleClick}
+      onMouseDown={handleSelectionStart}
       tabIndex={0}
     >
       <div
@@ -841,6 +1063,21 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         }}
       >
         {items.map(renderItem)}
+        {selectionArea.isSelecting && (
+          <div
+            style={{
+              position: 'absolute',
+              left: Math.min(selectionArea.start.x, selectionArea.end.x),
+              top: Math.min(selectionArea.start.y, selectionArea.end.y),
+              width: Math.abs(selectionArea.end.x - selectionArea.start.x),
+              height: Math.abs(selectionArea.end.y - selectionArea.start.y),
+              border: '2px dashed #4a90e2',
+              backgroundColor: 'rgba(74, 144, 226, 0.1)',
+              pointerEvents: 'none',
+              zIndex: 999,
+            }}
+          />
+        )}
       </div>
 
       {/* Fixed UI elements that don't scale with zoom */}
