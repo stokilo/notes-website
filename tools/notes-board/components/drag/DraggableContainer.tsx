@@ -14,6 +14,7 @@ import ArrowItem from '../items/ArrowItem';
 import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 import CirclesPathItem from '../items/CirclesPathItem';
 import TwoPointsPathItem from '../items/TwoPointsPathItem';
+import MarkdownEditorItem from '../items/MarkdownEditorItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -28,7 +29,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath' | 'twoPointsPath';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath' | 'twoPointsPath' | 'markdown';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -225,8 +226,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const setItemsWithHistory = (newItems: DraggableItem[] | ((prev: DraggableItem[]) => DraggableItem[])) => {
     setItems(prevItems => {
       const nextItems = typeof newItems === 'function' ? newItems(prevItems) : newItems;
-      
-      console.log('Setting items:', nextItems);
       
       // Only add to history if there are actual changes
       if (JSON.stringify(nextItems) !== JSON.stringify(prevItems)) {
@@ -926,21 +925,39 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
+  const addMarkdownEditor = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: `markdown-${Date.now()}`,
+      type: 'markdown',
+      position,
+      size: { width: 40, height: 40 },
+      props: {
+        initialContent: '',
+      },
+    };
+    setItemsWithHistory(prev => [...prev, newItem]);
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
-      initialPosition: item.position,
-      initialSize: item.size,
-      onPositionChange: (pos: { x: number; y: number }) => handlePositionChange(item.id, pos),
+      position: item.position,
+      size: item.size,
+      isSelected: selectedItemIds.includes(item.id),
+      onSelect: () => setSelectedItemIds([item.id]),
+      onDragStart: (position: { x: number; y: number }) => handleDragStart(item.id, position),
+      onPositionChange: (position: { x: number; y: number }) => handlePositionChange(item.id, position),
+      onDragEnd: (position: { x: number; y: number }) => handleDragEnd(item.id, position),
       onSizeChange: (size: { width: number; height: number }) => handleSizeChange(item.id, size),
       onResizeEnd: handleResizeEnd,
-      onDragStart: (pos: { x: number; y: number }) => handleDragStart(item.id, pos),
-      onDragEnd: (pos: { x: number; y: number }) => handleDragEnd(item.id, pos),
       onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, item.id),
-      onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
-      isSelected: selectedItemIds.includes(item.id),
-      zoom: zoom,
-      disableAnimations: true,
+      onCommentChange: (comment: string, label: string) => handleCommentChange(item.id, comment, label),
+      onLabelChange: (newLabel: string) => handleLabelChange(item.id, newLabel),
+      onToggleArrowAnimation: () => handleToggleArrowAnimation(item.id),
+      onToggleCirclesPathAnimation: () => handleToggleCirclesPathAnimation(item.id),
+      onCirclesPathPositionChange: (position: { x: number; y: number }) => handleCirclesPathPositionChange(item.id, position),
+      onCirclesPathCirclePositionsChange: (positions: Array<{ x: number; y: number }>) => handleCirclesPathCirclePositionsChange(item.id, positions),
+      onAttachCirclesPath: (targetId: string) => handleAttachCirclesPath(item.id, targetId),
     };
 
     if (item.type === 'boxSetContainer') {
@@ -1002,7 +1019,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
 
     return (
-      <DraggableItem  key={item.id} {...commonProps}>
+      <DraggableItem key={item.id} {...commonProps}>
         {item.type === 'box' ? (
           <RectangleItem
             {...item.props} 
@@ -1039,6 +1056,12 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             segments={item.props.segments}
             rotation={item.props.rotation}
             isAnimating={item.props.isAnimating}
+          />
+        ) : item.type === 'markdown' ? (
+          <MarkdownEditorItem
+            width={item.size.width}
+            height={item.size.height}
+            initialContent={item.props.initialContent}
           />
         ) : (
           <span>nothing here</span>
@@ -1107,6 +1130,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
           onAddCirclesPath={() => addCirclesPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
           onAddTwoPointsPath={() => addTwoPointsPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
+          onAddMarkdownEditor={() => addMarkdownEditor({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
         />
         <div
           style={{

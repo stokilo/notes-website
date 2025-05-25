@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
 interface DraggableItemProps {
@@ -47,19 +47,35 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   const itemRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number>();
   const lastPositionRef = useRef(position);
+  const onPositionChangeRef = useRef(onPositionChange);
+  const onSizeChangeRef = useRef(onSizeChange);
+  const onDragEndRef = useRef(onDragEnd);
+  const onResizeEndRef = useRef(onResizeEnd);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onPositionChangeRef.current = onPositionChange;
+    onSizeChangeRef.current = onSizeChange;
+    onDragEndRef.current = onDragEnd;
+    onResizeEndRef.current = onResizeEnd;
+  }, [onPositionChange, onSizeChange, onDragEnd, onResizeEnd]);
 
   // Update position when initialPosition changes
   useEffect(() => {
-    setPosition(initialPosition);
-    lastPositionRef.current = initialPosition;
+    if (JSON.stringify(initialPosition) !== JSON.stringify(lastPositionRef.current)) {
+      setPosition(initialPosition);
+      lastPositionRef.current = initialPosition;
+    }
   }, [initialPosition]);
 
   // Update size when initialSize changes
   useEffect(() => {
-    setSize(initialSize);
+    if (JSON.stringify(initialSize) !== JSON.stringify(size)) {
+      setSize(initialSize);
+    }
   }, [initialSize]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!itemRef.current) return;
 
     const rect = itemRef.current.getBoundingClientRect();
@@ -80,9 +96,9 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
     };
     setIsDragging(true);
     onDragStart?.({ x: e.clientX, y: e.clientY });
-  };
+  }, [position, zoom, onDragStart]);
 
-  const handleResizeStart = (e: React.MouseEvent) => {
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (!itemRef.current) return;
 
@@ -103,13 +119,13 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       y: unzoomedY,
     };
     setIsResizing(true);
-  };
+  }, [size, zoom]);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = useCallback((e: React.MouseEvent) => {
     if (!isDragging && !isResizing) {
       onClick?.(e);
     }
-  };
+  }, [isDragging, isResizing, onClick]);
 
   useEffect(() => {
     const updatePosition = (e: MouseEvent) => {
@@ -138,9 +154,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       }
       
       animationFrameRef.current = requestAnimationFrame(() => {
-        if (onPositionChange) {
-          onPositionChange({ x: newX, y: newY });
-        }
+        onPositionChangeRef.current?.({ x: newX, y: newY });
       });
     };
 
@@ -173,9 +187,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       }
 
       animationFrameRef.current = requestAnimationFrame(() => {
-        if (onSizeChange) {
-          onSizeChange({ width: newWidth, height: newHeight });
-        }
+        onSizeChangeRef.current?.({ width: newWidth, height: newHeight });
       });
     };
 
@@ -187,15 +199,11 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
     const handleMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         setIsDragging(false);
-        if (onDragEnd) {
-          onDragEnd({ x: e.clientX, y: e.clientY });
-        }
+        onDragEndRef.current?.({ x: e.clientX, y: e.clientY });
       }
       if (isResizing) {
         setIsResizing(false);
-        if (onResizeEnd) {
-          onResizeEnd();
-        }
+        onResizeEndRef.current?.();
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -214,24 +222,55 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isDragging, isResizing, onPositionChange, onSizeChange, onDragEnd, onResizeEnd, zoom]);
+  }, [isDragging, isResizing, zoom]);
 
   useEffect(() => {
     if (disableAnimations) return;
 
-    // Random animation intervals
+    let isActive = true;
     const rotationInterval = setInterval(() => {
-      setRotation(Math.random() * 2 - 1); // Random rotation between -1 and 1 degrees
+      if (isActive) {
+        setRotation(prev => prev + (Math.random() * 2 - 1));
+      }
     }, 3000);
 
     const scaleInterval = setInterval(() => {
-      setScale(1.0002);
-      setTimeout(() => setScale(1), 3500);
+      if (isActive) {
+        setScale(prev => prev === 1 ? 1.0002 : 1);
+      }
     }, 7000);
 
     return () => {
+      isActive = false;
       clearInterval(rotationInterval);
       clearInterval(scaleInterval);
+    };
+  }, [disableAnimations]);
+
+  // Separate effect for hover state
+  useEffect(() => {
+    if (disableAnimations) return;
+    
+    let isActive = true;
+    const handleMouseEnter = () => {
+      if (isActive) setHover(true);
+    };
+    const handleMouseLeave = () => {
+      if (isActive) setHover(false);
+    };
+    
+    const element = itemRef.current;
+    if (element) {
+      element.addEventListener('mouseenter', handleMouseEnter);
+      element.addEventListener('mouseleave', handleMouseLeave);
+    }
+    
+    return () => {
+      isActive = false;
+      if (element) {
+        element.removeEventListener('mouseenter', handleMouseEnter);
+        element.removeEventListener('mouseleave', handleMouseLeave);
+      }
     };
   }, [disableAnimations]);
 
@@ -255,9 +294,6 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         width: { duration: 0, ease: "linear" },
         height: { duration: 0, ease: "linear" },
       }}
-      whileHover={disableAnimations ? {} : { scale: 1.1 }}
-      onHoverStart={() => !disableAnimations && setHover(true)}
-      onHoverEnd={() => !disableAnimations && setHover(false)}
       style={{
         position: 'absolute',
         left: 0,
