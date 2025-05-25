@@ -1,12 +1,5 @@
 <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <!-- Filter to slightly roughen the edge -->
-    <filter id="lineArtWobble">
-      <feTurbulence type="fractalNoise" baseFrequency="11.52" numOctaves="99994" result="noise"/>
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="99.5" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-  </defs>
-
+  <!-- Outermost border -->
   <rect
           x="10"
           y="10"
@@ -15,10 +8,33 @@
           rx="8"
           ry="8"
           fill="none"
-          stroke="#333333"
-          stroke-width="1.2"
-          stroke-linecap="round"
-          stroke-dasharray="2.5 1.5"
-          filter="url(#lineArtWobble)"
+          stroke="#999999"
+          stroke-width="3"
+  />
+
+  <!-- Middle border -->
+  <rect
+          x="10"
+          y="10"
+          width="280"
+          height="180"
+          rx="8"
+          ry="8"
+          fill="none"
+          stroke="#bbbbbb"
+          stroke-width="2"
+  />
+
+  <!-- Innermost border -->
+  <rect
+          x="10"
+          y="10"
+          width="280"
+          height="180"
+          rx="8"
+          ry="8"
+          fill="white"
+          stroke="#dddddd"
+          stroke-width="1.5"
   />
 </svg>
