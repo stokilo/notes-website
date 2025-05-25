@@ -713,7 +713,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     if (item.type === 'boxSetContainer') {
       const containerboxSetes = item.props.children || [];
       return (
-        <DraggableItem key={item.id} {...commonProps}>
+        <DraggableItem disableAnimations={true} key={item.id} {...commonProps}>
           <BoxGridContainer width={item.size.width} height={item.size.height} containerId={item.id}>
           </BoxGridContainer>
         </DraggableItem>
@@ -769,7 +769,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
 
     return (
-      <DraggableItem key={item.id} {...commonProps}>
+      <DraggableItem disableAnimations={true} key={item.id} {...commonProps}>
         {item.type === 'box' ? (
           <RectangleItem
             {...item.props} 
