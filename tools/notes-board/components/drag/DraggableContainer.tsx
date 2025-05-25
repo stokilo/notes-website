@@ -94,15 +94,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const savedScene = localStorage.getItem(STORAGE_KEY);
     const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
     
-    console.log('Loading initial state:', {
-      savedScene: savedScene ? JSON.parse(savedScene) : null,
-      savedHistory: savedHistory ? JSON.parse(savedHistory) : null
-    });
     
     try {
       if (savedScene) {
         const parsedScene = JSON.parse(savedScene);
-        console.log('Parsed scene from localStorage:', parsedScene);
         
         // Set items first
         setItems(parsedScene);
@@ -143,14 +138,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   }, []); // Empty dependency array to ensure this only runs once on mount
 
-  // Add useEffect to verify items are loaded
-  useEffect(() => {
-    console.log('Items state after load:', items);
-  }, [items]);
 
   // Save scene to localStorage whenever items change
   useEffect(() => {
-    console.log('Items changed, current items:', items);
     if (items.length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } else if (items.length === 0 && history.length > 0 && history[historyIndex]?.length === 0) {
@@ -210,7 +200,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     // Create a deep copy of the new state
     const stateToAdd = JSON.parse(JSON.stringify(newItems));
     
-    console.log('Adding to history:', stateToAdd);
     
     setHistory(prevHistory => {
       // Remove any future states if we're not at the end of history
@@ -308,7 +297,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       else if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
         e.preventDefault();
         const allItemIds = items.map(item => item.id);
-        console.log('Selecting all items:', allItemIds);
         setSelectedItemIds(allItemIds);
       }
       // Add zoom keyboard shortcuts
@@ -393,7 +381,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     // Don't start selection if clicking on an item
     const target = e.target as HTMLElement;
     if (target.closest('.draggable-item')) {
-      console.log('Not starting selection - clicked on item');
       return;
     }
 
@@ -404,15 +391,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const startX = (e.clientX - containerRect.left) / zoom;
     const startY = (e.clientY - containerRect.top) / zoom;
 
-    console.log('Selection Start:', {
-      clientX: e.clientX,
-      clientY: e.clientY,
-      containerLeft: containerRect.left,
-      containerTop: containerRect.top,
-      zoom,
-      startX,
-      startY
-    });
 
     isSelectingRef.current = true;
     const newSelectionArea = {
@@ -459,13 +437,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const savedScene = localStorage.getItem(STORAGE_KEY);
     const localStorageItems = savedScene ? JSON.parse(savedScene) : [];
     
-    console.log('=== SELECTION DEBUG ===');
-    console.log('Selection coordinates:', {
-      start: currentSelection.start,
-      end: currentSelection.end,
-      rect: selectionRect
-    });
-    console.log('Items from localStorage:', localStorageItems);
 
     // Process the selection using localStorage items
     const selectedIds = localStorageItems
@@ -486,25 +457,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           itemRect.bottom >= selectionRect.top
         );
 
-        console.log('Item intersection check:', {
-          id: item.id,
-          type: item.type,
-          itemRect,
-          selectionRect,
-          isInSelection,
-          checks: {
-            leftCheck: itemRect.left <= selectionRect.right,
-            rightCheck: itemRect.right >= selectionRect.left,
-            topCheck: itemRect.top <= selectionRect.bottom,
-            bottomCheck: itemRect.bottom >= selectionRect.top
-          }
-        });
 
         return isInSelection;
       })
       .map(item => item.id);
     
-    console.log('Final selected items:', selectedIds);
     
     // Update the selected items immediately
     if (selectedIds.length > 0) {
@@ -551,7 +508,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const handleClick = (e: React.MouseEvent) => {
     // Don't handle clicks during selection
     if (isSelectingRef.current) {
-      console.log('Ignoring container click during selection');
       return;
     }
 
@@ -561,7 +517,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                            target.closest('.draggable-container') === containerRef.current;
     
     if (isContainerClick) {
-      console.log('Clearing selection on container click');
       setSelectedItemIds([]);
       setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
     }
@@ -573,7 +528,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     
     // Don't handle clicks during selection
     if (isSelectingRef.current) {
-      console.log('Ignoring click during selection');
       return;
     }
 
@@ -582,11 +536,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         const newSelection = prev.includes(itemId) 
           ? prev.filter(id => id !== itemId)
           : [...prev, itemId];
-        console.log('Shift-click selection:', newSelection);
         return newSelection;
       });
     } else {
-      console.log('Single item selection:', itemId);
       setSelectedItemIds([itemId]);
     }
   };
@@ -681,7 +633,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addItem = (type: 'box' | 'circle' , position: { x: number; y: number }) => {
-    console.log('Adding new item:', { type, position });
     const newItem: DraggableItem = {
       id: `${type}-${Date.now()}`,
       type,
@@ -696,7 +647,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     };
     setItemsWithHistory(prev => {
       const newItems = [...prev, newItem];
-      console.log('Updated items after adding:', newItems);
       return newItems;
     });
   };
@@ -1091,15 +1041,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
-  // Add useEffect to log items state changes
-  useEffect(() => {
-    console.log('Items state updated:', items);
-  }, [items]);
-
-  // Add useEffect to log selected items state changes
-  useEffect(() => {
-    console.log('Selected items state updated:', selectedItemIds);
-  }, [selectedItemIds]);
 
   return (
     <div
