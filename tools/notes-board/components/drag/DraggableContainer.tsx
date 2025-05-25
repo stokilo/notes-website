@@ -79,9 +79,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     end: { x: 0, y: 0 },
     isSelecting: false
   });
+  const selectionAreaRef = useRef<SelectionArea>(selectionArea);
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
   const isSelectingRef = useRef(false);
   const dragStartPositions = useRef<{ [key: string]: { x: number; y: number } }>({});
+
+  // Update ref when state changes
+  useEffect(() => {
+    selectionAreaRef.current = selectionArea;
+  }, [selectionArea]);
 
   // Load scene and history from localStorage on initial mount
   useEffect(() => {
@@ -365,67 +371,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   }, []); // Empty dependency array since we only need to set up the listener once
 
-  const handleSelectionEnd = () => {
-    if (!isSelectingRef.current) return;
-
-    // Calculate the selection rectangle
-    const selectionRect = {
-      left: Math.min(selectionArea.start.x, selectionArea.end.x),
-      right: Math.max(selectionArea.start.x, selectionArea.end.x),
-      top: Math.min(selectionArea.start.y, selectionArea.end.y),
-      bottom: Math.max(selectionArea.start.y, selectionArea.end.y)
-    };
-
-    console.log('Final selection rectangle:', {
-      start: selectionArea.start,
-      end: selectionArea.end,
-      rect: selectionRect,
-      width: selectionRect.right - selectionRect.left,
-      height: selectionRect.bottom - selectionRect.top
-    });
-
-    const selectedIds = items
-      .filter(item => {
-        // Calculate item's rectangle in the same coordinate space
-        const itemRect = {
-          left: item.position.x,
-          right: item.position.x + item.size.width,
-          top: item.position.y,
-          bottom: item.position.y + item.size.height
-        };
-
-        // Check if the item is at least partially within the selection area
-        const isInSelection = (
-          itemRect.left <= selectionRect.right &&
-          itemRect.right >= selectionRect.left &&
-          itemRect.top <= selectionRect.bottom &&
-          itemRect.bottom >= selectionRect.top
-        );
-
-        console.log('Item intersection check:', {
-          itemId: item.id,
-          itemPosition: item.position,
-          itemSize: item.size,
-          itemRect,
-          selectionRect,
-          isInSelection,
-          // Detailed intersection checks
-          leftCheck: itemRect.left <= selectionRect.right,
-          rightCheck: itemRect.right >= selectionRect.left,
-          topCheck: itemRect.top <= selectionRect.bottom,
-          bottomCheck: itemRect.bottom >= selectionRect.top
-        });
-
-        return isInSelection;
-      })
-      .map(item => item.id);
-
-    console.log('Final selected items:', selectedIds);
-    setSelectedItemIds(selectedIds);
-    setSelectionArea(prev => ({ ...prev, isSelecting: false }));
-    isSelectingRef.current = false;
-  };
-
   const handleSelectionStart = (e: React.MouseEvent) => {
     // Only handle left mouse button
     if (e.button !== 0) return;
@@ -444,13 +389,49 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const startX = (e.clientX - containerRect.left) / zoom;
     const startY = (e.clientY - containerRect.top) / zoom;
 
-    console.log('Starting selection at:', { x: startX, y: startY });
+    console.log('=== Selection Start ===');
+    console.log('Current zoom level:', zoom);
+    console.table({
+      'Container': {
+        left: containerRect.left,
+        top: containerRect.top,
+        width: containerRect.width,
+        height: containerRect.height
+      },
+      'Mouse': {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        relativeX: startX,
+        relativeY: startY
+      }
+    });
+
+    console.log('All items:');
+    items.forEach(item => {
+      console.table({
+        'Item': {
+          id: item.id,
+          type: item.type,
+          position: item.position,
+          size: item.size,
+          rect: {
+            left: item.position.x,
+            right: item.position.x + item.size.width,
+            top: item.position.y,
+            bottom: item.position.y + item.size.height
+          }
+        }
+      });
+    });
+
     isSelectingRef.current = true;
-    setSelectionArea({
+    const newSelectionArea = {
       start: { x: startX, y: startY },
       end: { x: startX, y: startY },
       isSelecting: true
-    });
+    };
+    setSelectionArea(newSelectionArea);
+    selectionAreaRef.current = newSelectionArea;
   };
 
   const handleSelectionMove = (e: MouseEvent) => {
@@ -460,19 +441,121 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const endX = (e.clientX - containerRect.left) / zoom;
     const endY = (e.clientY - containerRect.top) / zoom;
 
-    setSelectionArea(prev => {
-      const newArea = {
-        ...prev,
-        end: { x: endX, y: endY }
-      };
-      console.log('Selection area update:', {
-        start: newArea.start,
-        end: newArea.end,
-        width: Math.abs(endX - newArea.start.x),
-        height: Math.abs(endY - newArea.start.y)
-      });
-      return newArea;
+    const currentSelection = selectionAreaRef.current;
+    const newArea = {
+      ...currentSelection,
+      end: { x: endX, y: endY }
+    };
+    
+    // Calculate current rectangle dimensions
+    const width = Math.abs(endX - currentSelection.start.x);
+    const height = Math.abs(endY - currentSelection.start.y);
+    
+    console.table({
+      'Selection Update': {
+        start: currentSelection.start,
+        end: { x: endX, y: endY },
+        width,
+        height,
+        zoom,
+        mousePos: {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          relativeX: endX,
+          relativeY: endY
+        }
+      }
     });
+    
+    // Update both state and ref
+    setSelectionArea(newArea);
+    selectionAreaRef.current = newArea;
+  };
+
+  const handleSelectionEnd = () => {
+    if (!isSelectingRef.current || !containerRef.current) return;
+
+    // Get the current selection area state from the ref
+    const currentSelection = selectionAreaRef.current;
+    
+    // Calculate the selection rectangle using the current state
+    const selectionRect = {
+      left: Math.min(currentSelection.start.x, currentSelection.end.x),
+      right: Math.max(currentSelection.start.x, currentSelection.end.x),
+      top: Math.min(currentSelection.start.y, currentSelection.end.y),
+      bottom: Math.max(currentSelection.start.y, currentSelection.end.y)
+    };
+
+    const selectionWidth = selectionRect.right - selectionRect.left;
+    const selectionHeight = selectionRect.bottom - selectionRect.top;
+
+    console.log('=== Selection End ===');
+    console.table({
+      'Selection': {
+        start: currentSelection.start,
+        end: currentSelection.end,
+        rect: selectionRect,
+        width: selectionWidth,
+        height: selectionHeight,
+        zoom
+      }
+    });
+
+    // Process the selection before clearing the selection state
+    const selectedIds = items
+      .filter(item => {
+        // Calculate item's rectangle in the same coordinate space
+        const itemRect = {
+          left: item.position.x,
+          right: item.position.x + item.size.width,
+          top: item.position.y,
+          bottom: item.position.y + item.size.height
+        };
+
+        // Check if the item is at least partially within the selection area
+        const isInSelection = (
+          itemRect.left <= selectionRect.right &&
+          itemRect.right >= selectionRect.left &&
+          itemRect.top <= selectionRect.bottom &&
+          itemRect.bottom >= selectionRect.top
+        );
+
+        console.table({
+          'Intersection Check': {
+            itemId: item.id,
+            itemType: item.type,
+            itemPosition: item.position,
+            itemSize: item.size,
+            itemRect,
+            selectionRect,
+            isInSelection,
+            leftCheck: itemRect.left <= selectionRect.right,
+            rightCheck: itemRect.right >= selectionRect.left,
+            topCheck: itemRect.top <= selectionRect.bottom,
+            bottomCheck: itemRect.bottom >= selectionRect.top,
+            distanceFromLeft: Math.abs(itemRect.left - selectionRect.left),
+            distanceFromRight: Math.abs(itemRect.right - selectionRect.right),
+            distanceFromTop: Math.abs(itemRect.top - selectionRect.top),
+            distanceFromBottom: Math.abs(itemRect.bottom - selectionRect.bottom)
+          }
+        });
+
+        return isInSelection;
+      })
+      .map(item => item.id);
+
+    console.log('Final selected items:', selectedIds);
+    
+    // Update the selected items immediately
+    if (selectedIds.length > 0) {
+      setSelectedItemIds(selectedIds);
+    }
+    
+    // Clear the selection state
+    const newArea = { ...currentSelection, isSelecting: false };
+    setSelectionArea(newArea);
+    selectionAreaRef.current = newArea;
+    isSelectingRef.current = false;
   };
 
   const handleClick = (e: React.MouseEvent) => {
