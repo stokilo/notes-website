@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import ReactDOM from 'react-dom';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github.css';
 
 interface MarkdownEditorItemProps {
   width?: number;
@@ -376,7 +378,9 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
                   animation: 'none',
                 }}
               >
-                <ReactMarkdown>{content}</ReactMarkdown>
+                <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
+                  {content}
+                </ReactMarkdown>
               </div>
             )}
           </div>
