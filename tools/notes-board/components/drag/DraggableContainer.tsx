@@ -44,6 +44,13 @@ interface DraggableItem {
   rotation?: number;
   attachedTo?: string;
   circlePositions?: Array<{ x: number; y: number }>;
+  gridCell?: { gridId: string; row: number; col: number };
+  gridItems?: Array<{
+    id: string;
+    row: number;
+    col: number;
+    item: DraggableItem;
+  }>;
 }
 
 interface SelectionArea {
@@ -632,19 +639,43 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         const cellWidth = gridItem.size.width / (gridItem.props?.columns || 3);
         const cellHeight = gridItem.size.height / (gridItem.props?.rows || 3);
         
-        // Calculate the snapped position
+        // Get the dragged item
+        const draggedItem = items.find(item => item.id === draggedItemId);
+        if (!draggedItem) return;
+
+        // Calculate the snapped position to center the item in the cell
         const snappedPosition = {
-          x: gridItem.position.x + (hoveredGridCell.cell.col * cellWidth),
-          y: gridItem.position.y + (hoveredGridCell.cell.row * cellHeight)
+          x: gridItem.position.x + (hoveredGridCell.cell.col * cellWidth) + (cellWidth / 2) - (draggedItem.size.width / 2),
+          y: gridItem.position.y + (hoveredGridCell.cell.row * cellHeight) + (cellHeight / 2) - (draggedItem.size.height / 2)
         };
 
-        // Update the dragged item's position
+        // Update the item's position and grid cell info
         setItemsWithHistory(prevItems =>
-          prevItems.map(item =>
-            item.id === draggedItemId ? { ...item, position: snappedPosition } : item
-          )
+          prevItems.map(item => {
+            if (item.id === draggedItemId) {
+              return {
+                ...item,
+                position: snappedPosition,
+                gridCell: {
+                  gridId: hoveredGridCell.gridId,
+                  row: hoveredGridCell.cell.row,
+                  col: hoveredGridCell.cell.col
+                }
+              };
+            }
+            return item;
+          })
         );
       }
+    } else {
+      // If not dropped on a grid, remove any existing grid cell info
+      setItemsWithHistory(prevItems =>
+        prevItems.map(item =>
+          item.id === draggedItemId 
+            ? { ...item, position, gridCell: undefined }
+            : item
+        )
+      );
     }
 
     if (isDraggingSelection) {
@@ -1034,6 +1065,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
     if (isDraggingSelection && selectedItemIds.includes(id)) {
       const deltaX = newPosition.x - dragStartPositions.current[id].x;
       const deltaY = newPosition.y - dragStartPositions.current[id].y;
@@ -1054,11 +1088,40 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         })
       );
     } else {
-      setItems(prevItems =>
-        prevItems.map(item =>
-          item.id === id ? { ...item, position: newPosition } : item
-        )
-      );
+      // If the item is a grid, update positions of all items inside it
+      if (item.type === 'grid') {
+        setItems(prevItems =>
+          prevItems.map(prevItem => {
+            if (prevItem.id === id) {
+              return { ...prevItem, position: newPosition };
+            }
+            // Update positions of items inside the grid
+            if (prevItem.gridCell?.gridId === id) {
+              const cellWidth = item.size.width / (item.props?.columns || 3);
+              const cellHeight = item.size.height / (item.props?.rows || 3);
+              
+              // Calculate new position based on grid's new position and cell coordinates
+              // Subtract half of the item's size to center it
+              const newItemPosition = {
+                x: newPosition.x + (prevItem.gridCell.col * cellWidth) + (cellWidth / 2) - (prevItem.size.width / 2),
+                y: newPosition.y + (prevItem.gridCell.row * cellHeight) + (cellHeight / 2) - (prevItem.size.height / 2)
+              };
+              
+              return {
+                ...prevItem,
+                position: newItemPosition
+              };
+            }
+            return prevItem;
+          })
+        );
+      } else {
+        setItems(prevItems =>
+          prevItems.map(item =>
+            item.id === id ? { ...item, position: newPosition } : item
+          )
+        );
+      }
     }
   };
 
@@ -1161,6 +1224,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           </DraggableItem>
         );
       case 'grid':
+        // Find all items that belong to this grid
+        const gridItems = items.filter(i => i.gridCell?.gridId === item.id);
+        
         return (
           <DraggableItem key={item.id} {...commonProps}>
             <GridItem
@@ -1170,6 +1236,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               columns={item.props?.columns || 3}
               isMagnet={item.props?.isMagnet}
               isDraggingOver={draggingOverGridId === item.id}
+              droppedItems={gridItems.map(gridItem => ({
+                id: gridItem.id,
+                row: gridItem.gridCell.row,
+                col: gridItem.gridCell.col,
+                item: renderGridItem(gridItem)
+              }))}
+              onItemDrop={(row, col) => {
+                // Remove the onItemDrop handler since we handle drops in handleDragEnd
+              }}
             />
           </DraggableItem>
         );
@@ -1178,6 +1253,80 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   };
 
+  // Separate function to render items inside grid cells
+  const renderGridItem = (item: DraggableItem) => {
+    switch (item.type) {
+      case 'box':
+        return <RectangleItem width={item.size.width} height={item.size.height} />;
+      case 'circle':
+        return <CircleItem width={item.size.width} height={item.size.height} />;
+      case 'boxSet':
+        return (
+          <BoxSetItem
+            width={item.size.width}
+            height={item.size.height}
+            comment={item.comment}
+            commentLabel={item.commentLabel}
+          />
+        );
+      case 'separator':
+        return <SeparatorItem width={item.size.width} height={item.size.height} />;
+      case 'arrow':
+        return (
+          <ArrowItem
+            width={item.size.width}
+            height={item.size.height}
+            segments={item.props?.segments || 3}
+            isAnimating={item.props?.isAnimating}
+          />
+        );
+      case 'codeBlock':
+        return (
+          <ShikiCodeBlockItem
+            width={item.size.width}
+            height={item.size.height}
+            code={item.props?.code}
+            language={item.props?.language}
+          />
+        );
+      case 'circlesPath':
+        return (
+          <CirclesPathItem
+            width={item.size.width}
+            height={item.size.height}
+            isAnimating={item.props?.isAnimating}
+            position={item.position}
+            circlePositions={item.circlePositions}
+            onPositionChange={handleCirclesPathPositionChange}
+            onCirclePositionsChange={handleCirclesPathCirclePositionsChange}
+            onAttach={(targetId) => handleAttachCirclesPath(item.id, targetId)}
+          />
+        );
+      case 'twoPointsPath':
+        return (
+          <TwoPointsPathItem
+            width={item.size.width}
+            height={item.size.height}
+            isAnimating={item.props?.isAnimating}
+            position={item.position}
+            circlePositions={item.circlePositions}
+            onPositionChange={handleTwoPointsPathPositionChange}
+            onCirclePositionsChange={handleTwoPointsPathCirclePositionsChange}
+            onAttach={(targetId) => handleAttachTwoPointsPath(item.id, targetId)}
+          />
+        );
+      case 'markdown':
+        return (
+          <MarkdownEditorItem
+            width={item.size.width}
+            height={item.size.height}
+            initialContent={item.props?.content}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div

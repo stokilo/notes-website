@@ -12,6 +12,13 @@ interface GridItemProps {
   finalPosition?: { x: number; y: number };
   isPlaceholder?: boolean;
   isDraggingOver?: boolean;
+  droppedItems?: Array<{
+    id: string;
+    row: number;
+    col: number;
+    item: any;
+  }>;
+  onItemDrop?: (row: number, col: number) => void;
 }
 
 const GridItem: React.FC<GridItemProps> = ({
@@ -26,6 +33,8 @@ const GridItem: React.FC<GridItemProps> = ({
   finalPosition,
   isPlaceholder = false,
   isDraggingOver = false,
+  droppedItems = [],
+  onItemDrop,
 }) => {
   const [gridColor, setGridColor] = useState('#E0E0E0');
   const [borderColor, setBorderColor] = useState('#BDBDBD');
@@ -72,6 +81,29 @@ const GridItem: React.FC<GridItemProps> = ({
     setHoveredCell(null);
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!containerRef.current || !onItemDrop) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const col = Math.floor(x / cellWidth);
+    const row = Math.floor(y / cellHeight);
+
+    if (col >= 0 && col < columns && row >= 0 && row < rows) {
+      onItemDrop(row, col);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return (
     <div
       ref={containerRef}
@@ -98,6 +130,8 @@ const GridItem: React.FC<GridItemProps> = ({
       }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
     >
       {/* Grid lines */}
       {Array.from({ length: rows - 1 }).map((_, i) => (
@@ -146,6 +180,23 @@ const GridItem: React.FC<GridItemProps> = ({
           }}
         />
       )}
+      
+      {/* Dropped items */}
+      {droppedItems.map(({ id, row, col, item }) => (
+        <div
+          key={id}
+          style={{
+            position: 'absolute',
+            left: col * cellWidth + (cellWidth - (item?.size?.width || 0)) / 2,
+            top: row * cellHeight + (cellHeight - (item?.size?.height || 0)) / 2,
+            width: item?.size?.width || 0,
+            height: item?.size?.height || 0,
+            zIndex: 2,
+          }}
+        >
+          {item}
+        </div>
+      ))}
       
       {/* Magnet indicator */}
       {isMagnet && (
