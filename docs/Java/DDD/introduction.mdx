@@ -4,3 +4,85 @@ sidebar_position: 1
 ---
 
 # Introduction DDD
+
+Jasne, postaram się to wyjaśnić najprościej jak się da!
+
+**Domain-Driven Design (DDD)** to podejście do tworzenia oprogramowania, które skupia się na **zrozumieniu i modelowaniu złożonej logiki biznesowej** (czyli "domeny") w sercu aplikacji. Chodzi o to, żeby kod jak najlepiej odzwierciedlał to, jak działa biznes.
+
+Wyobraź sobie, że budujesz system do obsługi sklepu internetowego. Twoją "domeną" jest wszystko związane ze sprzedażą, produktami, klientami, zamówieniami itp.
+
+Oto kluczowe pojęcia DDD, często spotykane w kontekście Javy:
+
+1.  **Ubiquitous Language (Wszechobecny Język)**
+*   **Co to?** Wspólny język używany przez wszystkich: programistów, analityków, ludzi od biznesu. Jeśli biznes mówi "Klient składa Reklamację", to w kodzie też masz klasy `Klient` i `Reklamacja` oraz metodę np. `zlozReklamacje()`.
+*   **Po co?** Unikacie nieporozumień. Kod staje się bardziej zrozumiały dla wszystkich.
+*   **W Javie:** Nazwy klas, metod, zmiennych, pakietów odzwierciedlają ten język. Np. `class Zamowienie { ... }`, `interface ProduktRepository { ... }`.
+
+2.  **Bounded Context (Ograniczony Kontekst)**
+*   **Co to?** Granica, w której dany model biznesowy i wszechobecny język mają sens. Ten sam termin może znaczyć co innego w różnych kontekstach.
+*   **Przykład:** "Produkt" w kontekście sprzedaży (cena, opis marketingowy) to co innego niż "Produkt" w kontekście magazynu (ilość, lokalizacja).
+*   **Po co?** Upraszcza modele. Zamiast jednego gigantycznego, skomplikowanego modelu "Produktu", masz mniejsze, bardziej wyspecjalizowane.
+*   **W Javie:** Często oddzielne moduły, pakiety (np. `com.mojsklep.sprzedaz`, `com.mojsklep.magazyn`). Klasa `Produkt` może istnieć w obu, ale będzie miała inne pola i metody.
+
+3.  **Aggregate (Agregat)**
+*   **Co to?** Grupa obiektów (Encji i Obiektów Wartości), które są traktowane jako jedna całość. Zawsze mają jeden główny obiekt, tzw. **Aggregate Root**.
+*   **Przykład:** `Zamowienie` to agregat. Składa się z `PozycjiZamowienia` i `DanychDostawy`. `Zamowienie` jest tutaj **Aggregate Root**.
+*   **Po co?** Zapewnia spójność danych. Zmiany w agregacie odbywają się przez jego Root, co pozwala na kontrolę i walidację. Nie możesz np. dodać pozycji do nieistniejącego zamówienia.
+*   **W Javie:** `Zamowienie` (Aggregate Root) będzie miało listę obiektów `PozycjaZamowienia`. Z zewnątrz odwołujesz się tylko do `Zamowienie`, a nie bezpośrednio do jego wewnętrznych części.
+
+4.  **Aggregate Root (Korzeń Agregatu)**
+*   **Co to?** Główna Encja w Agregacie. Jedyny obiekt w Agregacie, do którego można się odwoływać z zewnątrz.
+*   **Po co?** Kontroluje dostęp i spójność całego Agregatu.
+*   **W Javie:** W przykładzie powyżej, klasa `Zamowienie`.
+
+5.  **Entity (Byt / Encja)**
+*   **Co to?** Obiekt, który ma unikalną tożsamość (ID) i jego stan może się zmieniać w czasie. Dwie encje są różne, nawet jeśli mają te same atrybuty, o ile mają różne ID.
+*   **Przykład:** `Klient` (ma ID klienta), `Produkt` (ma ID produktu), `Zamowienie` (ma ID zamówienia).
+*   **Po co?** Śledzenie obiektów i ich historii.
+*   **W Javie:** Klasa z polem `id` (np. `private Long id;`). Porównujemy je po `id`.
+
+6.  **Value Object (Obiekt Wartości)**
+*   **Co to?** Obiekt, który opisuje pewną cechę lub wartość. Nie ma tożsamości (ID), liczą się tylko jego atrybuty. Jest **niemutowalny** (niezmienialny po utworzeniu).
+*   **Przykład:** `Adres` (ulica, miasto, kod pocztowy), `Pieniadze` (kwota, waluta), `Kolor` (R, G, B). Dwa obiekty `Adres` z tą samą ulicą, miastem i kodem są sobie równe.
+*   **Po co?** Reprezentują proste wartości w bogatszy sposób, poprawiają czytelność, niemutowalność zwiększa bezpieczeństwo.
+*   **W Javie:** Klasa, której wszystkie pola są `final`. Implementuje `equals()` i `hashCode()` na podstawie wartości pól. Np. rekordy w Javie (od Java 14) są idealne do tego: `record Adres(String ulica, String miasto, String kodPocztowy) {}`.
+
+7.  **Repository (Repozytorium)**
+*   **Co to?** Działa jak kolekcja obiektów domenowych (zazwyczaj Agregatów). Ukrywa szczegóły przechowywania danych (baza danych, pliki itp.).
+*   **Przykład:** `ZamowienieRepository` z metodami `znajdzPoId(IdZamowienia id)`, `zapisz(Zamowienie zamowienie)`.
+*   **Po co?** Oddziela logikę biznesową od sposobu przechowywania danych. Kod domenowy nie wie, czy dane są w SQL, NoSQL czy w pamięci.
+*   **W Javie:** Zazwyczaj interfejs w warstwie domenowej (np. `interface ZamowienieRepository`) i jego implementacja w warstwie infrastruktury (np. `class JpaZamowienieRepository implements ZamowienieRepository`).
+
+8.  **Domain Service (Serwis Domenowy)**
+*   **Co to?** Logika biznesowa, która nie pasuje naturalnie do żadnej Encji ani Obiektu Wartości. Często operuje na wielu Agregatach lub wykonuje skomplikowane obliczenia.
+*   **Przykład:** Serwis do transferu pieniędzy między dwoma kontami (`TransferService.przelej(kontoZ, kontoNa, kwota)`), serwis obliczający skomplikowane rabaty.
+*   **Po co?** Utrzymuje obiekty domenowe (Encje, Agregaty) "czyste" i skupione na swojej odpowiedzialności.
+*   **W Javie:** Klasa, która nie przechowuje stanu (stateless), a jej metody przyjmują obiekty domenowe jako argumenty.
+
+9.  **Application Service (Serwis Aplikacyjny)**
+*   **Co to?** Koordynuje przepływ zadań w aplikacji. Wywołuje Repozytoria do pobrania danych, używa Serwisów Domenowych do wykonania logiki, zapisuje zmiany przez Repozytoria. **Nie zawiera logiki biznesowej!**
+*   **Przykład:** `ObslugaZamowienService` z metodą `zlozNoweZamowienie(DaneDoZamowieniaDto dane)`. W środku: pobiera klienta, tworzy Agregat `Zamowienie`, wywołuje `zamowienieRepository.zapisz(zamowienie)`.
+*   **Po co?** Stanowi API dla zewnętrznego świata (np. kontrolerów webowych). Oddziela sposób wywołania (np. HTTP) od logiki domenowej. Zarządza transakcjami.
+*   **W Javie:** Klasa, której metody odpowiadają przypadkom użycia systemu.
+
+10. **Domain Event (Zdarzenie Domenowe)**
+*   **Co to?** Coś ważnego, co wydarzyło się w domenie i o czym inne części systemu mogą chcieć wiedzieć.
+*   **Przykład:** `ZamowienieZostaloZlozoneEvent`, `ProduktZmienilCeneEvent`, `PlatnoscZakonczonaEvent`.
+*   **Po co?** Umożliwia luźne powiązania między różnymi częściami systemu. Np. gdy zamówienie zostanie złożone, moduł powiadomień może wysłać email, a moduł magazynowy może zarezerwować towar.
+*   **W Javie:** Prosta klasa (często niemutowalna, np. rekord) przechowująca informacje o zdarzeniu. Może być publikowana przez jakiś mechanizm (np. Spring ApplicationEventPublisher).
+
+**Jak to wszystko działa razem (bardzo uproszczony przykład w Javie):**
+
+1.  Kontroler webowy (np. Spring MVC) odbiera żądanie HTTP (np. "złóż zamówienie").
+2.  Wywołuje metodę w **Serwisie Aplikacyjnym** (np. `obslugaZamowienService.zlozZamowienie(daneZamowienia)`).
+3.  **Serwis Aplikacyjny**:
+*   Pobiera potrzebne dane używając **Repozytoriów** (np. `klientRepository.znajdzPoId(...)`).
+*   Tworzy nowy **Agregat** `Zamowienie` (który jest **Korzeniem Agregatu** i może zawierać **Encje** `PozycjaZamowienia` oraz **Obiekty Wartości** np. `AdresDostawy`).
+*   Jeśli jest skomplikowana logika, może wywołać **Serwis Domenowy**.
+*   Zapisuje `Zamowienie` używając `zamowienieRepository.zapisz(zamowienie)`.
+*   Może opublikować **Zdarzenie Domenowe** (np. `ZamowienieZostaloZlozoneEvent`).
+4.  Inne części systemu (np. moduł powiadomień) mogą nasłuchiwać na to zdarzenie i zareagować.
+
+Wszystko to jest oparte o **Wszechobecny Język** i działa w ramach określonego **Ograniczonego Kontekstu**.
+
+Mam nadzieję, że to trochę rozjaśniło! DDD to bardziej filozofia i zestaw wzorców niż sztywna technologia, ale te pojęcia pomagają budować lepsze, bardziej zrozumiałe i łatwiejsze w utrzymaniu systemy, szczególnie te duże i skomplikowane.
