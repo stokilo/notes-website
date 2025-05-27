@@ -85,6 +85,12 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
   const isSelectingRef = useRef(false);
   const dragStartPositions = useRef<{ [key: string]: { x: number; y: number } }>({});
+  const [hoveredGridCell, setHoveredGridCell] = useState<{
+    gridId: string;
+    cell: { row: number; col: number };
+  } | null>(null);
+  const [draggingOverGridId, setDraggingOverGridId] = useState<string | null>(null);
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   // Update ref when state changes
   useEffect(() => {
@@ -551,6 +557,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
   const handleDragStart = (id: string, position: { x: number; y: number }) => {
     setIsDragging(true);
+    setDraggedItemId(id);
     dragStartPosition.current = position;
     dragStartItems.current = JSON.parse(JSON.stringify(items));
 
@@ -568,58 +575,101 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   };
 
-  const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
-    if (isDraggingSelection && selectedItemIds.includes(id)) {
-      const deltaX = newPosition.x - dragStartPositions.current[id].x;
-      const deltaY = newPosition.y - dragStartPositions.current[id].y;
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging || !containerRef.current || !draggedItemId) return;
 
-      setItems(prevItems =>
-        prevItems.map(item => {
-          if (selectedItemIds.includes(item.id)) {
-            const startPos = dragStartPositions.current[item.id];
-            return {
-              ...item,
-              position: {
-                x: startPos.x + deltaX,
-                y: startPos.y + deltaY
-              }
-            };
-          }
-          return item;
-        })
-      );
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const x = (e.clientX - containerRect.left) / zoom;
+    const y = (e.clientY - containerRect.top) / zoom;
+
+    // Check if we're over a grid
+    const gridItem = items.find(item => 
+      item.type === 'grid' && 
+      x >= item.position.x && 
+      x <= item.position.x + item.size.width &&
+      y >= item.position.y && 
+      y <= item.position.y + item.size.height
+    );
+
+    if (gridItem) {
+      const cellWidth = gridItem.size.width / (gridItem.props?.columns || 3);
+      const cellHeight = gridItem.size.height / (gridItem.props?.rows || 3);
+      
+      // Calculate which cell we're over
+      const col = Math.floor((x - gridItem.position.x) / cellWidth);
+      const row = Math.floor((y - gridItem.position.y) / cellHeight);
+
+      if (col >= 0 && col < (gridItem.props?.columns || 3) && 
+          row >= 0 && row < (gridItem.props?.rows || 3)) {
+        setDraggingOverGridId(gridItem.id);
+        setHoveredGridCell({ gridId: gridItem.id, cell: { row, col } });
+      } else {
+        setDraggingOverGridId(null);
+        setHoveredGridCell(null);
+      }
     } else {
-      setItems(prevItems =>
-        prevItems.map(item =>
-          item.id === id ? { ...item, position: newPosition } : item
-        )
-      );
+      setDraggingOverGridId(null);
+      setHoveredGridCell(null);
     }
   };
 
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isDragging, draggedItemId, zoom]);
+
   const handleDragEnd = (id: string, position: { x: number; y: number }) => {
-    if (isDragging && dragStartPosition.current) {
-      if (isDraggingSelection) {
+    if (!isDragging || !draggedItemId) return;
+
+    if (hoveredGridCell) {
+      // Find the grid item
+      const gridItem = items.find(item => item.id === hoveredGridCell.gridId);
+      if (gridItem && gridItem.type === 'grid') {
+        const cellWidth = gridItem.size.width / (gridItem.props?.columns || 3);
+        const cellHeight = gridItem.size.height / (gridItem.props?.rows || 3);
+        
+        // Calculate the snapped position
+        const snappedPosition = {
+          x: gridItem.position.x + (hoveredGridCell.cell.col * cellWidth),
+          y: gridItem.position.y + (hoveredGridCell.cell.row * cellHeight)
+        };
+
+        // Update the dragged item's position
+        setItemsWithHistory(prevItems =>
+          prevItems.map(item =>
+            item.id === draggedItemId ? { ...item, position: snappedPosition } : item
+          )
+        );
+      }
+    }
+
+    if (isDraggingSelection) {
+      const currentItems = JSON.parse(JSON.stringify(items));
+      addToHistory(currentItems);
+      setIsDraggingSelection(false);
+      dragStartPositions.current = {};
+    } else {
+      const movedItem = items.find(item => item.id === draggedItemId);
+      const startItem = dragStartItems.current.find(item => item.id === draggedItemId);
+      
+      if (movedItem && startItem && 
+          (movedItem.position.x !== startItem.position.x || 
+           movedItem.position.y !== startItem.position.y)) {
         const currentItems = JSON.parse(JSON.stringify(items));
         addToHistory(currentItems);
-        setIsDraggingSelection(false);
-        dragStartPositions.current = {};
-      } else {
-        const movedItem = items.find(item => item.id === id);
-        const startItem = dragStartItems.current.find(item => item.id === id);
-        
-        if (movedItem && startItem && 
-            (movedItem.position.x !== startItem.position.x || 
-             movedItem.position.y !== startItem.position.y)) {
-          const currentItems = JSON.parse(JSON.stringify(items));
-          addToHistory(currentItems);
-        }
       }
     }
     
     setIsDragging(false);
+    setDraggedItemId(null);
     dragStartPosition.current = null;
     dragStartItems.current = [];
+    setHoveredGridCell(null);
+    setDraggingOverGridId(null);
   };
 
   const handleSizeChange = (id: string, newSize: { width: number; height: number }) => {
@@ -983,6 +1033,35 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     };
   };
 
+  const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
+    if (isDraggingSelection && selectedItemIds.includes(id)) {
+      const deltaX = newPosition.x - dragStartPositions.current[id].x;
+      const deltaY = newPosition.y - dragStartPositions.current[id].y;
+
+      setItems(prevItems =>
+        prevItems.map(item => {
+          if (selectedItemIds.includes(item.id)) {
+            const startPos = dragStartPositions.current[item.id];
+            return {
+              ...item,
+              position: {
+                x: startPos.x + deltaX,
+                y: startPos.y + deltaY
+              }
+            };
+          }
+          return item;
+        })
+      );
+    } else {
+      setItems(prevItems =>
+        prevItems.map(item =>
+          item.id === id ? { ...item, position: newPosition } : item
+        )
+      );
+    }
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -1090,6 +1169,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               rows={item.props?.rows || 3}
               columns={item.props?.columns || 3}
               isMagnet={item.props?.isMagnet}
+              isDraggingOver={draggingOverGridId === item.id}
             />
           </DraggableItem>
         );

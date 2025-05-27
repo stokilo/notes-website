@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 interface GridItemProps {
   width?: number;
@@ -11,6 +11,7 @@ interface GridItemProps {
   isNew?: boolean;
   finalPosition?: { x: number; y: number };
   isPlaceholder?: boolean;
+  isDraggingOver?: boolean;
 }
 
 const GridItem: React.FC<GridItemProps> = ({
@@ -24,9 +25,12 @@ const GridItem: React.FC<GridItemProps> = ({
   isNew,
   finalPosition,
   isPlaceholder = false,
+  isDraggingOver = false,
 }) => {
   const [gridColor, setGridColor] = useState('#E0E0E0');
   const [borderColor, setBorderColor] = useState('#BDBDBD');
+  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isPlaceholder) {
@@ -43,8 +47,34 @@ const GridItem: React.FC<GridItemProps> = ({
   const cellWidth = width / columns;
   const cellHeight = height / rows;
 
+  const handleMouseMove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!containerRef.current || !isDraggingOver) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Calculate which cell the mouse is over
+    const col = Math.floor(x / cellWidth);
+    const row = Math.floor(y / cellHeight);
+
+    // Check if the mouse is within the grid bounds
+    if (col >= 0 && col < columns && row >= 0 && row < rows) {
+      setHoveredCell({ row, col });
+    } else {
+      setHoveredCell(null);
+    }
+  };
+
+  const handleMouseLeave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHoveredCell(null);
+  };
+
   return (
     <div
+      ref={containerRef}
       style={{
         position: 'relative',
         width,
@@ -56,9 +86,18 @@ const GridItem: React.FC<GridItemProps> = ({
         cursor: isMagnet ? 'grab' : 'default',
         transition: 'all 0.2s ease',
         boxShadow: isMagnet ? '0 4px 8px rgba(0, 0, 0, 0.1)' : 'none',
+        pointerEvents: isDraggingOver ? 'auto' : 'none',
       }}
-      onClick={onClick}
-      onContextMenu={onContextMenu}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.(e);
+      }}
+      onContextMenu={(e) => {
+        e.stopPropagation();
+        onContextMenu?.(e);
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Grid lines */}
       {Array.from({ length: rows - 1 }).map((_, i) => (
@@ -89,6 +128,24 @@ const GridItem: React.FC<GridItemProps> = ({
           }}
         />
       ))}
+      
+      {/* Hovered cell highlight */}
+      {hoveredCell && (
+        <div
+          style={{
+            position: 'absolute',
+            left: hoveredCell.col * cellWidth,
+            top: hoveredCell.row * cellHeight,
+            width: cellWidth,
+            height: cellHeight,
+            backgroundColor: 'rgba(74, 144, 226, 0.2)',
+            border: '2px solid rgba(74, 144, 226, 0.5)',
+            borderRadius: '4px',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        />
+      )}
       
       {/* Magnet indicator */}
       {isMagnet && (
