@@ -63,8 +63,12 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   // Update position when initialPosition changes
   useEffect(() => {
     if (JSON.stringify(initialPosition) !== JSON.stringify(lastPositionRef.current)) {
-      setPosition(initialPosition);
-      lastPositionRef.current = initialPosition;
+      const newPosition = {
+        x: initialPosition.x,
+        y: initialPosition.y
+      };
+      setPosition(newPosition);
+      lastPositionRef.current = newPosition;
     }
   }, [initialPosition]);
 
@@ -279,20 +283,16 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       ref={itemRef}
       className="draggable-item"
       animate={disableAnimations ? {} : {
-        rotate: rotation,
-        scale: hover ? 1.1 : scale,
         x: position.x,
         y: position.y,
         width: size.width,
         height: size.height,
       }}
-      transition={disableAnimations ? {} : {
-        rotate: { duration: 0.5, ease: "easeInOut" },
-        scale: { duration: 0.2, ease: "easeInOut" },
-        x: { duration: 0, ease: "linear" },
-        y: { duration: 0, ease: "linear" },
-        width: { duration: 0, ease: "linear" },
-        height: { duration: 0, ease: "linear" },
+      transition={{
+        x: { duration: 0 },
+        y: { duration: 0 },
+        width: { duration: 0 },
+        height: { duration: 0 },
       }}
       style={{
         position: 'absolute',
@@ -301,11 +301,13 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         zIndex: isDragging || isResizing ? 1000 : 1,
-        willChange: 'transform',
+        willChange: 'auto',
         transform: 'translate3d(0, 0, 0)',
         outline: isSelected ? '2px solid #4a90e2' : 'none',
         outlineOffset: '2px',
         boxShadow: isSelected ? '0 0 8px rgba(74, 144, 226, 0.5)' : 'none',
+        transition: 'none',
+        animation: 'none',
         ...(disableAnimations ? {
           transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
           width: size.width,
@@ -324,9 +326,11 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: isSelected ? 'rgba(74, 144, 226, 0.1)' : 'transparent',
-          transition: 'background-color 0.2s ease',
           borderRadius: '4px',
           border: isSelected ? '1px solid rgba(74, 144, 226, 0.3)' : 'none',
+          transition: 'none',
+          animation: 'none',
+          willChange: 'auto',
         }}
       >
         {children}
@@ -335,25 +339,37 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       <div
         style={{
           position: 'absolute',
-          right: -6,
-          bottom: -6,
-          width: 12,
-          height: 12,
+          right: -4,
+          bottom: -4,
+          width: 8,
+          height: 8,
           backgroundColor: isSelected ? '#4a90e2' : '#999',
           borderRadius: '50%',
           cursor: 'nwse-resize',
-          border: '2px solid white',
-          boxShadow: '0 0 4px rgba(0,0,0,0.2)',
+          border: '1px solid white',
+          boxShadow: '0 0 2px rgba(0,0,0,0.2)',
           zIndex: 1001,
           opacity: isSelected ? 1 : 0,
-          transition: 'opacity 0.2s ease, background-color 0.2s ease',
+          transition: 'none',
+          animation: 'none',
+          willChange: 'auto',
         }}
         onMouseDown={handleResizeStart}
       />
       <style>
         {`
+          .draggable-item {
+            transition: none !important;
+            animation: none !important;
+          }
+          .draggable-item:hover {
+            transition: none !important;
+            animation: none !important;
+          }
           .draggable-item:hover > div[style*="position: absolute"] {
             opacity: 1 !important;
+            transition: none !important;
+            animation: none !important;
           }
         `}
       </style>

@@ -73,8 +73,17 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
       ref={containerRef}
       style={{ 
         position: 'relative', 
-        width, 
-        height,
+        width: width * 0.5,
+        height: height * 0.5,
+        transform: 'none',
+        transition: 'none',
+        animation: 'none',
+        willChange: 'auto',
+        ':hover': {
+          transform: 'none',
+          transition: 'none',
+          animation: 'none'
+        }
       }}
     >
       {/* Markdown icon */}
@@ -94,11 +103,16 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
           transform: 'none',
           animation: 'none',
           willChange: 'auto',
+          ':hover': {
+            transform: 'none',
+            transition: 'none',
+            animation: 'none'
+          }
         }}
       >
         <svg
-          width={width * 0.6}
-          height={height * 0.6}
+          width={width * 0.3}
+          height={height * 0.3}
           viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -107,6 +121,11 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
             transform: 'none',
             animation: 'none',
             willChange: 'auto',
+            ':hover': {
+              transform: 'none',
+              transition: 'none',
+              animation: 'none'
+            }
           }}
         >
           <path
@@ -131,15 +150,20 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
             backgroundColor: '#ffffff',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            width: '90vw',
-            maxWidth: '1400px',
-            maxHeight: '90vh',
+            width: '60vw',
+            maxWidth: '800px',
+            maxHeight: '80vh',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
             transition: 'none',
             animation: 'none',
             willChange: 'auto',
+            ':hover': {
+              transform: 'translate(-50%, -50%)',
+              transition: 'none',
+              animation: 'none'
+            }
           }}
         >
           {/* Header */}

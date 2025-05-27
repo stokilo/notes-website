@@ -638,10 +638,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addItem = (type: 'box' | 'circle' , position: { x: number; y: number }) => {
+    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `${type}-${Date.now()}`,
       type,
-      position,
+      position: centerPos,
       size: { width: 100, height: 100 },
       props: type === 'box'
         ? { color: '#4a90e2', size: 100, height: 80 } 
@@ -728,10 +729,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addSingleBoxSet = (position: { x: number; y: number }) => {
+    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `boxSet-${Date.now()}`,
       type: 'boxSet',
-      position,
+      position: centerPos,
       size: { width: 20, height: 20 },
       props: {},
       label: undefined,
@@ -740,10 +742,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addSeparator = (position: { x: number; y: number }) => {
+    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `separator-${Date.now()}`,
       type: 'separator',
-      position,
+      position: centerPos,
       size: { width: 2, height: 100 },
       props: { color: '#e0e0e0' },
     };
@@ -751,10 +754,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addArrow = (position: { x: number; y: number }) => {
+    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `arrow-${Date.now()}`,
       type: 'arrow',
-      position,
+      position: centerPos,
       size: { width: 120, height: 40 },
       props: { 
         segments: 3,
@@ -783,10 +787,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addCodeBlock = (position: { x: number; y: number }) => {
+    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: generateId(),
       type: 'codeBlock',
-      position,
+      position: centerPos,
       size: { width: 40, height: 40 },
       props: {
         url: 'https://raw.githubusercontent.com/stokilo/notes-website/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/SecurityConfig.java',
@@ -797,10 +802,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addCirclesPath = (position: { x: number; y: number }) => {
+    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `circlesPath-${Date.now()}`,
       type: 'circlesPath',
-      position,
+      position: centerPos,
       size: { width: 200, height: 100 },
       props: { 
         isAnimating: true
@@ -862,10 +868,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addTwoPointsPath = (position: { x: number; y: number }) => {
+    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `twoPointsPath-${Date.now()}`,
       type: 'twoPointsPath',
-      position,
+      position: centerPos,
       size: { width: 200, height: 100 },
       props: { 
         isAnimating: true
@@ -926,13 +933,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addMarkdownEditor = (position: { x: number; y: number }) => {
+    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `markdown-${Date.now()}`,
       type: 'markdown',
-      position,
+      position: centerPos,
       size: { width: 300, height: 200 },
       props: {
         initialContent: '',
+        showPreview: false
       },
     };
     setItemsWithHistory(prev => [...prev, newItem]);
