@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github.css'; // or any other highlight.js theme
 
 interface DraggableItemProps {
   children: React.ReactNode;
@@ -277,6 +280,15 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       }
     };
   }, [disableAnimations]);
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT' || active.getAttribute('contenteditable') === 'true')) {
+      // Don't block shortcuts in input fields
+      return;
+    }
+    // ...your global shortcuts
+  };
 
   return (
     <motion.div

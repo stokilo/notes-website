@@ -1342,6 +1342,36 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               ];
             }
 
+            if (item.type === 'markdown') {
+              return [
+                {
+                  label: 'Paste',
+                  onClick: () => {
+                    navigator.clipboard.readText().then(text => {
+                      const markdownItem = items.find(i => i.id === contextMenu.itemId);
+                      if (markdownItem) {
+                        setItemsWithHistory(prevItems =>
+                          prevItems.map(item =>
+                            item.id === contextMenu.itemId
+                              ? {
+                                  ...item,
+                                  props: {
+                                    ...item.props,
+                                    initialContent: (item.props.initialContent || '') + text
+                                  }
+                                }
+                              : item
+                          )
+                        );
+                      }
+                    });
+                    setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+                  }
+                },
+                ...baseItems,
+              ];
+            }
+
             return [
               {
                 label: 'Add Label',
