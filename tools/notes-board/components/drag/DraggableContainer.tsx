@@ -938,11 +938,29 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItemsWithHistory(prev => [...prev, newItem]);
   };
 
+  const getCenterPosition = () => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    
+    // Calculate the center position in the container's coordinate space
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    // Convert to unzoomed coordinates
+    const unzoomedX = centerX / zoom;
+    const unzoomedY = centerY / zoom;
+    
+    return {
+      x: unzoomedX - 150, // Half of typical item width
+      y: unzoomedY - 100  // Half of typical item height
+    };
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
-      position: item.position,
-      size: item.size,
+      initialPosition: item.position,
+      initialSize: item.size,
       isSelected: selectedItemIds.includes(item.id),
       onSelect: () => setSelectedItemIds([item.id]),
       onDragStart: (position: { x: number; y: number }) => handleDragStart(item.id, position),
@@ -958,6 +976,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       onCirclesPathPositionChange: (position: { x: number; y: number }) => handleCirclesPathPositionChange(item.id, position),
       onCirclesPathCirclePositionsChange: (positions: Array<{ x: number; y: number }>) => handleCirclesPathCirclePositionsChange(item.id, positions),
       onAttachCirclesPath: (targetId: string) => handleAttachCirclesPath(item.id, targetId),
+      zoom,
     };
 
     if (item.type === 'boxSetContainer') {

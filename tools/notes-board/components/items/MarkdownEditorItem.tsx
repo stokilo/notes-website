@@ -20,6 +20,9 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartTime = useRef<number>(0);
+  const dragThreshold = 200; // milliseconds
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -49,9 +52,20 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
     }
   }, [isDialogOpen, onClosePreview]);
 
-  const handleIconClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent event from bubbling up to DraggableItem
-    setIsDialogOpen(true);
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 0) { // Left mouse button
+      dragStartTime.current = Date.now();
+      setIsDragging(false);
+    }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (e.button === 0) { // Left mouse button
+      const dragDuration = Date.now() - dragStartTime.current;
+      if (dragDuration < dragThreshold) {
+        setIsDialogOpen(true);
+      }
+    }
   };
 
   return (
@@ -65,7 +79,8 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
     >
       {/* Markdown icon */}
       <div
-        onClick={handleIconClick}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
         style={{
           width: '100%',
           height: '100%',
@@ -75,6 +90,10 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
           backgroundColor: 'transparent',
           borderRadius: '4px',
           cursor: 'pointer',
+          transition: 'none',
+          transform: 'none',
+          animation: 'none',
+          willChange: 'auto',
         }}
       >
         <svg
@@ -83,6 +102,12 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
           viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
+          style={{
+            transition: 'none',
+            transform: 'none',
+            animation: 'none',
+            willChange: 'auto',
+          }}
         >
           <path
             d="M4 6H20M4 12H20M4 18H12"
@@ -112,6 +137,9 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            transition: 'none',
+            animation: 'none',
+            willChange: 'auto',
           }}
         >
           {/* Header */}
@@ -123,6 +151,8 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              transition: 'none',
+              animation: 'none',
             }}
           >
             <div style={{ display: 'flex', gap: '12px' }}>
@@ -136,6 +166,8 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
                   padding: '6px 12px',
                   borderRadius: '4px',
                   fontSize: '14px',
+                  transition: 'none',
+                  animation: 'none',
                 }}
               >
                 Edit
@@ -150,6 +182,8 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
                   padding: '6px 12px',
                   borderRadius: '4px',
                   fontSize: '14px',
+                  transition: 'none',
+                  animation: 'none',
                 }}
               >
                 Preview
@@ -165,6 +199,8 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
                 padding: '6px 12px',
                 borderRadius: '4px',
                 fontSize: '14px',
+                transition: 'none',
+                animation: 'none',
               }}
             >
               Close
@@ -177,6 +213,8 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
               flex: 1,
               display: 'flex',
               overflow: 'hidden',
+              transition: 'none',
+              animation: 'none',
             }}
           >
             {viewMode === 'edit' ? (
@@ -192,6 +230,8 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
                   fontSize: '14px',
                   lineHeight: '1.5',
                   outline: 'none',
+                  transition: 'none',
+                  animation: 'none',
                 }}
               />
             ) : (
@@ -201,6 +241,8 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
                   padding: '16px',
                   overflow: 'auto',
                   backgroundColor: '#f8f9fa',
+                  transition: 'none',
+                  animation: 'none',
                 }}
               >
                 <div className="markdown-content">
