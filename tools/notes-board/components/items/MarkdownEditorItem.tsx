@@ -23,6 +23,7 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartTime = useRef<number>(0);
   const dragThreshold = 200; // milliseconds
+  const ICON_SIZE = 24;
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -73,17 +74,12 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
       ref={containerRef}
       style={{ 
         position: 'relative', 
-        width: width * 0.5,
-        height: height * 0.5,
+        width: width,
+        height: height,
         transform: 'none',
         transition: 'none',
         animation: 'none',
         willChange: 'auto',
-        ':hover': {
-          transform: 'none',
-          transition: 'none',
-          animation: 'none'
-        }
       }}
     >
       {/* Markdown icon */}
@@ -103,16 +99,11 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
           transform: 'none',
           animation: 'none',
           willChange: 'auto',
-          ':hover': {
-            transform: 'none',
-            transition: 'none',
-            animation: 'none'
-          }
         }}
       >
         <svg
-          width={width * 0.3}
-          height={height * 0.3}
+          width={width}
+          height={height}
           viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -121,11 +112,6 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
             transform: 'none',
             animation: 'none',
             willChange: 'auto',
-            ':hover': {
-              transform: 'none',
-              transition: 'none',
-              animation: 'none'
-            }
           }}
         >
           <path
@@ -158,7 +144,6 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
             overflow: 'hidden',
             transition: 'none',
             animation: 'none',
-            willChange: 'auto',
             ':hover': {
               transform: 'translate(-50%, -50%)',
               transition: 'none',
