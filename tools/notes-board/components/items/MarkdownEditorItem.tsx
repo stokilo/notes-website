@@ -253,37 +253,7 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
                   animation: 'none',
                 }}
               >
-                <div className="markdown-content">
-                  {content.split('\n').map((line, i) => {
-                    if (line.startsWith('# ')) {
-                      return <h1 key={i} style={{ margin: '0 0 16px 0', fontSize: '2em' }}>{line.slice(2)}</h1>;
-                    } else if (line.startsWith('## ')) {
-                      return <h2 key={i} style={{ margin: '0 0 16px 0', fontSize: '1.5em' }}>{line.slice(3)}</h2>;
-                    } else if (line.startsWith('### ')) {
-                      return <h3 key={i} style={{ margin: '0 0 16px 0', fontSize: '1.17em' }}>{line.slice(4)}</h3>;
-                    } else if (line.startsWith('- ')) {
-                      return <li key={i} style={{ margin: '0 0 8px 0', listStyleType: 'disc', marginLeft: '20px' }}>{line.slice(2)}</li>;
-                    } else if (line.startsWith('```')) {
-                      return <pre key={i} style={{ 
-                        backgroundColor: '#e9ecef', 
-                        padding: '16px', 
-                        borderRadius: '4px', 
-                        overflow: 'auto',
-                        margin: '0 0 16px 0',
-                        fontFamily: 'monospace'
-                      }}>{line.slice(3)}</pre>;
-                    } else if (line.startsWith('`') && line.endsWith('`')) {
-                      return <code key={i} style={{ 
-                        backgroundColor: '#e9ecef', 
-                        padding: '2px 4px', 
-                        borderRadius: '4px',
-                        fontFamily: 'monospace'
-                      }}>{line.slice(1, -1)}</code>;
-                    } else {
-                      return <p key={i} style={{ margin: '0 0 16px 0' }}>{line}</p>;
-                    }
-                  })}
-                </div>
+                <ReactMarkdown>{content}</ReactMarkdown>
               </div>
             )}
           </div>
