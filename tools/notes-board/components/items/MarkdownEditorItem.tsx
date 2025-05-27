@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import ReactDOM from 'react-dom';
 
 interface MarkdownEditorItemProps {
   width?: number;
@@ -24,6 +25,7 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
   const dragStartTime = useRef<number>(0);
   const dragThreshold = 200; // milliseconds
   const ICON_SIZE = 24;
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -41,7 +43,7 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (dialogRef.current && !dialogRef.current.contains(event.target as Node)) {
         setIsDialogOpen(false);
         onClosePreview?.();
       }
@@ -125,14 +127,15 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
       </div>
 
       {/* Markdown editor dialog */}
-      {isDialogOpen && (
+      {isDialogOpen && ReactDOM.createPortal(
         <div
+          ref={dialogRef}
           style={{
             position: 'fixed',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            zIndex: 1100,
+            zIndex: 2147483647,
             backgroundColor: '#ffffff',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
@@ -144,11 +147,7 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
             overflow: 'hidden',
             transition: 'none',
             animation: 'none',
-            ':hover': {
-              transform: 'translate(-50%, -50%)',
-              transition: 'none',
-              animation: 'none'
-            }
+            willChange: 'auto',
           }}
         >
           {/* Header */}
@@ -288,7 +287,8 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
