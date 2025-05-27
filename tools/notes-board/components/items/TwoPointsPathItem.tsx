@@ -5,10 +5,11 @@ interface TwoPointsPathItemProps {
   width: number;
   height: number;
   isAnimating?: boolean;
-  position?: { x: number; y: number };
-  onPositionChange?: (position: { x: number; y: number }) => void;
-  onCirclePositionChange?: (positions: Array<{ x: number; y: number }>) => void;
-  initialCirclePositions?: Array<{ x: number; y: number }>;
+  position: { x: number; y: number };
+  onPositionChange: (id: string, position: { x: number; y: number }) => void;
+  onCirclePositionsChange: (id: string, positions: Array<{ x: number; y: number }>) => void;
+  circlePositions?: Array<{ x: number; y: number }>;
+  onAttach?: (targetId: string) => void;
   attachedTo?: string;
 }
 
@@ -16,14 +17,15 @@ const TwoPointsPathItem: React.FC<TwoPointsPathItemProps> = ({
   width,
   height,
   isAnimating = false,
-  position = { x: 0, y: 0 },
+  position,
   onPositionChange,
-  onCirclePositionChange,
-  initialCirclePositions,
+  onCirclePositionsChange,
+  circlePositions,
+  onAttach,
   attachedTo,
 }) => {
   const [positions, setPositions] = useState(
-    initialCirclePositions || [
+    circlePositions || [
       { x: width * 0.2, y: height * 0.5 },
       { x: width * 0.8, y: height * 0.5 },
     ]
@@ -78,7 +80,7 @@ const TwoPointsPathItem: React.FC<TwoPointsPathItemProps> = ({
         const newPositions = [...positions];
         newPositions[draggedCircleIndex] = { x, y };
         setPositions(newPositions);
-        onCirclePositionChange?.(newPositions);
+        onCirclePositionsChange('twoPointsPath', newPositions);
       }
     };
 
@@ -95,17 +97,16 @@ const TwoPointsPathItem: React.FC<TwoPointsPathItemProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggedCircleIndex, positions, onCirclePositionChange]);
+  }, [draggedCircleIndex, positions, onCirclePositionsChange]);
 
   return (
     <div
       ref={containerRef}
       style={{
-        position: 'absolute',
-        left: position.x,
-        top: position.y,
+        position: 'relative',
         width: '100%',
         height: '100%',
+        overflow: 'visible',
       }}
     >
       {/* Dotted line between points */}

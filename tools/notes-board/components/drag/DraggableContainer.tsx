@@ -15,6 +15,7 @@ import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 import CirclesPathItem from '../items/CirclesPathItem';
 import TwoPointsPathItem from '../items/TwoPointsPathItem';
 import MarkdownEditorItem from '../items/MarkdownEditorItem';
+import GridItem from '../items/GridItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -29,7 +30,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath' | 'twoPointsPath' | 'markdown';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath' | 'twoPointsPath' | 'markdown' | 'grid';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -947,157 +948,154 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     setItemsWithHistory(prev => [...prev, newItem]);
   };
 
+  const addGrid = (position: { x: number; y: number }) => {
+    const centerPos = getCenterPosition();
+    const gridSize = { width: 200, height: 200 };
+    const newItem: DraggableItem = {
+      id: generateId(),
+      type: 'grid',
+      position: {
+        x: centerPos.x - (gridSize.width / 2),
+        y: centerPos.y - (gridSize.height / 2)
+      },
+      size: gridSize,
+      props: {
+        rows: 3,
+        columns: 3,
+        isMagnet: true
+      },
+      isNew: true
+    };
+    setItemsWithHistory(prevItems => [...prevItems, newItem]);
+  };
+
   const getCenterPosition = () => {
     if (!containerRef.current) return { x: 0, y: 0 };
     const rect = containerRef.current.getBoundingClientRect();
     
     // Calculate the center position in the container's coordinate space
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    
-    // Convert to unzoomed coordinates
-    const unzoomedX = centerX / zoom;
-    const unzoomedY = centerY / zoom;
+    const centerX = (rect.width / 2) / zoom;
+    const centerY = (rect.height / 2) / zoom;
     
     return {
-      x: unzoomedX - 150, // Half of typical item width
-      y: unzoomedY - 100  // Half of typical item height
+      x: centerX,
+      y: centerY
     };
   };
 
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
-      initialPosition: item.position,
-      initialSize: item.size,
-      isSelected: selectedItemIds.includes(item.id),
-      onSelect: () => setSelectedItemIds([item.id]),
-      onDragStart: (position: { x: number; y: number }) => handleDragStart(item.id, position),
-      onPositionChange: (position: { x: number; y: number }) => handlePositionChange(item.id, position),
-      onDragEnd: (position: { x: number; y: number }) => handleDragEnd(item.id, position),
-      onSizeChange: (size: { width: number; height: number }) => handleSizeChange(item.id, size),
+      position: item.position,
+      size: item.size,
+      onDragStart: handleDragStart,
+      onPositionChange: handlePositionChange,
+      onDragEnd: handleDragEnd,
+      onSizeChange: handleSizeChange,
       onResizeEnd: handleResizeEnd,
+      onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
       onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, item.id),
-      onCommentChange: (comment: string, label: string) => handleCommentChange(item.id, comment, label),
-      onLabelChange: (newLabel: string) => handleLabelChange(item.id, newLabel),
-      onToggleArrowAnimation: () => handleToggleArrowAnimation(item.id),
-      onToggleCirclesPathAnimation: () => handleToggleCirclesPathAnimation(item.id),
-      onCirclesPathPositionChange: (position: { x: number; y: number }) => handleCirclesPathPositionChange(item.id, position),
-      onCirclesPathCirclePositionsChange: (positions: Array<{ x: number; y: number }>) => handleCirclesPathCirclePositionsChange(item.id, positions),
-      onAttachCirclesPath: (targetId: string) => handleAttachCirclesPath(item.id, targetId),
-      zoom,
+      isSelected: selectedItemIds.includes(item.id),
+      isNew: item.isNew,
+      finalPosition: item.finalPosition,
+      rotation: item.rotation,
     };
 
-    if (item.type === 'boxSetContainer') {
-      const containerboxSetes = item.props.children || [];
-      return (
-        <DraggableItem disableAnimations={true} key={item.id} {...commonProps}>
-          <BoxGridContainer width={item.size.width} height={item.size.height} containerId={item.id}>
-          </BoxGridContainer>
-        </DraggableItem>
-      );
+    switch (item.type) {
+      case 'box':
+        return <DraggableItem key={item.id} {...commonProps}><RectangleItem width={item.size.width} height={item.size.height} /></DraggableItem>;
+      case 'circle':
+        return <DraggableItem key={item.id} {...commonProps}><CircleItem width={item.size.width} height={item.size.height} /></DraggableItem>;
+      case 'boxSet':
+        return (
+          <DraggableItem key={item.id} {...commonProps}>
+            <BoxSetItem
+              width={item.size.width}
+              height={item.size.height}
+              comment={item.comment}
+              commentLabel={item.commentLabel}
+            />
+          </DraggableItem>
+        );
+      case 'separator':
+        return <DraggableItem key={item.id} {...commonProps}><SeparatorItem width={item.size.width} height={item.size.height} /></DraggableItem>;
+      case 'arrow':
+        return (
+          <DraggableItem key={item.id} {...commonProps}>
+            <ArrowItem
+              width={item.size.width}
+              height={item.size.height}
+              segments={item.props?.segments || 3}
+              isAnimating={item.props?.isAnimating}
+            />
+          </DraggableItem>
+        );
+      case 'codeBlock':
+        return (
+          <DraggableItem key={item.id} {...commonProps}>
+            <ShikiCodeBlockItem
+              width={item.size.width}
+              height={item.size.height}
+              code={item.props?.code}
+              language={item.props?.language}
+            />
+          </DraggableItem>
+        );
+      case 'circlesPath':
+        return (
+          <DraggableItem key={item.id} {...commonProps}>
+            <CirclesPathItem
+              width={item.size.width}
+              height={item.size.height}
+              isAnimating={item.props?.isAnimating}
+              position={item.position}
+              circlePositions={item.circlePositions}
+              onPositionChange={handleCirclesPathPositionChange}
+              onCirclePositionsChange={handleCirclesPathCirclePositionsChange}
+              onAttach={(targetId) => handleAttachCirclesPath(item.id, targetId)}
+            />
+          </DraggableItem>
+        );
+      case 'twoPointsPath':
+        return (
+          <DraggableItem key={item.id} {...commonProps}>
+            <TwoPointsPathItem
+              width={item.size.width}
+              height={item.size.height}
+              isAnimating={item.props?.isAnimating}
+              position={item.position}
+              circlePositions={item.circlePositions}
+              onPositionChange={handleTwoPointsPathPositionChange}
+              onCirclePositionsChange={handleTwoPointsPathCirclePositionsChange}
+              onAttach={(targetId) => handleAttachTwoPointsPath(item.id, targetId)}
+            />
+          </DraggableItem>
+        );
+      case 'markdown':
+        return (
+          <DraggableItem key={item.id} {...commonProps}>
+            <MarkdownEditorItem
+              width={item.size.width}
+              height={item.size.height}
+              initialContent={item.props?.content}
+            />
+          </DraggableItem>
+        );
+      case 'grid':
+        return (
+          <DraggableItem key={item.id} {...commonProps}>
+            <GridItem
+              width={item.size.width}
+              height={item.size.height}
+              rows={item.props?.rows || 3}
+              columns={item.props?.columns || 3}
+              isMagnet={item.props?.isMagnet}
+            />
+          </DraggableItem>
+        );
+      default:
+        return null;
     }
-
-    if (item.type === 'codeBlock') {
-      return (
-        <DraggableItem key={item.id} {...commonProps} disableAnimations={true}>
-          <ShikiCodeBlockItem
-            width={item.size.width}
-            height={item.size.height}
-            code={item.props.code}
-            url={item.props.url}
-            language={item.props.language}
-            showPreview={item.id === codePreviewItemId}
-            onClosePreview={() => setCodePreviewItemId(null)}
-          />
-        </DraggableItem>
-      );
-    }
-
-    if (item.type === 'circlesPath') {
-      return (
-        <CirclesPathItem
-          key={item.id}
-          width={item.size.width}
-          height={item.size.height}
-          isAnimating={item.props.isAnimating}
-          position={item.position}
-          onPositionChange={(pos) => handleCirclesPathPositionChange(item.id, pos)}
-          onCirclePositionChange={(positions) => handleCirclesPathCirclePositionsChange(item.id, positions)}
-          initialCirclePositions={item.circlePositions}
-          attachedTo={item.attachedTo}
-        />
-      );
-    }
-
-    if (item.type === 'twoPointsPath') {
-      return (
-        <TwoPointsPathItem
-          key={item.id}
-          width={item.size.width}
-          height={item.size.height}
-          isAnimating={item.props.isAnimating}
-          position={item.position}
-          onPositionChange={(pos) => handleTwoPointsPathPositionChange(item.id, pos)}
-          onCirclePositionChange={(positions) => handleTwoPointsPathCirclePositionsChange(item.id, positions)}
-          initialCirclePositions={item.circlePositions}
-          attachedTo={item.attachedTo}
-        />
-      );
-    }
-
-    return (
-      <DraggableItem key={item.id} {...commonProps}>
-        {item.type === 'box' ? (
-          <RectangleItem
-            {...item.props} 
-            width={item.size.width}
-            height={item.size.height}
-            label={item.label} 
-            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
-          />
-        ) : item.type === 'circle' ? (
-          <CircleItem
-            {...item.props} 
-            width={item.size.width}
-            height={item.size.height}
-            label={item.label} 
-            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
-          />
-        ) : item.type === 'boxSet' ? (
-          <BoxSetItem
-            width={item.size.width}
-            height={item.size.height}
-            comment={item.comment}
-            commentLabel={item.commentLabel}
-          />
-        ) : item.type === 'separator' ? (
-          <SeparatorItem
-            width={item.size.width}
-            height={item.size.height}
-            color={item.props.color}
-          />
-        ) : item.type === 'arrow' ? (
-          <ArrowItem
-            width={item.size.width}
-            height={item.size.height}
-            segments={item.props.segments}
-            rotation={item.props.rotation}
-            isAnimating={item.props.isAnimating}
-          />
-        ) : item.type === 'markdown' ? (
-          <MarkdownEditorItem
-            width={item.size.width}
-            height={item.size.height}
-            initialContent={item.props.initialContent}
-            showPreview={false}
-            onClosePreview={() => {}}
-          />
-        ) : (
-          <span>nothing here</span>
-        )}
-      </DraggableItem>
-    );
   };
 
 
@@ -1161,6 +1159,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onAddCirclesPath={() => addCirclesPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
           onAddTwoPointsPath={() => addTwoPointsPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
           onAddMarkdownEditor={() => addMarkdownEditor({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
+          onAddGrid={() => addGrid({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 100 })}
         />
         <div
           style={{

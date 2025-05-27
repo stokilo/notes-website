@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 interface CircleItemProps {
   width?: number;
-  length?: number;
+  height?: number;
   color?: string;
   hasSidewalk?: boolean;
   hasMarkings?: boolean;
@@ -12,7 +12,7 @@ interface CircleItemProps {
 
 const CircleItem: React.FC<CircleItemProps> = ({
   width = 100,
-  length = 200,
+  height = 100,
   color = '#4a4a4a',
   hasSidewalk = true,
   hasMarkings = true,
@@ -56,7 +56,7 @@ const CircleItem: React.FC<CircleItemProps> = ({
   };
 
   return (
-    <div style={{ position: 'relative', width, height: width }}>
+    <div style={{ position: 'relative', width, height }}>
       {/* Label */}
       {(label !== undefined || isEditing) && (
         <div
