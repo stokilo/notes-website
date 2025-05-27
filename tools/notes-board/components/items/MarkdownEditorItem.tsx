@@ -36,6 +36,17 @@ const MarkdownEditorItem: React.FC<MarkdownEditorItemProps> = ({
   const [isDraggingDialog, setIsDraggingDialog] = useState(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
 
+  // Center dialog when it opens
+  useEffect(() => {
+    if (isDialogOpen && dialogRef.current) {
+      const dialogWidth = dialogRef.current.offsetWidth;
+      const dialogHeight = dialogRef.current.offsetHeight;
+      const centerX = (window.innerWidth - dialogWidth) / 2;
+      const centerY = (window.innerHeight - dialogHeight) / 2;
+      setDialogPosition({ x: centerX, y: centerY });
+    }
+  }, [isDialogOpen]);
+
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
