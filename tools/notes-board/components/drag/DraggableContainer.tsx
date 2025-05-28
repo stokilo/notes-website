@@ -921,6 +921,22 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
+  const handleLanguageChange = (itemId: string, newLanguage: string) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId
+          ? {
+              ...item,
+              props: {
+                ...item.props,
+                language: newLanguage
+              }
+            }
+          : item
+      )
+    );
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -1026,6 +1042,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 )
               );
             }}
+            onLanguageChange={(newLanguage) => handleLanguageChange(item.id, newLanguage)}
           />
         )}
       </DraggableItem>

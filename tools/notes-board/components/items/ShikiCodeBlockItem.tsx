@@ -35,6 +35,32 @@ const SUPPORTED_LANGUAGES = [
   'plaintext'
 ];
 
+// Singleton highlighter instance
+let highlighterInstance: shiki.Highlighter | null = null;
+let highlighterPromise: Promise<shiki.Highlighter> | null = null;
+
+const getHighlighter = async () => {
+  if (highlighterInstance) {
+    return highlighterInstance;
+  }
+
+  if (highlighterPromise) {
+    return highlighterPromise;
+  }
+
+  highlighterPromise = shiki.createHighlighter({
+    themes: ['github-dark'],
+    langs: SUPPORTED_LANGUAGES,
+  }).then(async instance => {
+    // Preload all languages
+    await Promise.all(SUPPORTED_LANGUAGES.map(lang => instance.loadLanguage(lang)));
+    highlighterInstance = instance;
+    return instance;
+  });
+
+  return highlighterPromise;
+};
+
 interface ShikiCodeBlockItemProps {
   width?: number;
   height?: number;
@@ -44,6 +70,7 @@ interface ShikiCodeBlockItemProps {
   showPreview?: boolean;
   onClosePreview?: () => void;
   onCodeChange?: (code: string) => void;
+  onLanguageChange?: (language: string) => void;
   isPreview?: boolean;
 }
 
@@ -56,6 +83,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   showPreview = false,
   onClosePreview,
   onCodeChange,
+  onLanguageChange,
   isPreview = false,
 }) => {
   const [highlightedCode, setHighlightedCode] = useState('');
@@ -67,16 +95,18 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  // Update selected language when prop changes
+  useEffect(() => {
+    setSelectedLanguage(language);
+  }, [language]);
+
   // Detect language from code content
   useEffect(() => {
     const detectLanguage = async () => {
       if (!editorCode.trim()) return;
       
       try {
-        const highlighter = await shiki.createHighlighter({
-          themes: ['github-dark'],
-          langs: SUPPORTED_LANGUAGES,
-        });
+        const highlighter = await getHighlighter();
         
         // Try to detect language from the code
         const detected = highlighter.getLoadedLanguages().find(lang => {
@@ -92,6 +122,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           setDetectedLanguage(detected);
           if (selectedLanguage === 'plaintext') {
             setSelectedLanguage(detected);
+            onLanguageChange?.(detected);
           }
         }
       } catch (err) {
@@ -100,7 +131,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
     };
 
     detectLanguage();
-  }, [editorCode]);
+  }, [editorCode, selectedLanguage, onLanguageChange]);
 
   useEffect(() => {
     const highlightCode = async () => {
@@ -118,10 +149,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           codeToHighlight = await response.text();
         }
 
-        const highlighter = await shiki.createHighlighter({
-          themes: ['github-dark'],
-          langs: SUPPORTED_LANGUAGES,
-        });
+        const highlighter = await getHighlighter();
         
         const highlighted = highlighter.codeToHtml(codeToHighlight, { 
           lang: selectedLanguage,
@@ -130,8 +158,16 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
             dark: 'github-dark'
           }
         });
-        setHighlightedCode(highlighted);
+
+        // Add a class to the highlighted code for styling
+        const highlightedWithClass = highlighted.replace(
+          '<pre class="shiki"',
+          '<pre class="shiki shiki-code-block"'
+        );
+
+        setHighlightedCode(highlightedWithClass);
       } catch (err) {
+        console.error('Highlighting error:', err);
         setError(err instanceof Error ? err.message : 'Failed to load code');
         setHighlightedCode('');
       } finally {
@@ -143,6 +179,17 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
       highlightCode();
     }
   }, [code, url, selectedLanguage, showPreview]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (highlighterInstance && !document.querySelector('.shiki-code-block')) {
+        highlighterInstance.dispose();
+        highlighterInstance = null;
+        highlighterPromise = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -168,7 +215,35 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
 
   const handleSave = () => {
     onCodeChange?.(editorCode);
+    onLanguageChange?.(selectedLanguage);
     setShowEditor(false);
+  };
+
+  const handleLanguageChange = (newLanguage: string) => {
+    setSelectedLanguage(newLanguage);
+    // Immediately update the preview if it's showing
+    if (showPreview) {
+      const highlightCode = async () => {
+        try {
+          const highlighter = await getHighlighter();
+          const highlighted = highlighter.codeToHtml(code, { 
+            lang: newLanguage,
+            themes: {
+              light: 'github-dark',
+              dark: 'github-dark'
+            }
+          });
+          const highlightedWithClass = highlighted.replace(
+            '<pre class="shiki"',
+            '<pre class="shiki shiki-code-block"'
+          );
+          setHighlightedCode(highlightedWithClass);
+        } catch (err) {
+          console.error('Highlighting error:', err);
+        }
+      };
+      highlightCode();
+    }
   };
 
   return (
@@ -247,7 +322,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               <span>Edit Code</span>
               <select
                 value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
+                onChange={(e) => handleLanguageChange(e.target.value)}
                 style={{
                   backgroundColor: '#3d3d3d',
                   color: '#fff',
@@ -442,11 +517,35 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 {error}
               </div>
             ) : (
-              <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+              <div 
+                dangerouslySetInnerHTML={{ __html: highlightedCode }} 
+                style={{
+                  backgroundColor: '#1e1e1e',
+                  borderRadius: '4px',
+                  padding: '16px',
+                }}
+              />
             )}
           </div>
         </div>
       )}
+
+      <style>
+        {`
+          .shiki-code-block {
+            margin: 0;
+            padding: 16px;
+            background-color: #1e1e1e !important;
+            border-radius: 4px;
+            overflow: auto;
+          }
+          .shiki-code-block code {
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+          }
+        `}
+      </style>
     </div>
   );
 };
