@@ -14,8 +14,6 @@ import ArrowItem from '../items/ArrowItem';
 import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 import CirclesPathItem from '../items/CirclesPathItem';
 import TwoPointsPathItem from '../items/TwoPointsPathItem';
-import MarkdownEditorItem from '../items/MarkdownEditorItem';
-import GridItem from '../items/GridItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -30,7 +28,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath' | 'twoPointsPath' | 'markdown' | 'grid';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath' | 'twoPointsPath';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -44,13 +42,6 @@ interface DraggableItem {
   rotation?: number;
   attachedTo?: string;
   circlePositions?: Array<{ x: number; y: number }>;
-  gridCell?: { gridId: string; row: number; col: number };
-  gridItems?: Array<{
-    id: string;
-    row: number;
-    col: number;
-    item: DraggableItem;
-  }>;
 }
 
 interface SelectionArea {
@@ -92,12 +83,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
   const isSelectingRef = useRef(false);
   const dragStartPositions = useRef<{ [key: string]: { x: number; y: number } }>({});
-  const [hoveredGridCell, setHoveredGridCell] = useState<{
-    gridId: string;
-    cell: { row: number; col: number };
-  } | null>(null);
-  const [draggingOverGridId, setDraggingOverGridId] = useState<string | null>(null);
-  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   // Update ref when state changes
   useEffect(() => {
@@ -240,6 +225,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const setItemsWithHistory = (newItems: DraggableItem[] | ((prev: DraggableItem[]) => DraggableItem[])) => {
     setItems(prevItems => {
       const nextItems = typeof newItems === 'function' ? newItems(prevItems) : newItems;
+      
+      console.log('Setting items:', nextItems);
       
       // Only add to history if there are actual changes
       if (JSON.stringify(nextItems) !== JSON.stringify(prevItems)) {
@@ -564,7 +551,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
   const handleDragStart = (id: string, position: { x: number; y: number }) => {
     setIsDragging(true);
-    setDraggedItemId(id);
     dragStartPosition.current = position;
     dragStartItems.current = JSON.parse(JSON.stringify(items));
 
@@ -582,125 +568,58 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging || !containerRef.current || !draggedItemId) return;
+  const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
+    if (isDraggingSelection && selectedItemIds.includes(id)) {
+      const deltaX = newPosition.x - dragStartPositions.current[id].x;
+      const deltaY = newPosition.y - dragStartPositions.current[id].y;
 
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - containerRect.left) / zoom;
-    const y = (e.clientY - containerRect.top) / zoom;
-
-    // Check if we're over a grid
-    const gridItem = items.find(item => 
-      item.type === 'grid' && 
-      x >= item.position.x && 
-      x <= item.position.x + item.size.width &&
-      y >= item.position.y && 
-      y <= item.position.y + item.size.height
-    );
-
-    if (gridItem) {
-      const cellWidth = gridItem.size.width / (gridItem.props?.columns || 3);
-      const cellHeight = gridItem.size.height / (gridItem.props?.rows || 3);
-      
-      // Calculate which cell we're over
-      const col = Math.floor((x - gridItem.position.x) / cellWidth);
-      const row = Math.floor((y - gridItem.position.y) / cellHeight);
-
-      if (col >= 0 && col < (gridItem.props?.columns || 3) && 
-          row >= 0 && row < (gridItem.props?.rows || 3)) {
-        setDraggingOverGridId(gridItem.id);
-        setHoveredGridCell({ gridId: gridItem.id, cell: { row, col } });
-      } else {
-        setDraggingOverGridId(null);
-        setHoveredGridCell(null);
-      }
+      setItems(prevItems =>
+        prevItems.map(item => {
+          if (selectedItemIds.includes(item.id)) {
+            const startPos = dragStartPositions.current[item.id];
+            return {
+              ...item,
+              position: {
+                x: startPos.x + deltaX,
+                y: startPos.y + deltaY
+              }
+            };
+          }
+          return item;
+        })
+      );
     } else {
-      setDraggingOverGridId(null);
-      setHoveredGridCell(null);
-    }
-  };
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, [isDragging, draggedItemId, zoom]);
-
-  const handleDragEnd = (id: string, position: { x: number; y: number }) => {
-    if (!isDragging || !draggedItemId) return;
-
-    if (hoveredGridCell) {
-      // Find the grid item
-      const gridItem = items.find(item => item.id === hoveredGridCell.gridId);
-      if (gridItem && gridItem.type === 'grid') {
-        const cellWidth = gridItem.size.width / (gridItem.props?.columns || 3);
-        const cellHeight = gridItem.size.height / (gridItem.props?.rows || 3);
-        
-        // Get the dragged item
-        const draggedItem = items.find(item => item.id === draggedItemId);
-        if (!draggedItem) return;
-
-        // Calculate the snapped position to center the item in the cell
-        const snappedPosition = {
-          x: gridItem.position.x + (hoveredGridCell.cell.col * cellWidth) + (cellWidth / 2) - (draggedItem.size.width / 2),
-          y: gridItem.position.y + (hoveredGridCell.cell.row * cellHeight) + (cellHeight / 2) - (draggedItem.size.height / 2)
-        };
-
-        // Update the item's position and grid cell info
-        setItemsWithHistory(prevItems =>
-          prevItems.map(item => {
-            if (item.id === draggedItemId) {
-              return {
-                ...item,
-                position: snappedPosition,
-                gridCell: {
-                  gridId: hoveredGridCell.gridId,
-                  row: hoveredGridCell.cell.row,
-                  col: hoveredGridCell.cell.col
-                }
-              };
-            }
-            return item;
-          })
-        );
-      }
-    } else {
-      // If not dropped on a grid, remove any existing grid cell info
-      setItemsWithHistory(prevItems =>
+      setItems(prevItems =>
         prevItems.map(item =>
-          item.id === draggedItemId 
-            ? { ...item, position, gridCell: undefined }
-            : item
+          item.id === id ? { ...item, position: newPosition } : item
         )
       );
     }
+  };
 
-    if (isDraggingSelection) {
-      const currentItems = JSON.parse(JSON.stringify(items));
-      addToHistory(currentItems);
-      setIsDraggingSelection(false);
-      dragStartPositions.current = {};
-    } else {
-      const movedItem = items.find(item => item.id === draggedItemId);
-      const startItem = dragStartItems.current.find(item => item.id === draggedItemId);
-      
-      if (movedItem && startItem && 
-          (movedItem.position.x !== startItem.position.x || 
-           movedItem.position.y !== startItem.position.y)) {
+  const handleDragEnd = (id: string, position: { x: number; y: number }) => {
+    if (isDragging && dragStartPosition.current) {
+      if (isDraggingSelection) {
         const currentItems = JSON.parse(JSON.stringify(items));
         addToHistory(currentItems);
+        setIsDraggingSelection(false);
+        dragStartPositions.current = {};
+      } else {
+        const movedItem = items.find(item => item.id === id);
+        const startItem = dragStartItems.current.find(item => item.id === id);
+        
+        if (movedItem && startItem && 
+            (movedItem.position.x !== startItem.position.x || 
+             movedItem.position.y !== startItem.position.y)) {
+          const currentItems = JSON.parse(JSON.stringify(items));
+          addToHistory(currentItems);
+        }
       }
     }
     
     setIsDragging(false);
-    setDraggedItemId(null);
     dragStartPosition.current = null;
     dragStartItems.current = [];
-    setHoveredGridCell(null);
-    setDraggingOverGridId(null);
   };
 
   const handleSizeChange = (id: string, newSize: { width: number; height: number }) => {
@@ -720,11 +639,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addItem = (type: 'box' | 'circle' , position: { x: number; y: number }) => {
-    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `${type}-${Date.now()}`,
       type,
-      position: centerPos,
+      position,
       size: { width: 100, height: 100 },
       props: type === 'box'
         ? { color: '#4a90e2', size: 100, height: 80 } 
@@ -811,11 +729,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addSingleBoxSet = (position: { x: number; y: number }) => {
-    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `boxSet-${Date.now()}`,
       type: 'boxSet',
-      position: centerPos,
+      position,
       size: { width: 20, height: 20 },
       props: {},
       label: undefined,
@@ -824,11 +741,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addSeparator = (position: { x: number; y: number }) => {
-    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `separator-${Date.now()}`,
       type: 'separator',
-      position: centerPos,
+      position,
       size: { width: 2, height: 100 },
       props: { color: '#e0e0e0' },
     };
@@ -836,11 +752,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addArrow = (position: { x: number; y: number }) => {
-    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `arrow-${Date.now()}`,
       type: 'arrow',
-      position: centerPos,
+      position,
       size: { width: 120, height: 40 },
       props: { 
         segments: 3,
@@ -869,11 +784,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addCodeBlock = (position: { x: number; y: number }) => {
-    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: generateId(),
       type: 'codeBlock',
-      position: centerPos,
+      position,
       size: { width: 40, height: 40 },
       props: {
         url: 'https://raw.githubusercontent.com/stokilo/notes-website/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/SecurityConfig.java',
@@ -884,11 +798,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addCirclesPath = (position: { x: number; y: number }) => {
-    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `circlesPath-${Date.now()}`,
       type: 'circlesPath',
-      position: centerPos,
+      position,
       size: { width: 200, height: 100 },
       props: { 
         isAnimating: true
@@ -950,11 +863,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const addTwoPointsPath = (position: { x: number; y: number }) => {
-    const centerPos = getCenterPosition();
     const newItem: DraggableItem = {
       id: `twoPointsPath-${Date.now()}`,
       type: 'twoPointsPath',
-      position: centerPos,
+      position,
       size: { width: 200, height: 100 },
       props: { 
         isAnimating: true
@@ -1014,319 +926,127 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
-  const addMarkdownEditor = (position: { x: number; y: number }) => {
-    const centerPos = getCenterPosition();
-    const newItem: DraggableItem = {
-      id: `markdown-${Date.now()}`,
-      type: 'markdown',
-      position: centerPos,
-      size: { width: 24, height: 24 },
-      props: {
-        initialContent: '',
-        showPreview: false
-      },
-    };
-    setItemsWithHistory(prev => [...prev, newItem]);
-  };
-
-  const addGrid = (position: { x: number; y: number }) => {
-    const centerPos = getCenterPosition();
-    const gridSize = { width: 200, height: 200 };
-    const newItem: DraggableItem = {
-      id: generateId(),
-      type: 'grid',
-      position: {
-        x: centerPos.x - (gridSize.width / 2),
-        y: centerPos.y - (gridSize.height / 2)
-      },
-      size: gridSize,
-      props: {
-        rows: 3,
-        columns: 3,
-        isMagnet: true
-      },
-      isNew: true
-    };
-    setItemsWithHistory(prevItems => [...prevItems, newItem]);
-  };
-
-  const getCenterPosition = () => {
-    if (!containerRef.current) return { x: 0, y: 0 };
-    const rect = containerRef.current.getBoundingClientRect();
-    
-    // Calculate the center position in the container's coordinate space
-    const centerX = (rect.width / 2) / zoom;
-    const centerY = (rect.height / 2) / zoom;
-    
-    return {
-      x: centerX,
-      y: centerY
-    };
-  };
-
-  const handlePositionChange = (id: string, newPosition: { x: number; y: number }) => {
-    const item = items.find(i => i.id === id);
-    if (!item) return;
-
-    if (isDraggingSelection && selectedItemIds.includes(id)) {
-      const deltaX = newPosition.x - dragStartPositions.current[id].x;
-      const deltaY = newPosition.y - dragStartPositions.current[id].y;
-
-      setItems(prevItems =>
-        prevItems.map(item => {
-          if (selectedItemIds.includes(item.id)) {
-            const startPos = dragStartPositions.current[item.id];
-            return {
-              ...item,
-              position: {
-                x: startPos.x + deltaX,
-                y: startPos.y + deltaY
-              }
-            };
-          }
-          return item;
-        })
-      );
-    } else {
-      // If the item is a grid, update positions of all items inside it
-      if (item.type === 'grid') {
-        setItems(prevItems =>
-          prevItems.map(prevItem => {
-            if (prevItem.id === id) {
-              return { ...prevItem, position: newPosition };
-            }
-            // Update positions of items inside the grid
-            if (prevItem.gridCell?.gridId === id) {
-              const cellWidth = item.size.width / (item.props?.columns || 3);
-              const cellHeight = item.size.height / (item.props?.rows || 3);
-              
-              // Calculate new position based on grid's new position and cell coordinates
-              // Subtract half of the item's size to center it
-              const newItemPosition = {
-                x: newPosition.x + (prevItem.gridCell.col * cellWidth) + (cellWidth / 2) - (prevItem.size.width / 2),
-                y: newPosition.y + (prevItem.gridCell.row * cellHeight) + (cellHeight / 2) - (prevItem.size.height / 2)
-              };
-              
-              return {
-                ...prevItem,
-                position: newItemPosition
-              };
-            }
-            return prevItem;
-          })
-        );
-      } else {
-        setItems(prevItems =>
-          prevItems.map(item =>
-            item.id === id ? { ...item, position: newPosition } : item
-          )
-        );
-      }
-    }
-  };
-
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
-      position: item.position,
-      size: item.size,
-      onDragStart: handleDragStart,
-      onPositionChange: handlePositionChange,
-      onDragEnd: handleDragEnd,
-      onSizeChange: handleSizeChange,
+      initialPosition: item.position,
+      initialSize: item.size,
+      onPositionChange: (pos: { x: number; y: number }) => handlePositionChange(item.id, pos),
+      onSizeChange: (size: { width: number; height: number }) => handleSizeChange(item.id, size),
       onResizeEnd: handleResizeEnd,
-      onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
+      onDragStart: (pos: { x: number; y: number }) => handleDragStart(item.id, pos),
+      onDragEnd: (pos: { x: number; y: number }) => handleDragEnd(item.id, pos),
       onContextMenu: (e: React.MouseEvent) => handleContextMenu(e, item.id),
+      onClick: (e: React.MouseEvent) => handleItemClick(e, item.id),
       isSelected: selectedItemIds.includes(item.id),
-      isNew: item.isNew,
-      finalPosition: item.finalPosition,
-      rotation: item.rotation,
+      zoom: zoom,
+      disableAnimations: true,
     };
 
-    switch (item.type) {
-      case 'box':
-        return <DraggableItem key={item.id} {...commonProps}><RectangleItem width={item.size.width} height={item.size.height} /></DraggableItem>;
-      case 'circle':
-        return <DraggableItem key={item.id} {...commonProps}><CircleItem width={item.size.width} height={item.size.height} /></DraggableItem>;
-      case 'boxSet':
-        return (
-          <DraggableItem key={item.id} {...commonProps}>
-            <BoxSetItem
-              width={item.size.width}
-              height={item.size.height}
-              comment={item.comment}
-              commentLabel={item.commentLabel}
-            />
-          </DraggableItem>
-        );
-      case 'separator':
-        return <DraggableItem key={item.id} {...commonProps}><SeparatorItem width={item.size.width} height={item.size.height} /></DraggableItem>;
-      case 'arrow':
-        return (
-          <DraggableItem key={item.id} {...commonProps}>
-            <ArrowItem
-              width={item.size.width}
-              height={item.size.height}
-              segments={item.props?.segments || 3}
-              isAnimating={item.props?.isAnimating}
-            />
-          </DraggableItem>
-        );
-      case 'codeBlock':
-        return (
-          <DraggableItem key={item.id} {...commonProps}>
-            <ShikiCodeBlockItem
-              width={item.size.width}
-              height={item.size.height}
-              code={item.props?.code}
-              language={item.props?.language}
-            />
-          </DraggableItem>
-        );
-      case 'circlesPath':
-        return (
-          <DraggableItem key={item.id} {...commonProps}>
-            <CirclesPathItem
-              width={item.size.width}
-              height={item.size.height}
-              isAnimating={item.props?.isAnimating}
-              position={item.position}
-              circlePositions={item.circlePositions}
-              onPositionChange={handleCirclesPathPositionChange}
-              onCirclePositionsChange={handleCirclesPathCirclePositionsChange}
-              onAttach={(targetId) => handleAttachCirclesPath(item.id, targetId)}
-            />
-          </DraggableItem>
-        );
-      case 'twoPointsPath':
-        return (
-          <DraggableItem key={item.id} {...commonProps}>
-            <TwoPointsPathItem
-              width={item.size.width}
-              height={item.size.height}
-              isAnimating={item.props?.isAnimating}
-              position={item.position}
-              circlePositions={item.circlePositions}
-              onPositionChange={handleTwoPointsPathPositionChange}
-              onCirclePositionsChange={handleTwoPointsPathCirclePositionsChange}
-              onAttach={(targetId) => handleAttachTwoPointsPath(item.id, targetId)}
-            />
-          </DraggableItem>
-        );
-      case 'markdown':
-        return (
-          <DraggableItem key={item.id} {...commonProps}>
-            <MarkdownEditorItem
-              width={item.size.width}
-              height={item.size.height}
-              initialContent={item.props?.content}
-            />
-          </DraggableItem>
-        );
-      case 'grid':
-        // Find all items that belong to this grid
-        const gridItems = items.filter(i => i.gridCell?.gridId === item.id);
-        
-        return (
-          <DraggableItem key={item.id} {...commonProps}>
-            <GridItem
-              width={item.size.width}
-              height={item.size.height}
-              rows={item.props?.rows || 3}
-              columns={item.props?.columns || 3}
-              isMagnet={item.props?.isMagnet}
-              isDraggingOver={draggingOverGridId === item.id}
-              droppedItems={gridItems.map(gridItem => ({
-                id: gridItem.id,
-                row: gridItem.gridCell.row,
-                col: gridItem.gridCell.col,
-                item: renderGridItem(gridItem)
-              }))}
-              onItemDrop={(row, col) => {
-                // Remove the onItemDrop handler since we handle drops in handleDragEnd
-              }}
-            />
-          </DraggableItem>
-        );
-      default:
-        return null;
+    if (item.type === 'boxSetContainer') {
+      const containerboxSetes = item.props.children || [];
+      return (
+        <DraggableItem disableAnimations={true} key={item.id} {...commonProps}>
+          <BoxGridContainer width={item.size.width} height={item.size.height} containerId={item.id}>
+          </BoxGridContainer>
+        </DraggableItem>
+      );
     }
-  };
 
-  // Separate function to render items inside grid cells
-  const renderGridItem = (item: DraggableItem) => {
-    switch (item.type) {
-      case 'box':
-        return <RectangleItem width={item.size.width} height={item.size.height} />;
-      case 'circle':
-        return <CircleItem width={item.size.width} height={item.size.height} />;
-      case 'boxSet':
-        return (
+    if (item.type === 'codeBlock') {
+      return (
+        <DraggableItem key={item.id} {...commonProps} disableAnimations={true}>
+          <ShikiCodeBlockItem
+            width={item.size.width}
+            height={item.size.height}
+            code={item.props.code}
+            url={item.props.url}
+            language={item.props.language}
+            showPreview={item.id === codePreviewItemId}
+            onClosePreview={() => setCodePreviewItemId(null)}
+          />
+        </DraggableItem>
+      );
+    }
+
+    if (item.type === 'circlesPath') {
+      return (
+        <CirclesPathItem
+          key={item.id}
+          width={item.size.width}
+          height={item.size.height}
+          isAnimating={item.props.isAnimating}
+          position={item.position}
+          onPositionChange={(pos) => handleCirclesPathPositionChange(item.id, pos)}
+          onCirclePositionChange={(positions) => handleCirclesPathCirclePositionsChange(item.id, positions)}
+          initialCirclePositions={item.circlePositions}
+          attachedTo={item.attachedTo}
+        />
+      );
+    }
+
+    if (item.type === 'twoPointsPath') {
+      return (
+        <TwoPointsPathItem
+          key={item.id}
+          width={item.size.width}
+          height={item.size.height}
+          isAnimating={item.props.isAnimating}
+          position={item.position}
+          onPositionChange={(pos) => handleTwoPointsPathPositionChange(item.id, pos)}
+          onCirclePositionChange={(positions) => handleTwoPointsPathCirclePositionsChange(item.id, positions)}
+          initialCirclePositions={item.circlePositions}
+          attachedTo={item.attachedTo}
+        />
+      );
+    }
+
+    return (
+      <DraggableItem  key={item.id} {...commonProps}>
+        {item.type === 'box' ? (
+          <RectangleItem
+            {...item.props} 
+            width={item.size.width}
+            height={item.size.height}
+            label={item.label} 
+            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
+          />
+        ) : item.type === 'circle' ? (
+          <CircleItem
+            {...item.props} 
+            width={item.size.width}
+            height={item.size.height}
+            label={item.label} 
+            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
+          />
+        ) : item.type === 'boxSet' ? (
           <BoxSetItem
             width={item.size.width}
             height={item.size.height}
             comment={item.comment}
             commentLabel={item.commentLabel}
           />
-        );
-      case 'separator':
-        return <SeparatorItem width={item.size.width} height={item.size.height} />;
-      case 'arrow':
-        return (
+        ) : item.type === 'separator' ? (
+          <SeparatorItem
+            width={item.size.width}
+            height={item.size.height}
+            color={item.props.color}
+          />
+        ) : item.type === 'arrow' ? (
           <ArrowItem
             width={item.size.width}
             height={item.size.height}
-            segments={item.props?.segments || 3}
-            isAnimating={item.props?.isAnimating}
+            segments={item.props.segments}
+            rotation={item.props.rotation}
+            isAnimating={item.props.isAnimating}
           />
-        );
-      case 'codeBlock':
-        return (
-          <ShikiCodeBlockItem
-            width={item.size.width}
-            height={item.size.height}
-            code={item.props?.code}
-            language={item.props?.language}
-          />
-        );
-      case 'circlesPath':
-        return (
-          <CirclesPathItem
-            width={item.size.width}
-            height={item.size.height}
-            isAnimating={item.props?.isAnimating}
-            position={item.position}
-            circlePositions={item.circlePositions}
-            onPositionChange={handleCirclesPathPositionChange}
-            onCirclePositionsChange={handleCirclesPathCirclePositionsChange}
-            onAttach={(targetId) => handleAttachCirclesPath(item.id, targetId)}
-          />
-        );
-      case 'twoPointsPath':
-        return (
-          <TwoPointsPathItem
-            width={item.size.width}
-            height={item.size.height}
-            isAnimating={item.props?.isAnimating}
-            position={item.position}
-            circlePositions={item.circlePositions}
-            onPositionChange={handleTwoPointsPathPositionChange}
-            onCirclePositionsChange={handleTwoPointsPathCirclePositionsChange}
-            onAttach={(targetId) => handleAttachTwoPointsPath(item.id, targetId)}
-          />
-        );
-      case 'markdown':
-        return (
-          <MarkdownEditorItem
-            width={item.size.width}
-            height={item.size.height}
-            initialContent={item.props?.content}
-          />
-        );
-      default:
-        return null;
-    }
+        ) : (
+          <span>nothing here</span>
+        )}
+      </DraggableItem>
+    );
   };
+
 
   return (
     <div
@@ -1387,8 +1107,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
           onAddCirclesPath={() => addCirclesPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
           onAddTwoPointsPath={() => addTwoPointsPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
-          onAddMarkdownEditor={() => addMarkdownEditor({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
-          onAddGrid={() => addGrid({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 100 })}
         />
         <div
           style={{
@@ -1565,36 +1283,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                       label: `Attach to ${targetItem.type} ${targetItem.id}`,
                       onClick: () => handleAttachCirclesPath(contextMenu.itemId, targetItem.id),
                     })),
-                },
-                ...baseItems,
-              ];
-            }
-
-            if (item.type === 'markdown') {
-              return [
-                {
-                  label: 'Paste',
-                  onClick: () => {
-                    navigator.clipboard.readText().then(text => {
-                      const markdownItem = items.find(i => i.id === contextMenu.itemId);
-                      if (markdownItem) {
-                        setItemsWithHistory(prevItems =>
-                          prevItems.map(item =>
-                            item.id === contextMenu.itemId
-                              ? {
-                                  ...item,
-                                  props: {
-                                    ...item.props,
-                                    initialContent: (item.props.initialContent || '') + text
-                                  }
-                                }
-                              : item
-                          )
-                        );
-                      }
-                    });
-                    setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
-                  }
                 },
                 ...baseItems,
               ];

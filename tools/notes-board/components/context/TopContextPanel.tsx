@@ -5,7 +5,6 @@ import SeparatorItem from '../items/SeparatorItem';
 import ArrowItem from '../items/ArrowItem';
 import CirclesPathItem from '../items/CirclesPathItem';
 import TwoPointsPathItem from '../items/TwoPointsPathItem';
-import MarkdownEditorItem from '../items/MarkdownEditorItem';
 import GridItem from '../items/GridItem';
 
 interface TopContextPanelProps {
