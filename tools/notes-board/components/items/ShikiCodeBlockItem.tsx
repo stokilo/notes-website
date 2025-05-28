@@ -51,11 +51,11 @@ const getHighlighter = async () => {
   }
 
   highlighterPromise = shiki.createHighlighter({
-    theme: 'github-dark',
-    langs: SUPPORTED_LANGUAGES,
+    themes: ['github-dark'],
+    langs: SUPPORTED_LANGUAGES as shiki.BundledLanguage[],
   }).then(async instance => {
     // Preload all languages
-    await Promise.all(SUPPORTED_LANGUAGES.map(lang => instance.loadLanguage(lang)));
+    await Promise.all(SUPPORTED_LANGUAGES.map(lang => instance.loadLanguage(lang as shiki.BundledLanguage)));
     highlighterInstance = instance;
     return instance;
   });
@@ -113,7 +113,13 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         // Try to detect language from the code
         const detected = highlighter.getLoadedLanguages().find(lang => {
           try {
-            highlighter.codeToHtml(editorCode, { lang });
+            highlighter.codeToHtml(editorCode, { 
+              lang: lang as shiki.BundledLanguage,
+              themes: {
+                light: 'github-dark',
+                dark: 'github-dark'
+              }
+            });
             return true;
           } catch {
             return false;
@@ -154,8 +160,11 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         const highlighter = await getHighlighter();
         
         const highlighted = highlighter.codeToHtml(codeToHighlight, { 
-          lang: selectedLanguage,
-          theme: 'github-dark'
+          lang: selectedLanguage as shiki.BundledLanguage,
+          themes: {
+            light: 'github-dark',
+            dark: 'github-dark'
+          }
         });
 
         // Add a class to the highlighted code for styling
@@ -226,8 +235,11 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         try {
           const highlighter = await getHighlighter();
           const highlighted = highlighter.codeToHtml(code, { 
-            lang: newLanguage,
-            theme: 'github-dark'
+            lang: newLanguage as shiki.BundledLanguage,
+            themes: {
+              light: 'github-dark',
+              dark: 'github-dark'
+            }
           });
           const highlightedWithClass = highlighted.replace(
             '<pre class="shiki"',
