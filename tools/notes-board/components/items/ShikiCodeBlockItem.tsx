@@ -201,6 +201,14 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Don't close if clicking inside the editor dialog
+      if (showEditor && event.target instanceof Element) {
+        const dialog = document.querySelector('[style*="position: relative"][style*="zIndex: 100000"]');
+        if (dialog?.contains(event.target)) {
+          return;
+        }
+      }
+
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         onClosePreview?.();
         setShowEditor(false);
@@ -312,7 +320,12 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               justifyContent: 'center',
               isolation: 'isolate',
             }}
-            onClick={() => setShowEditor(false)}
+            onClick={(e) => {
+              // Only close if clicking the backdrop itself
+              if (e.target === e.currentTarget) {
+                setShowEditor(false);
+              }
+            }}
           >
             {/* Dialog */}
             <div

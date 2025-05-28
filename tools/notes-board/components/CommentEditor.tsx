@@ -29,6 +29,31 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
   const resizeStartSize = useRef({ width: 0, height: 0 });
   const labelInputRef = useRef<HTMLInputElement>(null);
 
+  // Calculate responsive size based on viewport
+  useEffect(() => {
+    const calculateSize = () => {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // For mobile devices (width < 768px)
+      if (viewportWidth < 768) {
+        setSize({
+          width: Math.min(viewportWidth - 32, 600), // 32px for margins
+          height: Math.min(viewportHeight - 32, 400)
+        });
+      } else {
+        setSize({
+          width: Math.min(viewportWidth * 0.8, 600),
+          height: Math.min(viewportHeight * 0.8, 400)
+        });
+      }
+    };
+
+    calculateSize();
+    window.addEventListener('resize', calculateSize);
+    return () => window.removeEventListener('resize', calculateSize);
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -127,21 +152,25 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
         width: size.width,
         height: size.height,
+        maxWidth: '95vw',
+        maxHeight: '95vh',
         display: 'flex',
         flexDirection: 'column',
         resize: 'both',
         overflow: 'hidden',
       }}
     >
-      <div style={{ display: 'flex', height: 'calc(100% - 50px)' }}>
+      <div style={{ display: 'flex', height: 'calc(100% - 50px)', flexDirection: window.innerWidth < 768 ? 'column' : 'row' }}>
         {/* Preview view */}
         <div
           style={{
             flex: 1,
             padding: '12px',
-            borderRight: isViewMode ? 'none' : '1px solid #eee',
+            borderRight: isViewMode ? 'none' : window.innerWidth < 768 ? 'none' : '1px solid #eee',
+            borderBottom: window.innerWidth < 768 && !isViewMode ? '1px solid #eee' : 'none',
             overflowY: 'auto',
             backgroundColor: '#f8f9fa',
+            height: window.innerWidth < 768 ? '40%' : 'auto',
           }}
         >
           <h3 style={{ margin: '0 0 12px 0', color: '#666' }}>Preview</h3>
