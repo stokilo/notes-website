@@ -205,6 +205,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
       if (showEditor && event.target instanceof Element) {
         const dialog = document.querySelector('[style*="position: relative"][style*="zIndex: 100000"]');
         if (dialog?.contains(event.target)) {
+          event.stopPropagation();
+          event.preventDefault();
           return;
         }
       }
@@ -344,7 +346,18 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 overflow: 'hidden',
                 transform: 'translateZ(0)',
               }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onMouseUp={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
             >
               {/* Header */}
               <div
