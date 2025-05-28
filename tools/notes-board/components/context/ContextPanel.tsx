@@ -1,18 +1,17 @@
 import React from 'react';
 import ContextButton from './ContextButton';
-import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 
 interface ContextPanelProps {
+  position: { x: number; y: number };
   onAddBox: () => void;
   onAddCircle: () => void;
-  onAddCodeBlock: () => void;
   onClearScene: () => void;
+  onClose: () => void;
 }
 
 const ContextPanel: React.FC<ContextPanelProps> = ({
   onAddBox,
   onAddCircle,
-  onAddCodeBlock,
   onClearScene,
 }) => {
   return (
@@ -40,13 +39,6 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         onClick={onAddCircle}
         icon="/circle.svg"
         text="Add Street"
-      />
-      <ContextButton
-        onClick={onAddCodeBlock}
-        icon="/code.svg"
-        text="Add Code"
-        backgroundColor="transparent"
-        textColor="white"
       />
       <ContextButton
         onClick={onClearScene}

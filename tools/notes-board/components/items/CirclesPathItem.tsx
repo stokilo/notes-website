@@ -6,23 +6,14 @@ interface CirclesPathItemProps {
   height: number;
   isAnimating?: boolean;
   position: { x: number; y: number };
-  onPositionChange: (id: string, position: { x: number; y: number }) => void;
-  onCirclePositionsChange: (id: string, positions: Array<{ x: number; y: number }>) => void;
   circlePositions?: Array<{ x: number; y: number }>;
-  onAttach?: (targetId: string) => void;
-  attachedTo?: string;
 }
 
 const CirclesPathItem: React.FC<CirclesPathItemProps> = ({
   width,
   height,
   isAnimating = false,
-  position,
-  onPositionChange,
-  onCirclePositionsChange,
   circlePositions,
-  onAttach,
-  attachedTo,
 }) => {
   const [positions, setPositions] = useState(
     circlePositions || [
@@ -81,7 +72,6 @@ const CirclesPathItem: React.FC<CirclesPathItemProps> = ({
         const newPositions = [...positions];
         newPositions[draggedCircleIndex] = { x, y };
         setPositions(newPositions);
-        onCirclePositionsChange('circlesPath', newPositions);
       }
     };
 
@@ -98,7 +88,7 @@ const CirclesPathItem: React.FC<CirclesPathItemProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggedCircleIndex, positions, onCirclePositionsChange]);
+  }, [draggedCircleIndex, positions]);
 
   return (
     <div

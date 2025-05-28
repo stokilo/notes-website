@@ -11,7 +11,6 @@ import RectangleItem from "../items/RectangleItem";
 import CircleItem from "../items/CircleItem";
 import SeparatorItem from '../items/SeparatorItem';
 import ArrowItem from '../items/ArrowItem';
-import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 import CirclesPathItem from '../items/CirclesPathItem';
 import TwoPointsPathItem from '../items/TwoPointsPathItem';
 
@@ -28,7 +27,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'codeBlock' | 'circlesPath' | 'twoPointsPath';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'circlesPath' | 'twoPointsPath' | 'codeBlock';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -783,20 +782,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     });
   };
 
-  const addCodeBlock = (position: { x: number; y: number }) => {
-    const newItem: DraggableItem = {
-      id: generateId(),
-      type: 'codeBlock',
-      position,
-      size: { width: 40, height: 40 },
-      props: {
-        url: 'https://raw.githubusercontent.com/stokilo/notes-website/refs/heads/main/chapters/keycloak/chapter3-custom-scopes/src/main/java/org/sstec/resourceserver/SecurityConfig.java',
-        language: 'java',
-      },
-    };
-    setItemsWithHistory([...items, newItem]);
-  };
-
   const addCirclesPath = (position: { x: number; y: number }) => {
     const newItem: DraggableItem = {
       id: `circlesPath-${Date.now()}`,
@@ -943,67 +928,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       disableAnimations: true,
     };
 
-    if (item.type === 'boxSetContainer') {
-      const containerboxSetes = item.props.children || [];
-      return (
-        <DraggableItem disableAnimations={true} key={item.id} {...commonProps}>
-          <BoxGridContainer width={item.size.width} height={item.size.height} containerId={item.id}>
-          </BoxGridContainer>
-        </DraggableItem>
-      );
-    }
-
-    if (item.type === 'codeBlock') {
-      return (
-        <DraggableItem key={item.id} {...commonProps} disableAnimations={true}>
-          <ShikiCodeBlockItem
-            width={item.size.width}
-            height={item.size.height}
-            code={item.props.code}
-            url={item.props.url}
-            language={item.props.language}
-            showPreview={item.id === codePreviewItemId}
-            onClosePreview={() => setCodePreviewItemId(null)}
-          />
-        </DraggableItem>
-      );
-    }
-
-    if (item.type === 'circlesPath') {
-      return (
-        <CirclesPathItem
-          key={item.id}
-          width={item.size.width}
-          height={item.size.height}
-          isAnimating={item.props.isAnimating}
-          position={item.position}
-          onPositionChange={(pos) => handleCirclesPathPositionChange(item.id, pos)}
-          onCirclePositionsChange={(positions) => handleCirclesPathCirclePositionsChange(item.id, positions)}
-          circlePositions={item.circlePositions || []}
-          attachedTo={item.attachedTo}
-        />
-      );
-    }
-
-    if (item.type === 'twoPointsPath') {
-      return (
-        <TwoPointsPathItem
-          key={item.id}
-          width={item.size.width}
-          height={item.size.height}
-          isAnimating={item.props.isAnimating}
-          position={item.position}
-          onPositionChange={(pos) => handleTwoPointsPathPositionChange(item.id, pos)}
-          onCirclePositionsChange={(positions) => handleTwoPointsPathCirclePositionsChange(item.id, positions)}
-          circlePositions={item.circlePositions || []}
-          attachedTo={item.attachedTo}
-        />
-      );
-    }
-
     return (
-      <DraggableItem  key={item.id} {...commonProps}>
-        {item.type === 'box' ? (
+      <DraggableItem key={item.id} {...commonProps}>
+        {item.type === 'box' && (
           <RectangleItem
             {...item.props} 
             width={item.size.width}
@@ -1011,7 +938,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             label={item.label} 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
-        ) : item.type === 'circle' ? (
+        )}
+        {item.type === 'circle' && (
           <CircleItem
             {...item.props} 
             width={item.size.width}
@@ -1019,20 +947,27 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             label={item.label} 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
-        ) : item.type === 'boxSet' ? (
+        )}
+        {item.type === 'boxSet' && (
           <BoxSetItem
             width={item.size.width}
             height={item.size.height}
             comment={item.comment}
             commentLabel={item.commentLabel}
           />
-        ) : item.type === 'separator' ? (
+        )}
+        {item.type === 'boxSetContainer' && (
+          <BoxGridContainer width={item.size.width} height={item.size.height} containerId={item.id}>
+          </BoxGridContainer>
+        )}
+        {item.type === 'separator' && (
           <SeparatorItem
             width={item.size.width}
             height={item.size.height}
             color={item.props.color}
           />
-        ) : item.type === 'arrow' ? (
+        )}
+        {item.type === 'arrow' && (
           <ArrowItem
             width={item.size.width}
             height={item.size.height}
@@ -1040,8 +975,26 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             rotation={item.props.rotation}
             isAnimating={item.props.isAnimating}
           />
-        ) : (
-          <span>nothing here</span>
+        )}
+        {item.type === 'circlesPath' && (
+          <CirclesPathItem
+            key={item.id}
+            width={item.size.width}
+            height={item.size.height}
+            isAnimating={item.props.isAnimating}
+            position={item.position}
+            circlePositions={item.circlePositions || []}
+          />
+        )}
+        {item.type === 'twoPointsPath' && (
+          <TwoPointsPathItem
+            key={item.id}
+            width={item.size.width}
+            height={item.size.height}
+            isAnimating={item.props.isAnimating}
+            position={item.position}
+            circlePositions={item.circlePositions || []}
+          />
         )}
       </DraggableItem>
     );
@@ -1096,10 +1049,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       <div style={{ position: 'relative', zIndex: 1000 }}>
         <DebugPanel />
         <ContextPanel
-          onAddBox={() => addItem('box', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-          onAddCircle={() => addItem('circle', { x: window.innerWidth / 2 - 50, y: window.innerHeight / 2 - 50 })}
-          onAddCodeBlock={() => addCodeBlock({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          onAddBox={() => addItem('box', { x: contextMenu.x, y: contextMenu.y })}
+          onAddCircle={() => addItem('circle', { x: contextMenu.x, y: contextMenu.y })}
           onClearScene={handleClearScene}
+          onClose={() => setContextMenu({ show: false, x: 0, y: 0, itemId: '' })}
         />
         <TopContextPanel
           onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
