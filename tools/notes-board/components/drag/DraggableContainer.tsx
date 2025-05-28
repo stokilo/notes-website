@@ -1692,6 +1692,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             setCommentEditor({ show: false, itemId: '', position: { x: 0, y: 0 } });
           }}
           onClose={() => setCommentEditor({ show: false, itemId: '', position: { x: 0, y: 0 } })}
+          isViewMode={isViewMode}
         />
       )}
     </div>

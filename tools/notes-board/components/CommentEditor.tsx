@@ -7,6 +7,7 @@ interface CommentEditorProps {
   position: { x: number; y: number };
   onSave: (content: string, label: string) => void;
   onClose: () => void;
+  isViewMode?: boolean;
 }
 
 const CommentEditor: React.FC<CommentEditorProps> = ({
@@ -15,6 +16,7 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
   position,
   onSave,
   onClose,
+  isViewMode = false,
 }) => {
   const [content, setContent] = useState(initialContent);
   const [label, setLabel] = useState(initialLabel);
@@ -137,7 +139,7 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
           style={{
             flex: 1,
             padding: '12px',
-            borderRight: '1px solid #eee',
+            borderRight: isViewMode ? 'none' : '1px solid #eee',
             overflowY: 'auto',
             backgroundColor: '#f8f9fa',
           }}
@@ -198,47 +200,49 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
           </div>
         </div>
 
-        {/* Editor view */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#666' }}>
-              Label:
-            </label>
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              onKeyDown={handleLabelKeyDown}
-              placeholder="Enter a label for this comment"
-              ref={labelInputRef}
+        {/* Editor view - only show if not in view mode */}
+        {!isViewMode && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#666' }}>
+                Label:
+              </label>
+              <input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                onKeyDown={handleLabelKeyDown}
+                placeholder="Enter a label for this comment"
+                ref={labelInputRef}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                }}
+              />
+            </div>
+            <textarea
+              ref={editorRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={handleKeyDown}
               style={{
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
+                padding: '12px',
+                flex: 1,
+                overflowY: 'auto',
+                outline: 'none',
+                border: 'none',
+                resize: 'none',
+                fontFamily: 'monospace',
                 fontSize: '14px',
+                lineHeight: '1.5',
               }}
+              placeholder="Enter your comment here... (Markdown supported)"
             />
           </div>
-          <textarea
-            ref={editorRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            style={{
-              padding: '12px',
-              flex: 1,
-              overflowY: 'auto',
-              outline: 'none',
-              border: 'none',
-              resize: 'none',
-              fontFamily: 'monospace',
-              fontSize: '14px',
-              lineHeight: '1.5',
-            }}
-            placeholder="Enter your comment here... (Markdown supported)"
-          />
-        </div>
+        )}
       </div>
 
       <div
@@ -263,45 +267,49 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
         >
           Close
         </button>
-        <button
-          onClick={handleSave}
-          style={{
-            padding: '6px 12px',
-            border: 'none',
-            borderRadius: '4px',
-            backgroundColor: '#4a90e2',
-            color: 'white',
-            cursor: 'pointer',
-          }}
-        >
-          Save
-        </button>
+        {!isViewMode && (
+          <button
+            onClick={handleSave}
+            style={{
+              padding: '6px 12px',
+              border: 'none',
+              borderRadius: '4px',
+              backgroundColor: '#4a90e2',
+              color: 'white',
+              cursor: 'pointer',
+            }}
+          >
+            Save
+          </button>
+        )}
       </div>
 
-      {/* Resize handle */}
-      <div
-        style={{
-          position: 'absolute',
-          right: 0,
-          bottom: 0,
-          width: '20px',
-          height: '20px',
-          cursor: 'nwse-resize',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        onMouseDown={handleResizeStart}
-      >
+      {/* Resize handle - only show if not in view mode */}
+      {!isViewMode && (
         <div
           style={{
-            width: '10px',
-            height: '10px',
-            borderRight: '2px solid #ccc',
-            borderBottom: '2px solid #ccc',
+            position: 'absolute',
+            right: 0,
+            bottom: 0,
+            width: '20px',
+            height: '20px',
+            cursor: 'nwse-resize',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
-        />
-      </div>
+          onMouseDown={handleResizeStart}
+        >
+          <div
+            style={{
+              width: '10px',
+              height: '10px',
+              borderRight: '2px solid #ccc',
+              borderBottom: '2px solid #ccc',
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
