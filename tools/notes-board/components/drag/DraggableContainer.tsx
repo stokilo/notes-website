@@ -1498,6 +1498,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           >
             Reset
           </button>
+          <button
+            onClick={() => setIsViewMode(prev => !prev)}
+            style={{
+              padding: '5px 10px',
+              cursor: 'pointer',
+              border: '1px solid #ccc',
+              borderRadius: '3px',
+              backgroundColor: isViewMode ? '#4a90e2' : 'white',
+              color: isViewMode ? 'white' : 'black',
+            }}
+            title={isViewMode ? "Exit View Mode" : "Enter View Mode"}
+          >
+            👁️
+          </button>
         </div>
       </div>
 
