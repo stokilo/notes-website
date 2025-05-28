@@ -63,6 +63,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [codePreviewItemId, setCodePreviewItemId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [commentEditor, setCommentEditor] = useState<{
     show: boolean;
     itemId: string;
@@ -937,6 +938,66 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     );
   };
 
+  const handleExportScene = () => {
+    const sceneData = {
+      items,
+      version: '1.0',
+      exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(sceneData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scene-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportScene = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importedData = JSON.parse(content);
+        
+        // Validate the imported data
+        if (!importedData.items || !Array.isArray(importedData.items)) {
+          throw new Error('Invalid scene data format');
+        }
+
+        // Reset the scene and set new items
+        setItems(importedData.items);
+        setSelectedItemIds([]);
+        setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+        setCopiedItem(null);
+        
+        // Initialize history with the imported scene
+        const initialHistory = [importedData.items];
+        setHistory(initialHistory);
+        setHistoryIndex(0);
+        
+        // Save to localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(importedData.items));
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(initialHistory));
+        
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      } catch (error) {
+        console.error('Error importing scene:', error);
+        alert('Error importing scene: Invalid file format');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -1148,6 +1209,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             setItemsWithHistory(prev => [...prev, newItem]);
           }}
           onAddGrid={() => {}}
+          onExport={handleExportScene}
+          onImport={() => fileInputRef.current?.click()}
         />
         <div
           style={{
@@ -1198,6 +1261,38 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             }}
           >
             Reset
+          </button>
+          <div style={{ width: '1px', backgroundColor: '#ccc', margin: '0 5px' }} />
+          <button
+            onClick={handleExportScene}
+            style={{
+              padding: '5px 10px',
+              cursor: 'pointer',
+              border: '1px solid #ccc',
+              borderRadius: '3px',
+              backgroundColor: 'white',
+            }}
+          >
+            Export
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImportScene}
+            style={{ display: 'none' }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              padding: '5px 10px',
+              cursor: 'pointer',
+              border: '1px solid #ccc',
+              borderRadius: '3px',
+              backgroundColor: 'white',
+            }}
+          >
+            Import
           </button>
         </div>
       </div>
