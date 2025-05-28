@@ -1262,6 +1262,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onAddCircle={() => addItem('circle', { x: contextMenu.x, y: contextMenu.y })}
           onClearScene={handleClearScene}
           onClose={() => setContextMenu({ show: false, x: 0, y: 0, itemId: '' })}
+          onExport={handleExportScene}
+          onImport={() => fileInputRef.current?.click()}
         />
         <TopContextPanel
           onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
@@ -1335,38 +1337,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             }}
           >
             Reset
-          </button>
-          <div style={{ width: '1px', backgroundColor: '#ccc', margin: '0 5px' }} />
-          <button
-            onClick={handleExportScene}
-            style={{
-              padding: '5px 10px',
-              cursor: 'pointer',
-              border: '1px solid #ccc',
-              borderRadius: '3px',
-              backgroundColor: 'white',
-            }}
-          >
-            Export
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleImportScene}
-            style={{ display: 'none' }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              padding: '5px 10px',
-              cursor: 'pointer',
-              border: '1px solid #ccc',
-              borderRadius: '3px',
-              backgroundColor: 'white',
-            }}
-          >
-            Import
           </button>
         </div>
       </div>

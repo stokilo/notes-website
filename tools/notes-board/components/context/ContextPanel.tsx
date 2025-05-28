@@ -1,5 +1,6 @@
 import React from 'react';
 import ContextButton from './ContextButton';
+import { MdFileUpload, MdFileDownload } from 'react-icons/md';
 
 interface ContextPanelProps {
   position: { x: number; y: number };
@@ -7,12 +8,17 @@ interface ContextPanelProps {
   onAddCircle: () => void;
   onClearScene: () => void;
   onClose: () => void;
+  onExport: () => void;
+  onImport: () => void;
 }
 
 const ContextPanel: React.FC<ContextPanelProps> = ({
   onAddBox,
   onAddCircle,
   onClearScene,
+  onClose,
+  onExport,
+  onImport,
 }) => {
   return (
     <div
@@ -33,17 +39,34 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
       <ContextButton
         onClick={onAddBox}
         icon="/box.svg"
-        text="Add Building"
+        text=""
+        title="Add Building"
       />
       <ContextButton
         onClick={onAddCircle}
         icon="/circle.svg"
-        text="Add Street"
+        text=""
+        title="Add Street"
       />
+      <div style={{ width: '100%', height: '1px', backgroundColor: '#ccc', margin: '4px 0' }} />
+      <ContextButton
+        onClick={onExport}
+        icon={<MdFileDownload size={24} />}
+        text=""
+        title="Export Scene"
+      />
+      <ContextButton
+        onClick={onImport}
+        icon={<MdFileUpload size={24} />}
+        text=""
+        title="Import Scene"
+      />
+      <div style={{ width: '100%', height: '1px', backgroundColor: '#ccc', margin: '4px 0' }} />
       <ContextButton
         onClick={onClearScene}
         icon="/trash.svg"
-        text="Clear"
+        text=""
+        title="Clear Scene"
         backgroundColor="#ff4444"
         textColor="white"
       />
