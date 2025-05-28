@@ -16,6 +16,7 @@ interface DraggableItemProps {
   disableAnimations?: boolean;
   zoom?: number;
   onResizeEnd?: () => void;
+  isViewMode?: boolean;
 }
 
 const DraggableItem: React.FC<DraggableItemProps> = ({
@@ -33,6 +34,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   disableAnimations = false,
   zoom = 1,
   onResizeEnd,
+  isViewMode = false,
 }) => {
   const [position, setPosition] = useState(initialPosition);
   const [size, setSize] = useState(initialSize);
@@ -60,6 +62,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   }, [initialSize]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isViewMode) return;
     if (!itemRef.current) return;
 
     const rect = itemRef.current.getBoundingClientRect();
@@ -83,6 +86,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   };
 
   const handleResizeStart = (e: React.MouseEvent) => {
+    if (isViewMode) return;
     e.stopPropagation();
     if (!itemRef.current) return;
 
@@ -106,6 +110,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    if (isViewMode) return;
     e.stopPropagation();
     if (!isDragging && !isResizing) {
       onClick?.(e);
@@ -256,21 +261,21 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         width: { duration: 0, ease: "linear" },
         height: { duration: 0, ease: "linear" },
       }}
-      whileHover={disableAnimations ? {} : { scale: 1.1 }}
-      onHoverStart={() => !disableAnimations && setHover(true)}
-      onHoverEnd={() => !disableAnimations && setHover(false)}
+      whileHover={disableAnimations || isViewMode ? {} : { scale: 1.1 }}
+      onHoverStart={() => !disableAnimations && !isViewMode && setHover(true)}
+      onHoverEnd={() => !disableAnimations && !isViewMode && setHover(false)}
       style={{
         position: 'absolute',
         left: 0,
         top: 0,
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isViewMode ? 'default' : (isDragging ? 'grabbing' : 'grab'),
         userSelect: 'none',
         zIndex: isDragging || isResizing ? 1000 : 1,
         willChange: 'transform',
         transform: 'translate3d(0, 0, 0)',
-        outline: isSelected ? '2px solid #4a90e2' : 'none',
+        outline: isSelected && !isViewMode ? '2px solid #4a90e2' : 'none',
         outlineOffset: '2px',
-        boxShadow: isSelected ? '0 0 8px rgba(74, 144, 226, 0.5)' : 'none',
+        boxShadow: isSelected && !isViewMode ? '0 0 8px rgba(74, 144, 226, 0.5)' : 'none',
         ...(disableAnimations ? {
           transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
           width: size.width,
@@ -278,7 +283,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
         } : {})
       }}
       onMouseDown={handleMouseDown}
-      onContextMenu={onContextMenu}
+      onContextMenu={isViewMode ? undefined : onContextMenu}
       onClick={handleClick}
     >
       <div
@@ -288,37 +293,39 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: isSelected ? 'rgba(74, 144, 226, 0.1)' : 'transparent',
+          backgroundColor: isSelected && !isViewMode ? 'rgba(74, 144, 226, 0.1)' : 'transparent',
           transition: 'background-color 0.2s ease',
           borderRadius: '4px',
-          border: isSelected ? '1px solid rgba(74, 144, 226, 0.3)' : 'none',
+          border: isSelected && !isViewMode ? '1px solid rgba(74, 144, 226, 0.3)' : 'none',
         }}
       >
         {children}
       </div>
       {/* Resize handle */}
-      <div
-        style={{
-          position: 'absolute',
-          right: -6,
-          bottom: -6,
-          width: 12,
-          height: 12,
-          backgroundColor: isSelected ? '#4a90e2' : '#999',
-          borderRadius: '50%',
-          cursor: 'nwse-resize',
-          border: '2px solid white',
-          boxShadow: '0 0 4px rgba(0,0,0,0.2)',
-          zIndex: 1001,
-          opacity: isSelected ? 1 : 0,
-          transition: 'opacity 0.2s ease, background-color 0.2s ease',
-        }}
-        onMouseDown={handleResizeStart}
-      />
+      {!isViewMode && (
+        <div
+          style={{
+            position: 'absolute',
+            right: -6,
+            bottom: -6,
+            width: 12,
+            height: 12,
+            backgroundColor: isSelected ? '#4a90e2' : '#999',
+            borderRadius: '50%',
+            cursor: 'nwse-resize',
+            border: '2px solid white',
+            boxShadow: '0 0 4px rgba(0,0,0,0.2)',
+            zIndex: 1001,
+            opacity: isSelected ? 1 : 0,
+            transition: 'opacity 0.2s ease, background-color 0.2s ease',
+          }}
+          onMouseDown={handleResizeStart}
+        />
+      )}
       <style>
         {`
           .draggable-item:hover > div[style*="position: absolute"] {
-            opacity: 1 !important;
+            opacity: ${isViewMode ? 0 : 1} !important;
           }
         `}
       </style>

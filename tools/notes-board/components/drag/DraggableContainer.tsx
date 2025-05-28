@@ -83,6 +83,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
   const isSelectingRef = useRef(false);
   const dragStartPositions = useRef<{ [key: string]: { x: number; y: number } }>({});
+  const [isViewMode, setIsViewMode] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const panStartPosition = useRef<{ x: number; y: number } | null>(null);
 
   // Function to load scene from URL
   const loadSceneFromUrl = async (url: string) => {
@@ -160,6 +164,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       loadSceneFromUrl(importUrlParam);
     }
   }, []); // Empty dependency array to ensure this only runs once on mount
+
+  // Check for view mode on initial load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewMode = urlParams.get('viewMode') === 'true';
+    setIsViewMode(viewMode);
+  }, []);
 
   // Update ref when state changes
   useEffect(() => {
@@ -1075,6 +1086,61 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     reader.readAsText(file);
   };
 
+  // Add panning functionality
+  const handlePanStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isViewMode) return;
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    setIsPanning(true);
+    panStartPosition.current = { x: clientX, y: clientY };
+  };
+
+  const handlePanMove = (e: MouseEvent | TouchEvent) => {
+    if (!isPanning || !panStartPosition.current) return;
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    const deltaX = (clientX - panStartPosition.current.x) / zoom;
+    const deltaY = (clientY - panStartPosition.current.y) / zoom;
+    
+    setPanOffset(prev => ({
+      x: prev.x + deltaX,
+      y: prev.y + deltaY
+    }));
+    
+    panStartPosition.current = { x: clientX, y: clientY };
+  };
+
+  const handlePanEnd = () => {
+    setIsPanning(false);
+    panStartPosition.current = null;
+  };
+
+  // Add panning event listeners
+  useEffect(() => {
+    if (!isViewMode) return;
+
+    const handleMouseMove = (e: MouseEvent) => handlePanMove(e);
+    const handleTouchMove = (e: TouchEvent) => handlePanMove(e);
+    const handleMouseUp = () => handlePanEnd();
+    const handleTouchEnd = () => handlePanEnd();
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isViewMode, isPanning, zoom]);
+
   const renderItem = (item: DraggableItem) => {
     const commonProps = {
       id: item.id,
@@ -1216,15 +1282,18 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         height: '100vh',
         overflow: 'hidden',
         backgroundColor: '#f0f0f0',
+        cursor: isViewMode ? (isPanning ? 'grabbing' : 'grab') : 'default',
       }}
       onClick={(e) => {
+        if (isViewMode) return;
         // Only handle clicks directly on the container
         if (e.target === containerRef.current) {
           setSelectedItemIds([]);
           setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
         }
       }}
-      onMouseDown={handleSelectionStart}
+      onMouseDown={isViewMode ? handlePanStart : handleSelectionStart}
+      onTouchStart={isViewMode ? handlePanStart : undefined}
       tabIndex={0}
     >
       <div
@@ -1234,7 +1303,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           left: 0,
           right: 0,
           bottom: 0,
-          transform: `scale(${zoom})`,
+          transform: `scale(${zoom}) translate(${isViewMode ? panOffset.x : 0}px, ${isViewMode ? panOffset.y : 0}px)`,
           transformOrigin: 'center center',
         }}
       >
@@ -1249,16 +1318,20 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             zIndex: 0,
           }}
           onClick={(e) => {
+            if (isViewMode) return;
             e.stopPropagation();
             setSelectedItemIds([]);
             setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
           }}
         />
-        {items.map(renderItem)}
+        {items.map(item => renderItem({
+          ...item,
+          isViewMode
+        }))}
       </div>
 
       {/* Selection rectangle */}
-      {selectionArea.isSelecting && (
+      {!isViewMode && selectionArea.isSelecting && (
         <div
           style={{
             position: 'absolute',
@@ -1277,45 +1350,49 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       {/* Fixed UI elements that don't scale with zoom */}
       <div style={{ position: 'relative', zIndex: 1000 }}>
         <DebugPanel />
-        <ContextPanel
-          position={{ x: contextMenu.x, y: contextMenu.y }}
-          onAddBox={() => addItem('box', { x: contextMenu.x, y: contextMenu.y })}
-          onAddCircle={() => addItem('circle', { x: contextMenu.x, y: contextMenu.y })}
-          onClearScene={handleClearScene}
-          onClose={() => setContextMenu({ show: false, x: 0, y: 0, itemId: '' })}
-          onExport={handleExportScene}
-          onImport={() => fileInputRef.current?.click()}
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleImportScene}
-          style={{ display: 'none' }}
-        />
-        <TopContextPanel
-          onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
-          onAddSeparator={() => addSeparator({ x: window.innerWidth / 2 - 1, y: window.innerHeight / 2 - 50 })}
-          onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
-          onAddCirclesPath={() => addCirclesPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
-          onAddTwoPointsPath={() => addTwoPointsPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
-          onAddCodeBlock={(position) => {
-            const newItem: DraggableItem = {
-              id: `code-${Date.now()}`,
-              type: 'codeBlock',
-              position,
-              size: { width: 48, height: 24 },
-              props: {
-                width: 48,
-                height: 24,
-                language: 'typescript',
-                code: '',
-              }
-            };
-            setItemsWithHistory(prev => [...prev, newItem]);
-          }}
-          onAddGrid={() => {}}
-        />
+        {!isViewMode && (
+          <>
+            <ContextPanel
+              position={{ x: contextMenu.x, y: contextMenu.y }}
+              onAddBox={() => addItem('box', { x: contextMenu.x, y: contextMenu.y })}
+              onAddCircle={() => addItem('circle', { x: contextMenu.x, y: contextMenu.y })}
+              onClearScene={handleClearScene}
+              onClose={() => setContextMenu({ show: false, x: 0, y: 0, itemId: '' })}
+              onExport={handleExportScene}
+              onImport={() => fileInputRef.current?.click()}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleImportScene}
+              style={{ display: 'none' }}
+            />
+            <TopContextPanel
+              onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
+              onAddSeparator={() => addSeparator({ x: window.innerWidth / 2 - 1, y: window.innerHeight / 2 - 50 })}
+              onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
+              onAddCirclesPath={() => addCirclesPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
+              onAddTwoPointsPath={() => addTwoPointsPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
+              onAddCodeBlock={(position) => {
+                const newItem: DraggableItem = {
+                  id: `code-${Date.now()}`,
+                  type: 'codeBlock',
+                  position,
+                  size: { width: 48, height: 24 },
+                  props: {
+                    width: 48,
+                    height: 24,
+                    language: 'typescript',
+                    code: '',
+                  }
+                };
+                setItemsWithHistory(prev => [...prev, newItem]);
+              }}
+              onAddGrid={() => {}}
+            />
+          </>
+        )}
         <div
           style={{
             position: 'fixed',
