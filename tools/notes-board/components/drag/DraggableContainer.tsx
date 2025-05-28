@@ -1144,6 +1144,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             isAnimating={item.props.isAnimating}
             position={item.position}
             circlePositions={item.circlePositions || []}
+            onPositionsChange={(newPositions) => {
+              setItemsWithHistory(prevItems =>
+                prevItems.map(prevItem =>
+                  prevItem.id === item.id
+                    ? { ...prevItem, circlePositions: newPositions }
+                    : prevItem
+                )
+              );
+            }}
           />
         )}
         {item.type === 'twoPointsPath' && (
@@ -1154,6 +1163,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             isAnimating={item.props.isAnimating}
             position={item.position}
             circlePositions={item.circlePositions || []}
+            onPositionsChange={(newPositions) => {
+              setItemsWithHistory(prevItems =>
+                prevItems.map(prevItem =>
+                  prevItem.id === item.id
+                    ? { ...prevItem, circlePositions: newPositions }
+                    : prevItem
+                )
+              );
+            }}
           />
         )}
         {item.type === 'codeBlock' && (

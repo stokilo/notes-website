@@ -7,6 +7,7 @@ interface TwoPointsPathItemProps {
   isAnimating?: boolean;
   position: { x: number; y: number };
   circlePositions?: Array<{ x: number; y: number }>;
+  onPositionsChange?: (positions: Array<{ x: number; y: number }>) => void;
 }
 
 const TwoPointsPathItem: React.FC<TwoPointsPathItemProps> = ({
@@ -14,6 +15,7 @@ const TwoPointsPathItem: React.FC<TwoPointsPathItemProps> = ({
   height,
   isAnimating = false,
   circlePositions,
+  onPositionsChange,
 }) => {
   const [positions, setPositions] = useState(
     circlePositions || [
@@ -71,6 +73,7 @@ const TwoPointsPathItem: React.FC<TwoPointsPathItemProps> = ({
         const newPositions = [...positions];
         newPositions[draggedCircleIndex] = { x, y };
         setPositions(newPositions);
+        onPositionsChange?.(newPositions);
       }
     };
 
@@ -87,7 +90,7 @@ const TwoPointsPathItem: React.FC<TwoPointsPathItemProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggedCircleIndex, positions]);
+  }, [draggedCircleIndex, positions, onPositionsChange]);
 
   return (
     <div
