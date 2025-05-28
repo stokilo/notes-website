@@ -106,6 +106,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!isDragging && !isResizing) {
       onClick?.(e);
     }

@@ -516,19 +516,23 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       return;
     }
 
+    // Only deselect if we clicked directly on the container or its background
     const target = e.target as HTMLElement;
-    const isContainerClick = target === containerRef.current || 
-                           target.className === 'draggable-container' ||
-                           target.closest('.draggable-container') === containerRef.current;
-    
-    if (isContainerClick) {
-      setSelectedItemIds([]);
-      setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+    if (target === containerRef.current || 
+        target.className === 'draggable-container' ||
+        target.closest('.draggable-container') === containerRef.current) {
+      // Check if we clicked on a draggable item
+      const clickedOnItem = target.closest('.draggable-item');
+      if (!clickedOnItem) {
+        setSelectedItemIds([]);
+        setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+      }
     }
   };
 
   // Add back handleItemClick function
   const handleItemClick = (e: React.MouseEvent, itemId: string) => {
+    e.preventDefault();
     e.stopPropagation();
     
     // Don't handle clicks during selection
@@ -637,11 +641,17 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     addToHistory(currentItems);
   };
 
-  const addItem = (type: 'box' | 'circle' , position: { x: number; y: number }) => {
+  const addItem = (type: 'box' | 'circle', position: { x: number; y: number }) => {
+    if (!containerRef.current) return;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const centerX = (containerRect.width / 2) / zoom;
+    const centerY = (containerRect.height / 2) / zoom;
+
     const newItem: DraggableItem = {
       id: `${type}-${Date.now()}`,
       type,
-      position,
+      position: { x: centerX - 50, y: centerY - 50 }, // Subtract half of the item size to center it
       size: { width: 100, height: 100 },
       props: type === 'box'
         ? { color: '#4a90e2', size: 100, height: 80 } 
@@ -1019,7 +1029,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
         overflow: 'hidden',
         backgroundColor: '#f0f0f0',
       }}
-      onClick={handleClick}
+      onClick={(e) => {
+        // Only handle clicks directly on the container
+        if (e.target === containerRef.current) {
+          setSelectedItemIds([]);
+          setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+        }
+      }}
       onMouseDown={handleSelectionStart}
       tabIndex={0}
     >
@@ -1034,6 +1050,22 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           transformOrigin: 'center center',
         }}
       >
+        {/* Add background div to catch clicks */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 0,
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedItemIds([]);
+            setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+          }}
+        />
         {items.map(renderItem)}
         {selectionArea.isSelecting && (
           <div
