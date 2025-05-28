@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import * as shiki from 'shiki';
+// Note: Direct grammar import does not work in browser builds. Use string language names.
+// import javaGrammar from 'shiki/langs/java.tmLanguage.json';
 
-// List of supported languages
+// List of supported languages (strings only for browser compatibility)
 const SUPPORTED_LANGUAGES = [
+  'java',
   'typescript',
   'javascript',
   'html',
@@ -11,7 +14,6 @@ const SUPPORTED_LANGUAGES = [
   'markdown',
   'bash',
   'shell',
-  'java',
   'kotlin',
   'scala',
   'groovy',
@@ -49,7 +51,7 @@ const getHighlighter = async () => {
   }
 
   highlighterPromise = shiki.createHighlighter({
-    themes: ['github-dark'],
+    theme: 'github-dark',
     langs: SUPPORTED_LANGUAGES,
   }).then(async instance => {
     // Preload all languages
@@ -79,7 +81,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   height = 40,
   code = '',
   url,
-  language = 'typescript',
+  language = 'java',
   showPreview = false,
   onClosePreview,
   onCodeChange,
@@ -153,10 +155,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         
         const highlighted = highlighter.codeToHtml(codeToHighlight, { 
           lang: selectedLanguage,
-          themes: {
-            light: 'github-dark',
-            dark: 'github-dark'
-          }
+          theme: 'github-dark'
         });
 
         // Add a class to the highlighted code for styling
@@ -221,17 +220,14 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
 
   const handleLanguageChange = (newLanguage: string) => {
     setSelectedLanguage(newLanguage);
-    // Immediately update the preview if it's showing
+    // Only update preview if it's showing
     if (showPreview) {
       const highlightCode = async () => {
         try {
           const highlighter = await getHighlighter();
           const highlighted = highlighter.codeToHtml(code, { 
             lang: newLanguage,
-            themes: {
-              light: 'github-dark',
-              dark: 'github-dark'
-            }
+            theme: 'github-dark'
           });
           const highlightedWithClass = highlighted.replace(
             '<pre class="shiki"',
@@ -417,7 +413,13 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 padding: '12px',
                 borderRadius: '4px',
                 resize: 'vertical',
+                whiteSpace: 'pre',
+                tabSize: 2,
               }}
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
             />
           </div>
         </div>
@@ -543,6 +545,62 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
             font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
             font-size: 14px;
             line-height: 1.5;
+            display: block;
+          }
+          .shiki-code-block .line {
+            display: block;
+            min-height: 1.5em;
+            padding: 0 1em;
+          }
+          .shiki-code-block .line-number {
+            display: inline-block;
+            width: 2em;
+            text-align: right;
+            margin-right: 1em;
+            color: #666;
+            user-select: none;
+          }
+          .shiki-code-block .highlighted {
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+          .shiki-code-block .keyword {
+            color: #ff7b72;
+          }
+          .shiki-code-block .string {
+            color: #a5d6ff;
+          }
+          .shiki-code-block .comment {
+            color: #8b949e;
+          }
+          .shiki-code-block .function {
+            color: #d2a8ff;
+          }
+          .shiki-code-block .class {
+            color: #7ee787;
+          }
+          .shiki-code-block .number {
+            color: #79c0ff;
+          }
+          .shiki-code-block .operator {
+            color: #ff7b72;
+          }
+          .shiki-code-block .variable {
+            color: #ffa657;
+          }
+          .shiki-code-block .parameter {
+            color: #ffa657;
+          }
+          .shiki-code-block .property {
+            color: #ffa657;
+          }
+          .shiki-code-block .type {
+            color: #7ee787;
+          }
+          .shiki-code-block .modifier {
+            color: #ff7b72;
+          }
+          .shiki-code-block .annotation {
+            color: #ff7b72;
           }
         `}
       </style>

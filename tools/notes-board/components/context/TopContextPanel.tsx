@@ -202,7 +202,7 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
           <ShikiCodeBlockItem 
             width={48} 
             height={24}
-            language="typescript"
+            language="java"
             isPreview={true}
           />
         </div>
