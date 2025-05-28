@@ -441,10 +441,22 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   position: 'relative',
                   backgroundColor: '#1e1e1e',
                 }}
+                onWheel={(e) => {
+                  e.stopPropagation();
+                }}
+                onTouchMove={(e) => {
+                  e.stopPropagation();
+                }}
               >
                 <textarea
                   value={editorCode}
                   onChange={(e) => setEditorCode(e.target.value)}
+                  onWheel={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onTouchMove={(e) => {
+                    e.stopPropagation();
+                  }}
                   style={{
                     width: '100%',
                     height: '100%',
