@@ -87,6 +87,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   // Function to load scene from URL
   const loadSceneFromUrl = async (url: string) => {
     try {
+      // Clear existing localStorage data before import
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -112,9 +116,31 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       // Save to localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(importedData.items));
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(initialHistory));
+
+      // Update URL to remove the import parameter
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('import');
+      window.history.replaceState({}, '', currentUrl.toString());
     } catch (error) {
       console.error('Error loading scene from URL:', error);
       alert('Error loading scene from URL: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      
+      // If import fails, try to restore from localStorage if available
+      const savedScene = localStorage.getItem(STORAGE_KEY);
+      const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+      
+      if (savedScene && savedHistory) {
+        try {
+          const parsedScene = JSON.parse(savedScene);
+          const parsedHistory = JSON.parse(savedHistory);
+          
+          setItems(parsedScene);
+          setHistory(parsedHistory);
+          setHistoryIndex(parsedHistory.length - 1);
+        } catch (e) {
+          console.error('Error restoring from localStorage after failed import:', e);
+        }
+      }
     }
   };
 
