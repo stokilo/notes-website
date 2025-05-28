@@ -474,10 +474,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) return;
 
-    // Calculate position relative to the container and account for zoom
-    const startX = (e.clientX - containerRect.left) / zoom;
-    const startY = (e.clientY - containerRect.top) / zoom;
-
+    // Calculate position relative to the container
+    const startX = e.clientX - containerRect.left;
+    const startY = e.clientY - containerRect.top;
 
     isSelectingRef.current = true;
     const newSelectionArea = {
@@ -493,8 +492,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     if (!isSelectingRef.current || !containerRef.current) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
-    const endX = (e.clientX - containerRect.left) / zoom;
-    const endY = (e.clientY - containerRect.top) / zoom;
+    const endX = e.clientX - containerRect.left;
+    const endY = e.clientY - containerRect.top;
 
     const currentSelection = selectionAreaRef.current;
     const newArea = {
@@ -514,17 +513,16 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     
     // Calculate the selection rectangle using the current state
     const selectionRect = {
-      left: Math.min(currentSelection.start.x, currentSelection.end.x),
-      right: Math.max(currentSelection.start.x, currentSelection.end.x),
-      top: Math.min(currentSelection.start.y, currentSelection.end.y),
-      bottom: Math.max(currentSelection.start.y, currentSelection.end.y)
+      left: Math.min(currentSelection.start.x, currentSelection.end.x) / zoom,
+      right: Math.max(currentSelection.start.x, currentSelection.end.x) / zoom,
+      top: Math.min(currentSelection.start.y, currentSelection.end.y) / zoom,
+      bottom: Math.max(currentSelection.start.y, currentSelection.end.y) / zoom
     };
 
     // Get items directly from localStorage
     const savedScene = localStorage.getItem(STORAGE_KEY);
     const localStorageItems = savedScene ? JSON.parse(savedScene) : [];
     
-
     // Process the selection using localStorage items
     const selectedIds = localStorageItems
       .filter(item => {
@@ -544,11 +542,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           itemRect.bottom >= selectionRect.top
         );
 
-
         return isInSelection;
       })
       .map(item => item.id);
-    
     
     // Update the selected items immediately
     if (selectedIds.length > 0) {
@@ -1259,22 +1255,24 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           }}
         />
         {items.map(renderItem)}
-        {selectionArea.isSelecting && (
-          <div
-            style={{
-              position: 'absolute',
-              left: Math.min(selectionArea.start.x, selectionArea.end.x),
-              top: Math.min(selectionArea.start.y, selectionArea.end.y),
-              width: Math.abs(selectionArea.end.x - selectionArea.start.x),
-              height: Math.abs(selectionArea.end.y - selectionArea.start.y),
-              border: '2px dashed #4a90e2',
-              backgroundColor: 'rgba(74, 144, 226, 0.1)',
-              pointerEvents: 'none',
-              zIndex: 999,
-            }}
-          />
-        )}
       </div>
+
+      {/* Selection rectangle */}
+      {selectionArea.isSelecting && (
+        <div
+          style={{
+            position: 'absolute',
+            left: Math.min(selectionArea.start.x, selectionArea.end.x),
+            top: Math.min(selectionArea.start.y, selectionArea.end.y),
+            width: Math.abs(selectionArea.end.x - selectionArea.start.x),
+            height: Math.abs(selectionArea.end.y - selectionArea.start.y),
+            border: '2px dashed #4a90e2',
+            backgroundColor: 'rgba(74, 144, 226, 0.1)',
+            pointerEvents: 'none',
+            zIndex: 999,
+          }}
+        />
+      )}
 
       {/* Fixed UI elements that don't scale with zoom */}
       <div style={{ position: 'relative', zIndex: 1000 }}>
