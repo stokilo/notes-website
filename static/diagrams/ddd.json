@@ -1,0 +1,119 @@
+{
+  "items": [
+    {
+      "id": "boxSet-1748439734014",
+      "type": "boxSet",
+      "position": {
+        "x": 562.5,
+        "y": 281
+      },
+      "size": {
+        "width": 502,
+        "height": 280
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "DDD"
+    },
+    {
+      "id": "boxSet-1748439742301",
+      "type": "boxSet",
+      "position": {
+        "x": 587.5,
+        "y": 396
+      },
+      "size": {
+        "width": 167,
+        "height": 116
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "BoundedContext"
+    },
+    {
+      "id": "boxSet-1748439757004",
+      "type": "boxSet",
+      "position": {
+        "x": 610.5,
+        "y": 456
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "Entity"
+    },
+    {
+      "id": "boxSet-1748439764717",
+      "type": "boxSet",
+      "position": {
+        "x": 676.5,
+        "y": 455
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "ValueObject"
+    },
+    {
+      "id": "arrow-1748439788849",
+      "type": "arrow",
+      "position": {
+        "x": 765.5,
+        "y": 435
+      },
+      "size": {
+        "width": 120,
+        "height": 40
+      },
+      "props": {
+        "segments": 3,
+        "rotation": 0,
+        "isAnimating": false
+      }
+    },
+    {
+      "id": "code-1748439797756",
+      "type": "codeBlock",
+      "position": {
+        "x": 666.5,
+        "y": 471
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "typescript",
+        "code": "class Test {\n}"
+      }
+    },
+    {
+      "id": "code-1748439809847",
+      "type": "codeBlock",
+      "position": {
+        "x": 598.5,
+        "y": 474
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "typescript",
+        "code": "class Entity { \n}"
+      }
+    }
+  ],
+  "version": "1.0",
+  "exportDate": "2025-05-28T13:43:45.900Z"
+}
