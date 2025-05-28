@@ -110,6 +110,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
       try {
         const highlighter = await getHighlighter();
         
+        // Try to detect language from the code
         const detected = highlighter.getLoadedLanguages().find(lang => {
           try {
             highlighter.codeToHtml(editorCode, { 
