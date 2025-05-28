@@ -11,6 +11,8 @@ interface BoxSetProps {
   isNew?: boolean;
   finalPosition?: { x: number; y: number };
   isPlaceholder?: boolean;
+  isViewMode?: boolean;
+  onAddComment?: (e: React.MouseEvent) => void;
 }
 
 const BoxSetItem: React.FC<BoxSetProps> = ({
@@ -23,6 +25,8 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
   isNew,
   finalPosition,
   isPlaceholder = false,
+  isViewMode = false,
+  onAddComment,
 }) => {
   const [boxColor, setBoxColor] = useState('#FFD700');
 
@@ -35,6 +39,16 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
     }
   }, [isPlaceholder]);
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (isViewMode) {
+      // In view mode, directly trigger the add comment action
+      e.preventDefault();
+      onAddComment?.(e);
+    } else {
+      onClick?.(e);
+    }
+  };
+
   return (
     <div 
       style={{ 
@@ -43,8 +57,9 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
         height,
         marginTop: comment ? '25px' : '0',
         opacity: isPlaceholder && commentLabel ? 0.3 : 1,
+        cursor: isViewMode ? 'pointer' : 'default',
       }} 
-      onClick={onClick} 
+      onClick={handleClick} 
       onContextMenu={onContextMenu}
     >
       {/* Comment indicator with label */}
@@ -77,6 +92,7 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
           </div>
         </div>
       )}
+
       {/* Always render the box (dot) */}
       <AnimatedColoredBox
         width={width} 

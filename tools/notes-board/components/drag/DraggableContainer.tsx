@@ -1230,6 +1230,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             height={item.size.height}
             comment={item.comment}
             commentLabel={item.commentLabel}
+            onContextMenu={(e) => handleContextMenu(e, item.id)}
+            onAddComment={(e) => {
+              setCommentEditor({
+                show: true,
+                itemId: item.id,
+                position: { x: e.clientX, y: e.clientY },
+              });
+            }}
+            isViewMode={isViewMode}
           />
         )}
 
