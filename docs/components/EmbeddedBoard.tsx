@@ -16,7 +16,7 @@ const EmbeddedBoard: React.FC<EmbeddedBoardProps> = ({
   style = {},
 }) => {
   const iframeUrl = importUrl 
-    ? `${serviceUrl}?importUrl=${encodeURIComponent(importUrl)}`
+    ? `${serviceUrl}?importUrl=${encodeURIComponent(importUrl)}&viewMode=true`
     : serviceUrl;
 
   return (

@@ -41,6 +41,7 @@ interface DraggableItem {
   rotation?: number;
   attachedTo?: string;
   circlePositions?: Array<{ x: number; y: number }>;
+  isViewMode?: boolean;
 }
 
 interface SelectionArea {
@@ -87,6 +88,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const [isPanning, setIsPanning] = useState(false);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const panStartPosition = useRef<{ x: number; y: number } | null>(null);
+  const [viewModePadding, setViewModePadding] = useState({ x: 0, y: 0 });
 
   // Function to load scene from URL
   const loadSceneFromUrl = async (url: string) => {
@@ -1141,10 +1143,53 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     };
   }, [isViewMode, isPanning, zoom]);
 
+  // Add function to calculate view mode padding and adjust positions
+  const calculateViewModePadding = (items: DraggableItem[]) => {
+    if (!items.length) return { x: 0, y: 0 };
+
+    // Find the bounds of all items
+    const bounds = items.reduce((acc, item) => {
+      return {
+        minX: Math.min(acc.minX, item.position.x),
+        minY: Math.min(acc.minY, item.position.y),
+        maxX: Math.max(acc.maxX, item.position.x + item.size.width),
+        maxY: Math.max(acc.maxY, item.position.y + item.size.height)
+      };
+    }, {
+      minX: Infinity,
+      minY: Infinity,
+      maxX: -Infinity,
+      maxY: -Infinity
+    });
+
+    // Calculate padding (1% of the total width/height)
+    const paddingX = (bounds.maxX - bounds.minX) * 0.01;
+    const paddingY = (bounds.maxY - bounds.minY) * 0.01;
+
+    // Calculate offset to shift items
+    const offsetX = bounds.minX - paddingX;
+    const offsetY = bounds.minY - paddingY;
+
+    return { x: offsetX, y: offsetY };
+  };
+
+  // Update view mode padding when items change
+  useEffect(() => {
+    if (isViewMode) {
+      setViewModePadding(calculateViewModePadding(items));
+    }
+  }, [isViewMode, items]);
+
+  // Modify renderItem to adjust positions in view mode
   const renderItem = (item: DraggableItem) => {
+    const adjustedPosition = isViewMode ? {
+      x: item.position.x - viewModePadding.x,
+      y: item.position.y - viewModePadding.y
+    } : item.position;
+
     const commonProps = {
       id: item.id,
-      initialPosition: item.position,
+      initialPosition: adjustedPosition,
       initialSize: item.size,
       onPositionChange: (pos: { x: number; y: number }) => handlePositionChange(item.id, pos),
       onSizeChange: (size: { width: number; height: number }) => handleSizeChange(item.id, size),
@@ -1156,6 +1201,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       isSelected: selectedItemIds.includes(item.id),
       zoom: zoom,
       disableAnimations: true,
+      isViewMode
     };
 
     return (
