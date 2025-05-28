@@ -1,0 +1,188 @@
+{
+  "items": [
+    {
+      "id": "code-1748416012120",
+      "type": "codeBlock",
+      "position": {
+        "x": 901.5,
+        "y": 289
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": "import java\n\nclass T {}"
+      }
+    },
+    {
+      "id": "code-1748416826007",
+      "type": "codeBlock",
+      "position": {
+        "x": 902.5,
+        "y": 289
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "typescript",
+        "code": ""
+      }
+    },
+    {
+      "id": "circlesPath-1748416827374",
+      "type": "circlesPath",
+      "position": {
+        "x": 822.5,
+        "y": 259
+      },
+      "size": {
+        "width": 200,
+        "height": 100
+      },
+      "props": {
+        "isAnimating": true
+      },
+      "circlePositions": [
+        {
+          "x": 40,
+          "y": 50
+        },
+        {
+          "x": 100,
+          "y": 20
+        },
+        {
+          "x": 160,
+          "y": 50
+        }
+      ]
+    },
+    {
+      "id": "arrow-1748416827791",
+      "type": "arrow",
+      "position": {
+        "x": 862.5,
+        "y": 289
+      },
+      "size": {
+        "width": 120,
+        "height": 40
+      },
+      "props": {
+        "segments": 3,
+        "rotation": 0,
+        "isAnimating": false
+      }
+    },
+    {
+      "id": "boxSet-1748416828807",
+      "type": "boxSet",
+      "position": {
+        "x": 912.5,
+        "y": 299
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {}
+    },
+    {
+      "id": "circlesPath-1748416829214",
+      "type": "circlesPath",
+      "position": {
+        "x": 822.5,
+        "y": 259
+      },
+      "size": {
+        "width": 200,
+        "height": 100
+      },
+      "props": {
+        "isAnimating": true
+      },
+      "circlePositions": [
+        {
+          "x": 40,
+          "y": 50
+        },
+        {
+          "x": 100,
+          "y": 20
+        },
+        {
+          "x": 160,
+          "y": 50
+        }
+      ]
+    },
+    {
+      "id": "twoPointsPath-1748416829455",
+      "type": "twoPointsPath",
+      "position": {
+        "x": 822.5,
+        "y": 259
+      },
+      "size": {
+        "width": 200,
+        "height": 100
+      },
+      "props": {
+        "isAnimating": true
+      },
+      "circlePositions": [
+        {
+          "x": 40,
+          "y": 50
+        },
+        {
+          "x": 160,
+          "y": 50
+        }
+      ]
+    },
+    {
+      "id": "circle-1748416830502",
+      "type": "circle",
+      "position": {
+        "x": 872.5,
+        "y": 259
+      },
+      "size": {
+        "width": 100,
+        "height": 100
+      },
+      "props": {
+        "width": 100,
+        "length": 200
+      }
+    },
+    {
+      "id": "box-1748416830847",
+      "type": "box",
+      "position": {
+        "x": 872.5,
+        "y": 259
+      },
+      "size": {
+        "width": 100,
+        "height": 100
+      },
+      "props": {
+        "color": "#4a90e2",
+        "size": 100,
+        "height": 80
+      }
+    }
+  ],
+  "version": "1.0",
+  "exportDate": "2025-05-28T07:30:56.094Z"
+}

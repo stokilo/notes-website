@@ -84,6 +84,52 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const isSelectingRef = useRef(false);
   const dragStartPositions = useRef<{ [key: string]: { x: number; y: number } }>({});
 
+  // Function to load scene from URL
+  const loadSceneFromUrl = async (url: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const importedData = await response.json();
+      
+      // Validate the imported data
+      if (!importedData.items || !Array.isArray(importedData.items)) {
+        throw new Error('Invalid scene data format');
+      }
+
+      // Reset the scene and set new items
+      setItems(importedData.items);
+      setSelectedItemIds([]);
+      setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+      setCopiedItem(null);
+      
+      // Initialize history with the imported scene
+      const initialHistory = [importedData.items];
+      setHistory(initialHistory);
+      setHistoryIndex(0);
+      
+      // Save to localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(importedData.items));
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(initialHistory));
+    } catch (error) {
+      console.error('Error loading scene from URL:', error);
+      alert('Error loading scene from URL: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Check for import parameter on initial load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const importParam = urlParams.get('import');
+    
+    if (importParam) {
+      // Construct the full URL using the current origin
+      const importUrl = `${window.location.origin}/${importParam}`;
+      loadSceneFromUrl(importUrl);
+    }
+  }, []); // Empty dependency array to ensure this only runs once on mount
+
   // Update ref when state changes
   useEffect(() => {
     selectionAreaRef.current = selectionArea;
@@ -94,20 +140,30 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const savedScene = localStorage.getItem(STORAGE_KEY);
     const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
     
+    // Only load from localStorage if there's no import parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const importParam = urlParams.get('import');
     
-    try {
-      if (savedScene) {
-        const parsedScene = JSON.parse(savedScene);
-        
-        // Set items first
-        setItems(parsedScene);
-        
-        // Initialize history with the loaded scene
-        if (savedHistory) {
-          const parsedHistory = JSON.parse(savedHistory);
-          if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
-            setHistory(parsedHistory);
-            setHistoryIndex(parsedHistory.length - 1);
+    if (!importParam) {
+      try {
+        if (savedScene) {
+          const parsedScene = JSON.parse(savedScene);
+          
+          // Set items first
+          setItems(parsedScene);
+          
+          // Initialize history with the loaded scene
+          if (savedHistory) {
+            const parsedHistory = JSON.parse(savedHistory);
+            if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
+              setHistory(parsedHistory);
+              setHistoryIndex(parsedHistory.length - 1);
+            } else {
+              const initialHistory = [parsedScene];
+              setHistory(initialHistory);
+              setHistoryIndex(0);
+              localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(initialHistory));
+            }
           } else {
             const initialHistory = [parsedScene];
             setHistory(initialHistory);
@@ -115,29 +171,23 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(initialHistory));
           }
         } else {
-          const initialHistory = [parsedScene];
-          setHistory(initialHistory);
+          const emptyHistory = [[]];
+          setHistory(emptyHistory);
           setHistoryIndex(0);
-          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(initialHistory));
+          setItems([]);
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(emptyHistory));
         }
-      } else {
+      } catch (error) {
+        console.error('Error loading state:', error);
+        // Reset to empty state if loading fails
         const emptyHistory = [[]];
         setHistory(emptyHistory);
         setHistoryIndex(0);
         setItems([]);
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(emptyHistory));
       }
-    } catch (error) {
-      console.error('Error loading state:', error);
-      // Reset to empty state if loading fails
-      const emptyHistory = [[]];
-      setHistory(emptyHistory);
-      setHistoryIndex(0);
-      setItems([]);
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(emptyHistory));
     }
   }, []); // Empty dependency array to ensure this only runs once on mount
-
 
   // Save scene to localStorage whenever items change
   useEffect(() => {
