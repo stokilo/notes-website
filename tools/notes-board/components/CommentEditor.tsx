@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 interface CommentEditorProps {
   initialContent?: string;
@@ -53,7 +54,7 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSave();
       onClose();
@@ -131,7 +132,7 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
       }}
     >
       <div style={{ display: 'flex', height: 'calc(100% - 50px)' }}>
-        {/* Read-only view */}
+        {/* Preview view */}
         <div
           style={{
             flex: 1,
@@ -141,7 +142,7 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
             backgroundColor: '#f8f9fa',
           }}
         >
-          <h3 style={{ margin: '0 0 12px 0', color: '#666' }}>Current Comment</h3>
+          <h3 style={{ margin: '0 0 12px 0', color: '#666' }}>Preview</h3>
           {label && (
             <div style={{ marginBottom: '12px' }}>
               <strong style={{ color: '#666' }}>Label:</strong>{' '}
@@ -154,10 +155,46 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
               backgroundColor: 'white',
               borderRadius: '4px',
               boxShadow: 'inset 0 0 4px rgba(0,0,0,0.1)',
-              whiteSpace: 'pre-wrap',
             }}
           >
-            {content || <em>No comment yet</em>}
+            {content ? (
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => <p style={{ margin: '0 0 1em 0' }}>{children}</p>,
+                  h1: ({ children }) => <h1 style={{ fontSize: '1.5em', margin: '0.5em 0' }}>{children}</h1>,
+                  h2: ({ children }) => <h2 style={{ fontSize: '1.3em', margin: '0.5em 0' }}>{children}</h2>,
+                  h3: ({ children }) => <h3 style={{ fontSize: '1.1em', margin: '0.5em 0' }}>{children}</h3>,
+                  ul: ({ children }) => <ul style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ul>,
+                  ol: ({ children }) => <ol style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ol>,
+                  li: ({ children }) => <li style={{ margin: '0.25em 0' }}>{children}</li>,
+                  code: ({ children }) => (
+                    <code style={{
+                      backgroundColor: '#f0f0f0',
+                      padding: '0.2em 0.4em',
+                      borderRadius: '3px',
+                      fontFamily: 'monospace',
+                    }}>
+                      {children}
+                    </code>
+                  ),
+                  pre: ({ children }) => (
+                    <pre style={{
+                      backgroundColor: '#f0f0f0',
+                      padding: '1em',
+                      borderRadius: '4px',
+                      overflow: 'auto',
+                      margin: '0.5em 0',
+                    }}>
+                      {children}
+                    </pre>
+                  ),
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            ) : (
+              <em>No comment yet</em>
+            )}
           </div>
         </div>
 
@@ -195,11 +232,11 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
               outline: 'none',
               border: 'none',
               resize: 'none',
-              fontFamily: 'inherit',
+              fontFamily: 'monospace',
               fontSize: '14px',
               lineHeight: '1.5',
             }}
-            placeholder="Enter your comment here..."
+            placeholder="Enter your comment here... (Markdown supported)"
           />
         </div>
       </div>

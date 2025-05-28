@@ -12,7 +12,7 @@ interface TopContextPanelProps {
   onAddArrow: () => void;
   onAddCirclesPath: () => void;
   onAddTwoPointsPath: () => void;
-  onAddMarkdownEditor: (position: { x: number; y: number }) => void;
+  onAddCodeBlock: (position: { x: number; y: number }) => void;
   onAddGrid: () => void;
 }
 
@@ -22,7 +22,7 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
   onAddArrow,
   onAddCirclesPath,
   onAddTwoPointsPath,
-  onAddMarkdownEditor,
+  onAddCodeBlock,
   onAddGrid,
 }) => {
   return (
@@ -177,7 +177,7 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
         </div>
       </div>
       <div
-        onClick={() => onAddMarkdownEditor({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
+        onClick={() => onAddCodeBlock({ x: window.innerWidth / 2 - 20, y: window.innerHeight / 2 - 20 })}
         style={{
           cursor: 'pointer',
           padding: '8px',

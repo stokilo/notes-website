@@ -12,6 +12,7 @@ import SeparatorItem from '../items/SeparatorItem';
 import ArrowItem from '../items/ArrowItem';
 import CirclesPathItem from '../items/CirclesPathItem';
 import TwoPointsPathItem from '../items/TwoPointsPathItem';
+import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -992,6 +993,16 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             circlePositions={item.circlePositions || []}
           />
         )}
+        {item.type === 'codeBlock' && (
+          <ShikiCodeBlockItem
+            width={item.size.width}
+            height={item.size.height}
+            language={item.props.language}
+            code={item.props.code}
+            showPreview={codePreviewItemId === item.id}
+            onClosePreview={() => setCodePreviewItemId(null)}
+          />
+        )}
       </DraggableItem>
     );
   };
@@ -1057,7 +1068,21 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
           onAddCirclesPath={() => addCirclesPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
           onAddTwoPointsPath={() => addTwoPointsPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
-          onAddMarkdownEditor={() => {}}
+          onAddCodeBlock={(position) => {
+            const newItem: DraggableItem = {
+              id: `code-${Date.now()}`,
+              type: 'codeBlock',
+              position,
+              size: { width: 400, height: 300 },
+              props: {
+                width: 400,
+                height: 300,
+                language: 'typescript',
+                code: '// Your code here',
+              }
+            };
+            setItemsWithHistory(prev => [...prev, newItem]);
+          }}
           onAddGrid={() => {}}
         />
         <div
