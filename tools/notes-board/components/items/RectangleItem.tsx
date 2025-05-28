@@ -20,6 +20,7 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const actualWidth = width || size;
   const actualHeight = height || size;
+  const labelBase = Math.min(actualWidth, actualHeight);
 
   useEffect(() => {
     if (label === '') {
@@ -65,9 +66,9 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
             transform: 'translateX(-50%)',
             backgroundColor: '#4a90e2',
             color: 'white',
-            padding: `${Math.max(1, Math.floor(actualWidth * 0.1))}px ${Math.max(2, Math.floor(actualWidth * 0.1))}px`,
+            padding: `${Math.max(1, Math.floor(labelBase * 0.1))}px ${Math.max(2, Math.floor(labelBase * 0.1))}px`,
             borderRadius: '2px',
-            fontSize: `${Math.max(8, Math.floor(actualWidth * 0.1))}px`,
+            fontSize: `${Math.max(8, Math.floor(labelBase * 0.1))}px`,
             whiteSpace: 'nowrap',
             maxWidth: `${actualWidth * 3}px`,
             textAlign: 'center',

@@ -23,6 +23,8 @@ const CircleItem: React.FC<CircleItemProps> = ({
   const [editValue, setEditValue] = useState(label || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const labelBase = Math.min(width, height);
+
   useEffect(() => {
     if (label === '') {
       setIsEditing(true);
