@@ -10,6 +10,7 @@ interface ShikiCodeBlockItemProps {
   showPreview?: boolean;
   onClosePreview?: () => void;
   onCodeChange?: (code: string) => void;
+  isPreview?: boolean;
 }
 
 const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
@@ -21,6 +22,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   showPreview = false,
   onClosePreview,
   onCodeChange,
+  isPreview = false,
 }) => {
   const [highlightedCode, setHighlightedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -86,6 +88,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   }, [showPreview, showEditor, onClosePreview]);
 
   const handleClick = (e: React.MouseEvent) => {
+    if (isPreview) return; // Don't open editor if it's just a preview
     e.stopPropagation();
     setShowEditor(true);
     setEditorCode(code);

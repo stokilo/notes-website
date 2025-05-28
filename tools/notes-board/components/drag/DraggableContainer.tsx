@@ -1125,7 +1125,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 width: 48,
                 height: 24,
                 language: 'typescript',
-                code: '// Your code here',
+                code: '',
               }
             };
             setItemsWithHistory(prev => [...prev, newItem]);

@@ -203,6 +203,7 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
             width={48} 
             height={24}
             language="typescript"
+            isPreview={true}
           />
         </div>
       </div>
