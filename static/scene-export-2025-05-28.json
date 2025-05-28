@@ -1,0 +1,107 @@
+{
+  "items": [
+    {
+      "id": "boxSet-1748418230169",
+      "type": "boxSet",
+      "position": {
+        "x": 468.5,
+        "y": 206
+      },
+      "size": {
+        "width": 110,
+        "height": 64
+      },
+      "props": {},
+      "comment": "This is **good**\n\n| Tables   |      Are      |  Cool |\n|----------|:-------------:|------:|\n| col 1 is |  left-aligned | $1600 |\n| col 2 is |    centered   |   $12 |\n| col 3 is | right-aligned |    $1 |\n    ",
+      "commentLabel": "This is comment"
+    },
+    {
+      "id": "boxSet-1748418500009",
+      "type": "boxSet",
+      "position": {
+        "x": 775.5,
+        "y": 263
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {}
+    },
+    {
+      "id": "box-1748418641318",
+      "type": "box",
+      "position": {
+        "x": 872.5,
+        "y": 259
+      },
+      "size": {
+        "width": 551,
+        "height": 236
+      },
+      "props": {
+        "color": "#4a90e2",
+        "size": 100,
+        "height": 80
+      },
+      "label": "DDD"
+    },
+    {
+      "id": "boxSet-1748418651209",
+      "type": "boxSet",
+      "position": {
+        "x": 912.5,
+        "y": 299
+      },
+      "size": {
+        "width": 69,
+        "height": 22
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "Bounded Context"
+    },
+    {
+      "id": "boxSet-1748418661841",
+      "type": "boxSet",
+      "position": {
+        "x": 1088.5,
+        "y": 396
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "Value Object"
+    },
+    {
+      "id": "twoPointsPath-1748418671570",
+      "type": "twoPointsPath",
+      "position": {
+        "x": 902.5,
+        "y": 331
+      },
+      "size": {
+        "width": 200,
+        "height": 100
+      },
+      "props": {
+        "isAnimating": true
+      },
+      "circlePositions": [
+        {
+          "x": 40,
+          "y": 50
+        },
+        {
+          "x": 160,
+          "y": 50
+        }
+      ]
+    }
+  ],
+  "version": "1.0",
+  "exportDate": "2025-05-28T07:51:29.453Z"
+}
