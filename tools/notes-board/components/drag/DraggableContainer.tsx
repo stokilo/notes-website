@@ -6,7 +6,6 @@ import TopContextPanel from '../context/TopContextPanel';
 import BoxSetItem from '../items/BoxSetItem';
 import ContextMenu from '../menu/ContextMenu';
 import CommentEditor from '../CommentEditor';
-import BoxGridContainer from '../box/BoxGridContainer';
 import RectangleItem from "../items/RectangleItem";
 import CircleItem from "../items/CircleItem";
 import SeparatorItem from '../items/SeparatorItem';
@@ -956,10 +955,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             commentLabel={item.commentLabel}
           />
         )}
-        {item.type === 'boxSetContainer' && (
-          <BoxGridContainer width={item.size.width} height={item.size.height} containerId={item.id}>
-          </BoxGridContainer>
-        )}
+
         {item.type === 'separator' && (
           <SeparatorItem
             width={item.size.width}
