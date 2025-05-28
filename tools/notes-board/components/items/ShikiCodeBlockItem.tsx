@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import * as shiki from 'shiki';
 // Note: Direct grammar import does not work in browser builds. Use string language names.
 // import javaGrammar from 'shiki/langs/java.tmLanguage.json';
@@ -294,146 +295,170 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
       </div>
 
       {/* Code editor dialog */}
-      {showEditor && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 1100,
-            backgroundColor: '#2d2d2d',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            width: '80vw',
-            maxWidth: '1200px',
-            maxHeight: '80vh',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Header */}
+      {showEditor && ReactDOM.createPortal(
+        <>
+          {/* Backdrop */}
           <div
             style={{
-              padding: '12px 16px',
-              backgroundColor: '#4a90e2',
-              borderBottom: '1px solid #4d4d4d',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 99999,
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+              justifyContent: 'center',
+              isolation: 'isolate',
             }}
+            onClick={() => setShowEditor(false)}
           >
-            <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span>Edit Code</span>
-              <select
-                value={selectedLanguage}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-                style={{
-                  backgroundColor: '#3d3d3d',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                }}
-              >
-                {SUPPORTED_LANGUAGES.map(lang => (
-                  <option key={lang} value={lang}>
-                    {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                  </option>
-                ))}
-              </select>
-              {detectedLanguage && detectedLanguage !== selectedLanguage && (
-                <span style={{ fontSize: '12px', opacity: 0.8 }}>
-                  Detected: {detectedLanguage}
-                </span>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={handleSave}
-                style={{
-                  background: '#3d3d3d',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  transition: 'background-color 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#4d4d4d';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3d3d3d';
-                }}
-              >
-                Save
-              </button>
-              <button
-                onClick={() => setShowEditor(false)}
-                style={{
-                  background: '#3d3d3d',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  transition: 'background-color 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#4d4d4d';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3d3d3d';
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-
-          {/* Code editor */}
-          <div
-            style={{
-              flex: 1,
-              overflow: 'auto',
-              padding: '16px',
-              position: 'relative',
-            }}
-          >
-            <textarea
-              value={editorCode}
-              onChange={(e) => setEditorCode(e.target.value)}
+            {/* Dialog */}
+            <div
               style={{
-                width: '100%',
-                height: '100%',
-                minHeight: '300px',
-                backgroundColor: '#1e1e1e',
-                color: '#fff',
-                border: 'none',
-                outline: 'none',
-                fontFamily: 'monospace',
-                fontSize: '14px',
-                lineHeight: '1.5',
-                padding: '12px',
-                borderRadius: '4px',
-                resize: 'vertical',
-                whiteSpace: 'pre',
-                tabSize: 2,
+                position: 'relative',
+                zIndex: 100000,
+                backgroundColor: '#2d2d2d',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                width: '95vw',
+                maxWidth: '1800px',
+                height: '70vh',
+                maxHeight: '70vh',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                transform: 'translateZ(0)',
               }}
-              spellCheck={false}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-            />
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#4a90e2',
+                  borderBottom: '1px solid #4d4d4d',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span>Edit Code</span>
+                  <select
+                    value={selectedLanguage}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
+                    style={{
+                      backgroundColor: '#3d3d3d',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {SUPPORTED_LANGUAGES.map(lang => (
+                      <option key={lang} value={lang}>
+                        {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                  {detectedLanguage && detectedLanguage !== selectedLanguage && (
+                    <span style={{ fontSize: '12px', opacity: 0.8 }}>
+                      Detected: {detectedLanguage}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={handleSave}
+                    style={{
+                      background: '#3d3d3d',
+                      border: 'none',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      transition: 'background-color 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#4d4d4d';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3d3d3d';
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setShowEditor(false)}
+                    style={{
+                      background: '#3d3d3d',
+                      border: 'none',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      transition: 'background-color 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#4d4d4d';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3d3d3d';
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+
+              {/* Code editor */}
+              <div
+                style={{
+                  flex: 1,
+                  overflow: 'auto',
+                  padding: '16px',
+                  position: 'relative',
+                  backgroundColor: '#1e1e1e',
+                }}
+              >
+                <textarea
+                  value={editorCode}
+                  onChange={(e) => setEditorCode(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    minHeight: '200px',
+                    backgroundColor: '#1e1e1e',
+                    color: '#fff',
+                    border: 'none',
+                    outline: 'none',
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    lineHeight: '1.5',
+                    padding: '12px',
+                    borderRadius: '4px',
+                    resize: 'none',
+                    whiteSpace: 'pre',
+                    tabSize: 2,
+                  }}
+                  spellCheck={false}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                />
+              </div>
+            </div>
           </div>
-        </div>
+        </>,
+        document.body
       )}
 
       {/* Code preview dialog */}
