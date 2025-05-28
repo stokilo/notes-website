@@ -1265,6 +1265,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onExport={handleExportScene}
           onImport={() => fileInputRef.current?.click()}
         />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImportScene}
+          style={{ display: 'none' }}
+        />
         <TopContextPanel
           onAddSingleBoxSet={() => addSingleBoxSet({ x: window.innerWidth / 2 - 10, y: window.innerHeight / 2 - 10 })}
           onAddSeparator={() => addSeparator({ x: window.innerWidth / 2 - 1, y: window.innerHeight / 2 - 50 })}
