@@ -1,16 +1,14 @@
 {
   "compilerOptions": {
-    "target": "ESNext", // Or ES2020, ES2022
-    "lib": ["DOM", "DOM.Iterable", "ESNext"], // Ensure ESNext or at least ES2015.Promise or ES2015 is here
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "module": "ESNext",
-    "moduleResolution": "bundler", // Recommended for Vite, or "node"
-    "jsx": "react-jsx", // Or "preserve" depending on your setup
-    // ... other options
-    "skipLibCheck": true, // Can sometimes help, but better to fix the root cause
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "strict": true
   },
-  "include": ["src", "vite.config.ts"], // BE SPECIFIC HERE!
-  "references": [{ "path": "./tsconfig.node.json" }] // Common in Vite setups
+  "include": ["src", "vite.config.ts"]
 }
