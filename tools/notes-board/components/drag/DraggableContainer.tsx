@@ -1073,10 +1073,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               id: `code-${Date.now()}`,
               type: 'codeBlock',
               position,
-              size: { width: 400, height: 300 },
+              size: { width: 48, height: 24 },
               props: {
-                width: 400,
-                height: 300,
+                width: 48,
+                height: 24,
                 language: 'typescript',
                 code: '// Your code here',
               }
