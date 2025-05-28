@@ -978,8 +978,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           isAnimating={item.props.isAnimating}
           position={item.position}
           onPositionChange={(pos) => handleCirclesPathPositionChange(item.id, pos)}
-          onCirclePositionChange={(positions) => handleCirclesPathCirclePositionsChange(item.id, positions)}
-          initialCirclePositions={item.circlePositions}
+          onCirclePositionsChange={(positions) => handleCirclesPathCirclePositionsChange(item.id, positions)}
+          circlePositions={item.circlePositions || []}
           attachedTo={item.attachedTo}
         />
       );
@@ -994,8 +994,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           isAnimating={item.props.isAnimating}
           position={item.position}
           onPositionChange={(pos) => handleTwoPointsPathPositionChange(item.id, pos)}
-          onCirclePositionChange={(positions) => handleTwoPointsPathCirclePositionsChange(item.id, positions)}
-          initialCirclePositions={item.circlePositions}
+          onCirclePositionsChange={(positions) => handleTwoPointsPathCirclePositionsChange(item.id, positions)}
+          circlePositions={item.circlePositions || []}
           attachedTo={item.attachedTo}
         />
       );
@@ -1107,6 +1107,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           onAddArrow={() => addArrow({ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 20 })}
           onAddCirclesPath={() => addCirclesPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
           onAddTwoPointsPath={() => addTwoPointsPath({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50 })}
+          onAddMarkdownEditor={() => {}}
+          onAddGrid={() => {}}
         />
         <div
           style={{
