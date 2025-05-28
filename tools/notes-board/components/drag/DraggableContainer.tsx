@@ -1011,6 +1011,21 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             code={item.props.code}
             showPreview={codePreviewItemId === item.id}
             onClosePreview={() => setCodePreviewItemId(null)}
+            onCodeChange={(newCode) => {
+              setItemsWithHistory(prevItems =>
+                prevItems.map(prevItem =>
+                  prevItem.id === item.id
+                    ? {
+                        ...prevItem,
+                        props: {
+                          ...prevItem.props,
+                          code: newCode
+                        }
+                      }
+                    : prevItem
+                )
+              );
+            }}
           />
         )}
       </DraggableItem>
