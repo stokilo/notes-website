@@ -117,9 +117,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(importedData.items));
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(initialHistory));
 
-      // Update URL to remove the import parameter
+      // Update URL to remove the import parameters
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.delete('import');
+      currentUrl.searchParams.delete('importUrl');
       window.history.replaceState({}, '', currentUrl.toString());
     } catch (error) {
       console.error('Error loading scene from URL:', error);
@@ -144,15 +145,19 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   };
 
-  // Check for import parameter on initial load
+  // Check for import parameters on initial load
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const importParam = urlParams.get('import');
+    const importUrlParam = urlParams.get('importUrl');
     
     if (importParam) {
-      // Construct the full URL using the current origin
+      // Construct the full URL using the current origin for local imports
       const importUrl = `${window.location.origin}/${importParam}`;
       loadSceneFromUrl(importUrl);
+    } else if (importUrlParam) {
+      // Use the provided external URL directly
+      loadSceneFromUrl(importUrlParam);
     }
   }, []); // Empty dependency array to ensure this only runs once on mount
 
