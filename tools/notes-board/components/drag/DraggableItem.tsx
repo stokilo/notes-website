@@ -45,7 +45,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
   const resizeStartSize = useRef(size);
   const resizeStartPos = useRef({ x: 0, y: 0 });
   const itemRef = useRef<HTMLDivElement>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
   const lastPositionRef = useRef(position);
 
   // Update position when initialPosition changes
