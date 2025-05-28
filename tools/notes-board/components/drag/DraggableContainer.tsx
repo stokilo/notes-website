@@ -1285,8 +1285,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             setItemsWithHistory(prev => [...prev, newItem]);
           }}
           onAddGrid={() => {}}
-          onExport={handleExportScene}
-          onImport={() => fileInputRef.current?.click()}
         />
         <div
           style={{
