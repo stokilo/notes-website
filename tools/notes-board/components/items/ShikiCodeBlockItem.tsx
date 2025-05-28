@@ -1,6 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import * as shiki from 'shiki';
 
+// List of supported languages
+const SUPPORTED_LANGUAGES = [
+  'typescript',
+  'javascript',
+  'html',
+  'css',
+  'json',
+  'markdown',
+  'bash',
+  'shell',
+  'java',
+  'kotlin',
+  'scala',
+  'groovy',
+  'python',
+  'ruby',
+  'php',
+  'c',
+  'cpp',
+  'csharp',
+  'go',
+  'rust',
+  'swift',
+  'yaml',
+  'xml',
+  'sql',
+  'graphql',
+  'diff',
+  'dockerfile',
+  'ini',
+  'toml',
+  'plaintext'
+];
+
 interface ShikiCodeBlockItemProps {
   width?: number;
   height?: number;
@@ -29,7 +63,44 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [editorCode, setEditorCode] = useState(code);
+  const [selectedLanguage, setSelectedLanguage] = useState(language);
+  const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // Detect language from code content
+  useEffect(() => {
+    const detectLanguage = async () => {
+      if (!editorCode.trim()) return;
+      
+      try {
+        const highlighter = await shiki.createHighlighter({
+          themes: ['github-dark'],
+          langs: SUPPORTED_LANGUAGES,
+        });
+        
+        // Try to detect language from the code
+        const detected = highlighter.getLoadedLanguages().find(lang => {
+          try {
+            highlighter.codeToHtml(editorCode, { lang });
+            return true;
+          } catch {
+            return false;
+          }
+        });
+        
+        if (detected) {
+          setDetectedLanguage(detected);
+          if (selectedLanguage === 'plaintext') {
+            setSelectedLanguage(detected);
+          }
+        }
+      } catch (err) {
+        console.error('Language detection failed:', err);
+      }
+    };
+
+    detectLanguage();
+  }, [editorCode]);
 
   useEffect(() => {
     const highlightCode = async () => {
@@ -49,11 +120,11 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
 
         const highlighter = await shiki.createHighlighter({
           themes: ['github-dark'],
-          langs: ['typescript', 'javascript', 'html', 'css', 'json', 'markdown', 'bash', 'shell', 'java', 'kotlin', 'scala', 'groovy'],
+          langs: SUPPORTED_LANGUAGES,
         });
         
         const highlighted = highlighter.codeToHtml(codeToHighlight, { 
-          lang: language,
+          lang: selectedLanguage,
           themes: {
             light: 'github-dark',
             dark: 'github-dark'
@@ -71,7 +142,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
     if (showPreview) {
       highlightCode();
     }
-  }, [code, url, language, showPreview]);
+  }, [code, url, selectedLanguage, showPreview]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -88,10 +159,11 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   }, [showPreview, showEditor, onClosePreview]);
 
   const handleClick = (e: React.MouseEvent) => {
-    if (isPreview) return; // Don't open editor if it's just a preview
+    if (isPreview) return;
     e.stopPropagation();
     setShowEditor(true);
     setEditorCode(code);
+    setSelectedLanguage(language);
   };
 
   const handleSave = () => {
@@ -171,8 +243,32 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
             }}
           >
-            <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
-              Edit {language.toUpperCase()} Code
+            <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span>Edit Code</span>
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                style={{
+                  backgroundColor: '#3d3d3d',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                {SUPPORTED_LANGUAGES.map(lang => (
+                  <option key={lang} value={lang}>
+                    {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                  </option>
+                ))}
+              </select>
+              {detectedLanguage && detectedLanguage !== selectedLanguage && (
+                <span style={{ fontSize: '12px', opacity: 0.8 }}>
+                  Detected: {detectedLanguage}
+                </span>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -285,7 +381,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
             }}
           >
             <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
-              {language.toUpperCase()} Code Preview
+              {selectedLanguage.toUpperCase()} Code Preview
               {url && (
                 <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
                   from {url}
