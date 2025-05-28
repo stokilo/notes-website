@@ -109,7 +109,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
-            d="M8 3L4 7L8 11M16 21L20 17L16 13M14 3L10 21"
+            d="M4 6H20M4 12H20M4 18H20"
             stroke="#4a90e2"
             strokeWidth="2"
             strokeLinecap="round"
