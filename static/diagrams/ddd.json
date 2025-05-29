@@ -4,8 +4,8 @@
       "id": "box-1748505820179",
       "type": "box",
       "position": {
-        "x": 419.5,
-        "y": 181
+        "x": 396.5,
+        "y": 170
       },
       "size": {
         "width": 619,
@@ -47,8 +47,93 @@
       "props": {},
       "comment": "Obiekt, który opisuje pewną cechę lub wartość. Nie ma tożsamości (ID), liczą się tylko jego atrybuty. Jest niemutowalny (niezmienialny po utworzeniu).",
       "commentLabel": "Value Object"
+    },
+    {
+      "id": "separator-1748510289400",
+      "type": "separator",
+      "position": {
+        "x": 869.5,
+        "y": 239
+      },
+      "size": {
+        "width": 10,
+        "height": 144
+      },
+      "props": {
+        "color": "#e0e0e0"
+      }
+    },
+    {
+      "id": "boxSet-1748510301064",
+      "type": "boxSet",
+      "position": {
+        "x": 978.5,
+        "y": 299
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {},
+      "comment": "Code",
+      "commentLabel": "Java"
+    },
+    {
+      "id": "twoPointsPath-1748510318624",
+      "type": "twoPointsPath",
+      "position": {
+        "x": 602.5,
+        "y": 416
+      },
+      "size": {
+        "width": 200,
+        "height": 100
+      },
+      "props": {
+        "isAnimating": true
+      },
+      "circlePositions": [
+        {
+          "x": 40,
+          "y": 50
+        },
+        {
+          "x": 160,
+          "y": 50
+        }
+      ]
+    },
+    {
+      "id": "boxSet-1748510322865",
+      "type": "boxSet",
+      "position": {
+        "x": 775.5,
+        "y": 457
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "To"
+    },
+    {
+      "id": "boxSet-1748510344164",
+      "type": "boxSet",
+      "position": {
+        "x": 602.5,
+        "y": 459
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "From"
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-29T08:13:56.042Z"
+  "exportDate": "2025-05-29T09:19:11.416Z"
 }
