@@ -90,6 +90,14 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   const panStartPosition = useRef<{ x: number; y: number } | null>(null);
   const [viewModePadding, setViewModePadding] = useState({ x: 0, y: 0 });
 
+  // Add view mode padding constants
+  const VIEW_MODE_PADDING = {
+    top: 15,
+    left: 5,
+    right: 10,
+    bottom: 10
+  };
+
   // Function to load scene from URL
   const loadSceneFromUrl = async (url: string) => {
     try {
@@ -1100,7 +1108,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handlePanMove = (e: MouseEvent | TouchEvent) => {
-    if (!isPanning || !panStartPosition.current) return;
+    if (!isPanning || !panStartPosition.current || !containerRef.current) return;
     
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -1108,11 +1116,29 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     const deltaX = (clientX - panStartPosition.current.x) / zoom;
     const deltaY = (clientY - panStartPosition.current.y) / zoom;
     
-    setPanOffset(prev => ({
-      x: prev.x + deltaX,
-      y: prev.y + deltaY
-    }));
+    // Calculate new pan offset
+    const newPanOffset = {
+      x: panOffset.x + deltaX,
+      y: panOffset.y + deltaY
+    };
+
+    // Get container dimensions
+    const containerWidth = containerRef.current.clientWidth;
+    const containerHeight = containerRef.current.clientHeight;
+
+    // Calculate bounds for panning
+    const minX = -containerWidth + VIEW_MODE_PADDING.left;
+    const maxX = containerWidth - VIEW_MODE_PADDING.right;
+    const minY = -containerHeight + VIEW_MODE_PADDING.top;
+    const maxY = containerHeight - VIEW_MODE_PADDING.bottom;
+
+    // Clamp pan offset to bounds
+    const clampedPanOffset = {
+      x: Math.min(Math.max(newPanOffset.x, minX), maxX),
+      y: Math.min(Math.max(newPanOffset.y, minY), maxY)
+    };
     
+    setPanOffset(clampedPanOffset);
     panStartPosition.current = { x: clientX, y: clientY };
   };
 
@@ -1180,18 +1206,29 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
     }
   }, [isViewMode, items]);
 
-  // Modify renderItem to adjust positions in view mode
+  // Modify renderItem to adjust positions in view mode with padding
   const renderItem = (item: DraggableItem) => {
     const adjustedPosition = isViewMode ? {
-      x: item.position.x - viewModePadding.x,
-      y: item.position.y - viewModePadding.y
+      x: item.position.x - viewModePadding.x + VIEW_MODE_PADDING.left,
+      y: item.position.y - viewModePadding.y + VIEW_MODE_PADDING.top
     } : item.position;
 
     const commonProps = {
       id: item.id,
       initialPosition: adjustedPosition,
       initialSize: item.size,
-      onPositionChange: (pos: { x: number; y: number }) => handlePositionChange(item.id, pos),
+      onPositionChange: (pos: { x: number; y: number }) => {
+        if (isViewMode) {
+          // Ensure items stay within padding bounds
+          const newPos = {
+            x: Math.max(pos.x, VIEW_MODE_PADDING.left),
+            y: Math.max(pos.y, VIEW_MODE_PADDING.top)
+          };
+          handlePositionChange(item.id, newPos);
+        } else {
+          handlePositionChange(item.id, pos);
+        }
+      },
       onSizeChange: (size: { width: number; height: number }) => handleSizeChange(item.id, size),
       onResizeEnd: handleResizeEnd,
       onDragStart: (pos: { x: number; y: number }) => handleDragStart(item.id, pos),
