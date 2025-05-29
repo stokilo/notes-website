@@ -233,7 +233,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
     e.stopPropagation();
     setShowEditor(true);
     setEditorCode(code || '');
-    setSelectedLanguage(language || 'plaintext');
+    setSelectedLanguage(language || 'java');
   };
 
   const handleSave = () => {

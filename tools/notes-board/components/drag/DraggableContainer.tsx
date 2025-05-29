@@ -1439,7 +1439,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                   props: {
                     width: 48,
                     height: 24,
-                    language: 'typescript',
+                    language: 'java',
                     code: '',
                   }
                 };
