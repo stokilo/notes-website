@@ -227,8 +227,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
     if (isPreview) return;
     e.stopPropagation();
     setShowEditor(true);
-    setEditorCode(code);
-    setSelectedLanguage(language);
+    setEditorCode(code || '');
+    setSelectedLanguage(language || 'plaintext');
   };
 
   const handleSave = () => {
@@ -237,32 +237,60 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
     setShowEditor(false);
   };
 
-  const handleLanguageChange = (newLanguage: string) => {
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLanguage = e.target.value;
     setSelectedLanguage(newLanguage);
-    // Only update preview if it's showing
-    if (showPreview) {
-      const highlightCode = async () => {
-        try {
-          const highlighter = await getHighlighter();
-          const highlighted = highlighter.codeToHtml(code, { 
-            lang: newLanguage as shiki.BundledLanguage,
-            themes: {
-              light: 'github-dark',
-              dark: 'github-dark'
-            }
-          });
-          const highlightedWithClass = highlighted.replace(
-            '<pre class="shiki"',
-            '<pre class="shiki shiki-code-block"'
-          );
-          setHighlightedCode(highlightedWithClass);
-        } catch (err) {
-          console.error('Highlighting error:', err);
-        }
-      };
-      highlightCode();
-    }
+    // Update preview immediately when language changes
+    const highlightCode = async () => {
+      try {
+        const highlighter = await getHighlighter();
+        const highlighted = highlighter.codeToHtml(editorCode, { 
+          lang: newLanguage as shiki.BundledLanguage,
+          themes: {
+            light: 'github-dark',
+            dark: 'github-dark'
+          }
+        });
+        const highlightedWithClass = highlighted.replace(
+          '<pre class="shiki"',
+          '<pre class="shiki shiki-code-block"'
+        );
+        setHighlightedCode(highlightedWithClass);
+      } catch (err) {
+        console.error('Highlighting error:', err);
+      }
+    };
+    highlightCode();
   };
+
+  // Add effect to update highlighted code when editor code changes
+  useEffect(() => {
+    const updateHighlightedCode = async () => {
+      if (!editorCode.trim()) return;
+      
+      try {
+        const highlighter = await getHighlighter();
+        const highlighted = highlighter.codeToHtml(editorCode, { 
+          lang: selectedLanguage as shiki.BundledLanguage,
+          themes: {
+            light: 'github-dark',
+            dark: 'github-dark'
+          }
+        });
+        const highlightedWithClass = highlighted.replace(
+          '<pre class="shiki"',
+          '<pre class="shiki shiki-code-block"'
+        );
+        setHighlightedCode(highlightedWithClass);
+      } catch (err) {
+        console.error('Highlighting error:', err);
+      }
+    };
+
+    if (showEditor) {
+      updateHighlightedCode();
+    }
+  }, [editorCode, selectedLanguage, showEditor]);
 
   return (
     <div 
@@ -347,16 +375,12 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 transform: 'translateZ(0)',
               }}
               onClick={(e) => {
+                // Stop propagation to prevent the backdrop click handler from firing
                 e.stopPropagation();
-                e.preventDefault();
               }}
               onMouseDown={(e) => {
+                // Stop propagation to prevent the backdrop click handler from firing
                 e.stopPropagation();
-                e.preventDefault();
-              }}
-              onMouseUp={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
               }}
             >
               {/* Header */}
@@ -370,13 +394,14 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   alignItems: 'center',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                   flexShrink: 0,
+                  zIndex: 100001,
                 }}
               >
                 <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span>Edit Code</span>
                   <select
                     value={selectedLanguage}
-                    onChange={(e) => handleLanguageChange(e.target.value)}
+                    onChange={handleLanguageChange}
                     style={{
                       backgroundColor: '#3d3d3d',
                       color: '#fff',
@@ -385,6 +410,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                       borderRadius: '4px',
                       fontSize: '14px',
                       cursor: 'pointer',
+                      zIndex: 100002,
                     }}
                   >
                     {SUPPORTED_LANGUAGES.map(lang => (
@@ -411,6 +437,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                       borderRadius: '4px',
                       fontSize: '14px',
                       transition: 'background-color 0.2s ease',
+                      zIndex: 100002,
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#4d4d4d';
@@ -432,6 +459,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                       borderRadius: '4px',
                       fontSize: '14px',
                       transition: 'background-color 0.2s ease',
+                      zIndex: 100002,
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#4d4d4d';
@@ -453,45 +481,79 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   padding: '16px',
                   position: 'relative',
                   backgroundColor: '#1e1e1e',
-                }}
-                onWheel={(e) => {
-                  e.stopPropagation();
-                }}
-                onTouchMove={(e) => {
-                  e.stopPropagation();
+                  display: 'flex',
+                  flexDirection: 'column',
+                  zIndex: 100001,
                 }}
               >
-                <textarea
-                  value={editorCode}
-                  onChange={(e) => setEditorCode(e.target.value)}
-                  onWheel={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onTouchMove={(e) => {
-                    e.stopPropagation();
-                  }}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    minHeight: '200px',
-                    backgroundColor: '#1e1e1e',
-                    color: '#fff',
-                    border: 'none',
-                    outline: 'none',
-                    fontFamily: 'monospace',
-                    fontSize: '14px',
-                    lineHeight: '1.5',
-                    padding: '12px',
-                    borderRadius: '4px',
-                    resize: 'none',
-                    whiteSpace: 'pre',
-                    tabSize: 2,
-                  }}
-                  spellCheck={false}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                />
+                <div style={{ display: 'flex', flex: 1, gap: '16px' }}>
+                  {/* Editor */}
+                  <div style={{ flex: 1, position: 'relative', zIndex: 100002 }}>
+                    <textarea
+                      value={editorCode}
+                      onChange={(e) => {
+                        const newCode = e.target.value;
+                        setEditorCode(newCode);
+                        // Update preview immediately
+                        const updatePreview = async () => {
+                          try {
+                            const highlighter = await getHighlighter();
+                            const highlighted = highlighter.codeToHtml(newCode, { 
+                              lang: selectedLanguage as shiki.BundledLanguage,
+                              themes: {
+                                light: 'github-dark',
+                                dark: 'github-dark'
+                              }
+                            });
+                            const highlightedWithClass = highlighted.replace(
+                              '<pre class="shiki"',
+                              '<pre class="shiki shiki-code-block"'
+                            );
+                            setHighlightedCode(highlightedWithClass);
+                          } catch (err) {
+                            console.error('Highlighting error:', err);
+                          }
+                        };
+                        updatePreview();
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        minHeight: '200px',
+                        backgroundColor: '#1e1e1e',
+                        color: '#fff',
+                        border: 'none',
+                        outline: 'none',
+                        fontFamily: 'monospace',
+                        fontSize: '14px',
+                        lineHeight: '1.5',
+                        padding: '12px',
+                        borderRadius: '4px',
+                        resize: 'none',
+                        whiteSpace: 'pre',
+                        tabSize: 2,
+                        position: 'relative',
+                        zIndex: 100003,
+                      }}
+                      spellCheck={false}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                    />
+                  </div>
+                  {/* Preview */}
+                  <div style={{ flex: 1, overflow: 'auto', position: 'relative', zIndex: 100002 }}>
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: highlightedCode }} 
+                      style={{
+                        backgroundColor: '#1e1e1e',
+                        borderRadius: '4px',
+                        padding: '16px',
+                        height: '100%',
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
