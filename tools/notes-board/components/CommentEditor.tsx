@@ -173,13 +173,7 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
             height: window.innerWidth < 768 ? '40%' : 'auto',
           }}
         >
-          <h3 style={{ margin: '0 0 12px 0', color: '#666' }}>Preview</h3>
-          {label && (
-            <div style={{ marginBottom: '12px' }}>
-              <strong style={{ color: '#666' }}>Label:</strong>{' '}
-              <span style={{ color: '#333' }}>{label}</span>
-            </div>
-          )}
+
           <div
             style={{
               padding: '12px',
