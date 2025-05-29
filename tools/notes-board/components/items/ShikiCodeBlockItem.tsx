@@ -519,6 +519,15 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                       onWheel={(e) => {
                         e.stopPropagation();
                       }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onTouchMove={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onTouchEnd={(e) => {
+                        e.stopPropagation();
+                      }}
                     >
                       <textarea
                         value={editorCode}
@@ -592,6 +601,15 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   <div 
                     style={{ flex: 1, overflow: 'auto', position: 'relative', zIndex: 100002 }}
                     onWheel={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onTouchMove={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onTouchEnd={(e) => {
                       e.stopPropagation();
                     }}
                   >
