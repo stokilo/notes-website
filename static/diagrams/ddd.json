@@ -1,88 +1,11 @@
 {
   "items": [
     {
-      "id": "boxSet-1748439734014",
-      "type": "boxSet",
-      "position": {
-        "x": 188.5,
-        "y": 134
-      },
-      "size": {
-        "width": 502,
-        "height": 280
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "DDD"
-    },
-    {
-      "id": "boxSet-1748439742301",
-      "type": "boxSet",
-      "position": {
-        "x": 213.5,
-        "y": 249
-      },
-      "size": {
-        "width": 167,
-        "height": 116
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "BoundedContext"
-    },
-    {
-      "id": "boxSet-1748439757004",
-      "type": "boxSet",
-      "position": {
-        "x": 236.5,
-        "y": 309
-      },
-      "size": {
-        "width": 20,
-        "height": 20
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "Entity"
-    },
-    {
-      "id": "boxSet-1748439764717",
-      "type": "boxSet",
-      "position": {
-        "x": 302.5,
-        "y": 308
-      },
-      "size": {
-        "width": 20,
-        "height": 20
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "ValueObject"
-    },
-    {
-      "id": "arrow-1748439788849",
-      "type": "arrow",
-      "position": {
-        "x": 391.5,
-        "y": 288
-      },
-      "size": {
-        "width": 120,
-        "height": 40
-      },
-      "props": {
-        "segments": 3,
-        "rotation": 0,
-        "isAnimating": false
-      }
-    },
-    {
-      "id": "code-1748439797756",
+      "id": "code-1748497228288",
       "type": "codeBlock",
       "position": {
-        "x": 292.5,
-        "y": 324
+        "x": 901.5,
+        "y": 447
       },
       "size": {
         "width": 48,
@@ -91,29 +14,26 @@
       "props": {
         "width": 48,
         "height": 24,
-        "language": "typescript",
-        "code": "class Test {\n}"
+        "language": "shell",
+        "code": "import java.io\n\nclass Slawek {\n}"
       }
     },
     {
-      "id": "code-1748439809847",
-      "type": "codeBlock",
+      "id": "boxSet-1748501329286",
+      "type": "boxSet",
       "position": {
-        "x": 224.5,
-        "y": 327
+        "x": 912.5,
+        "y": 325
       },
       "size": {
-        "width": 48,
-        "height": 24
+        "width": 20,
+        "height": 20
       },
-      "props": {
-        "width": 48,
-        "height": 24,
-        "language": "typescript",
-        "code": "class Entity { \n}"
-      }
+      "props": {},
+      "comment": "# test\n\n## simple\n\n#### simples\n\n**bold**",
+      "commentLabel": "comment"
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-28T13:47:55.007Z"
+  "exportDate": "2025-05-29T06:49:22.087Z"
 }

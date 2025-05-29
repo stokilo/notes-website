@@ -401,6 +401,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   flexShrink: 0,
                   zIndex: 100001,
                 }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
               >
                 <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span>Edit Code</span>
@@ -494,8 +496,14 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   flexDirection: 'column',
                   zIndex: 100001,
                 }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
               >
-                <div style={{ display: 'flex', flex: 1, gap: '16px' }}>
+                <div 
+                  style={{ display: 'flex', flex: 1, gap: '16px' }}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   {/* Editor */}
                   {!isViewMode && (
                     <div style={{ flex: 1, position: 'relative', zIndex: 100002 }}>
