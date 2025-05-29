@@ -401,26 +401,28 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               >
                 <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span>Edit Code</span>
-                  <select
-                    value={selectedLanguage}
-                    onChange={handleLanguageChange}
-                    style={{
-                      backgroundColor: '#3d3d3d',
-                      color: '#fff',
-                      border: 'none',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      zIndex: 100002,
-                    }}
-                  >
-                    {SUPPORTED_LANGUAGES.map(lang => (
-                      <option key={lang} value={lang}>
-                        {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                      </option>
-                    ))}
-                  </select>
+                  {!isViewMode && (
+                    <select
+                      value={selectedLanguage}
+                      onChange={handleLanguageChange}
+                      style={{
+                        backgroundColor: '#3d3d3d',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        zIndex: 100002,
+                      }}
+                    >
+                      {SUPPORTED_LANGUAGES.map(lang => (
+                        <option key={lang} value={lang}>
+                          {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   {detectedLanguage && detectedLanguage !== selectedLanguage && (
                     <span style={{ fontSize: '12px', opacity: 0.8 }}>
                       Detected: {detectedLanguage}
@@ -428,28 +430,30 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={handleSave}
-                    style={{
-                      background: '#3d3d3d',
-                      border: 'none',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      transition: 'background-color 0.2s ease',
-                      zIndex: 100002,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#4d4d4d';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#3d3d3d';
-                    }}
-                  >
-                    Save
-                  </button>
+                  {!isViewMode && (
+                    <button
+                      onClick={handleSave}
+                      style={{
+                        background: '#3d3d3d',
+                        border: 'none',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        transition: 'background-color 0.2s ease',
+                        zIndex: 100002,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#4d4d4d';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#3d3d3d';
+                      }}
+                    >
+                      Save
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowEditor(false)}
                     style={{
