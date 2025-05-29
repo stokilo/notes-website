@@ -59,6 +59,10 @@ const getHighlighter = async () => {
     await Promise.all(SUPPORTED_LANGUAGES.map(lang => instance.loadLanguage(lang as shiki.BundledLanguage)));
     highlighterInstance = instance;
     return instance;
+  }).catch(err => {
+    console.error('Error creating highlighter:', err);
+    highlighterPromise = null;
+    throw err;
   });
 
   return highlighterPromise;
@@ -190,16 +194,15 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
     }
   }, [code, url, selectedLanguage, showPreview]);
 
-  // Cleanup on unmount
+  // Add effect to handle view mode changes
   useEffect(() => {
-    return () => {
-      if (highlighterInstance && !document.querySelector('.shiki-code-block')) {
-        highlighterInstance.dispose();
-        highlighterInstance = null;
-        highlighterPromise = null;
-      }
-    };
-  }, []);
+    if (isViewMode) {
+      // When entering view mode, ensure highlighter is initialized
+      getHighlighter().catch(err => {
+        console.error('Error initializing highlighter:', err);
+      });
+    }
+  }, [isViewMode]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
