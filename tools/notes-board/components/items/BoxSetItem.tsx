@@ -76,19 +76,15 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
         >
           <div
             style={{
-              color: '#ffffff',
+              color: 'black',
               padding: `${Math.max(2, Math.floor(height * 0.10))}px ${Math.max(4, Math.floor(width * 0.10))}px`,
+              borderRadius: '10px',
               fontSize: `${Math.max(8, Math.floor(height * 0.10))}px`,
               fontWeight: 600,
               whiteSpace: 'nowrap',
               maxWidth: `${width * 3}px`,
               textAlign: 'center',
-              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-              borderRadius: '6px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.18), 0 1.5px 4px rgba(0,0,0,0.12)',
             }}
           >
             {commentLabel}
