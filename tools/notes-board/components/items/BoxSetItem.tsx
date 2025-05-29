@@ -76,8 +76,7 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
         >
           <div
             style={{
-              backgroundColor: '#e74c3c',
-              color: 'white',
+              color: 'black',
               padding: `${Math.max(2, Math.floor(height * 0.10))}px ${Math.max(4, Math.floor(width * 0.10))}px`,
               borderRadius: '10px',
               fontSize: `${Math.max(8, Math.floor(height * 0.10))}px`,
