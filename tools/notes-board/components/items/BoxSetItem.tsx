@@ -83,7 +83,7 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
               whiteSpace: 'nowrap',
               maxWidth: `${width * 3}px`,
               textAlign: 'center',
-              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+              background: boxColor.replace('85%)', '75%)'),
               borderRadius: '6px',
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
               backdropFilter: 'blur(8px)',

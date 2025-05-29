@@ -73,11 +73,11 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
             zIndex: 1000,
             cursor: 'pointer',
             fontWeight: 600,
-            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+            background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
             borderRadius: '6px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(99, 102, 241, 0.1)',
             backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(99, 102, 241, 0.2)',
             transition: 'all 0.3s ease',
           }}
           onClick={(e) => {
