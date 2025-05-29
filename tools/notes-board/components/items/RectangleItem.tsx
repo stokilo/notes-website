@@ -61,16 +61,16 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: '-25px',
+            top: '-15px',
             left: '50%',
             transform: 'translateX(-50%)',
             backgroundColor: '#4a90e2',
             color: 'white',
-            padding: `${Math.max(1, Math.floor(labelBase * 0.1))}px ${Math.max(2, Math.floor(labelBase * 0.1))}px`,
-            borderRadius: '2px',
-            fontSize: `${Math.max(8, Math.floor(labelBase * 0.1))}px`,
+            padding: `${Math.max(2, Math.min(6, Math.floor(labelBase * 0.1)))}px ${Math.max(4, Math.min(8, Math.floor(labelBase * 0.1)))}px`,
+            borderRadius: '10px',
+            fontSize: `${Math.max(10, Math.min(14, Math.floor(labelBase * 0.15)))}px`,
             whiteSpace: 'nowrap',
-            maxWidth: `${actualWidth * 3}px`,
+            maxWidth: `${Math.min(200, actualWidth * 2)}px`,
             textAlign: 'center',
             boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
             zIndex: 1000,
@@ -80,6 +80,8 @@ const RectangleItem: React.FC<RectangleItemProps> = ({
             MozUserSelect: 'none',
             msUserSelect: 'none',
             minWidth: 'max-content',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
           onClick={(e) => {
             e.preventDefault();
