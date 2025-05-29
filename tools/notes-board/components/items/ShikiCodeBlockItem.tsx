@@ -52,7 +52,7 @@ const getHighlighter = async () => {
   }
 
   highlighterPromise = shiki.createHighlighter({
-    themes: ['github-dark'],
+    themes: ['github-light'],
     langs: SUPPORTED_LANGUAGES as shiki.BundledLanguage[],
   }).then(async instance => {
     // Preload all languages
@@ -122,8 +122,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
             highlighter.codeToHtml(editorCode, { 
               lang: lang as shiki.BundledLanguage,
               themes: {
-                light: 'github-dark',
-                dark: 'github-dark'
+                light: 'github-light',
+                dark: 'github-light'
               }
             });
             return true;
@@ -168,8 +168,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         const highlighted = highlighter.codeToHtml(codeToHighlight, { 
           lang: selectedLanguage as shiki.BundledLanguage,
           themes: {
-            light: 'github-dark',
-            dark: 'github-dark'
+            light: 'github-light',
+            dark: 'github-light'
           }
         });
 
@@ -252,8 +252,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         const highlighted = highlighter.codeToHtml(editorCode, { 
           lang: newLanguage as shiki.BundledLanguage,
           themes: {
-            light: 'github-dark',
-            dark: 'github-dark'
+            light: 'github-light',
+            dark: 'github-light'
           }
         });
         const highlightedWithClass = highlighted.replace(
@@ -278,8 +278,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         const highlighted = highlighter.codeToHtml(editorCode, { 
           lang: selectedLanguage as shiki.BundledLanguage,
           themes: {
-            light: 'github-dark',
-            dark: 'github-dark'
+            light: 'github-light',
+            dark: 'github-light'
           }
         });
         const highlightedWithClass = highlighted.replace(
@@ -367,7 +367,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               style={{
                 position: 'relative',
                 zIndex: 100000,
-                backgroundColor: '#2d2d2d',
+                backgroundColor: '#ffffff',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                 width: '95vw',
@@ -491,7 +491,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   overflow: 'auto',
                   padding: '16px',
                   position: 'relative',
-                  backgroundColor: '#1e1e1e',
+                  backgroundColor: '#ffffff',
                   display: 'flex',
                   flexDirection: 'column',
                   zIndex: 100001,
@@ -541,8 +541,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                               const highlighted = highlighter.codeToHtml(newCode, { 
                                 lang: selectedLanguage as shiki.BundledLanguage,
                                 themes: {
-                                  light: 'github-dark',
-                                  dark: 'github-dark'
+                                  light: 'github-light',
+                                  dark: 'github-light'
                                 }
                               });
                               const highlightedWithClass = highlighted.replace(
@@ -575,8 +575,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                           width: '100%',
                           height: '100%',
                           minHeight: '200px',
-                          backgroundColor: '#1e1e1e',
-                          color: '#fff',
+                          backgroundColor: '#ffffff',
+                          color: '#000',
                           border: 'none',
                           outline: 'none',
                           fontFamily: 'monospace',
@@ -616,7 +616,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                     <div 
                       dangerouslySetInnerHTML={{ __html: highlightedCode }} 
                       style={{
-                        backgroundColor: '#1e1e1e',
+                        backgroundColor: '#ffffff',
                         borderRadius: '4px',
                         padding: '16px',
                         height: '100%',
@@ -640,7 +640,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
             left: '50%',
             transform: 'translate(-50%, -50%)',
             zIndex: 1100,
-            backgroundColor: '#2d2d2d',
+            backgroundColor: '#ffffff',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             width: '80vw',
@@ -708,7 +708,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           >
             {isLoading ? (
               <div style={{ 
-                color: '#fff', 
+                color: '#000', 
                 textAlign: 'center', 
                 padding: '20px',
                 fontSize: '14px'
@@ -728,7 +728,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               <div 
                 dangerouslySetInnerHTML={{ __html: highlightedCode }} 
                 style={{
-                  backgroundColor: '#1e1e1e',
+                  backgroundColor: '#ffffff',
                   borderRadius: '4px',
                   padding: '16px',
                 }}
@@ -743,7 +743,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           .shiki-code-block {
             margin: 0;
             padding: 16px;
-            background-color: #1e1e1e !important;
+            background-color: #ffffff !important;
             border-radius: 4px;
             overflow: auto;
           }
