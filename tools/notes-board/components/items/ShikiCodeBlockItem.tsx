@@ -516,6 +516,9 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                           textarea.focus();
                         }
                       }}
+                      onWheel={(e) => {
+                        e.stopPropagation();
+                      }}
                     >
                       <textarea
                         value={editorCode}
@@ -586,7 +589,12 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                     </div>
                   )}
                   {/* Preview */}
-                  <div style={{ flex: 1, overflow: 'auto', position: 'relative', zIndex: 100002 }}>
+                  <div 
+                    style={{ flex: 1, overflow: 'auto', position: 'relative', zIndex: 100002 }}
+                    onWheel={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
                     <div 
                       dangerouslySetInnerHTML={{ __html: highlightedCode }} 
                       style={{
