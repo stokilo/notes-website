@@ -1320,6 +1320,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               );
             }}
             onLanguageChange={(newLanguage) => handleLanguageChange(item.id, newLanguage)}
+            isViewMode={isViewMode}
           />
         )}
       </DraggableItem>

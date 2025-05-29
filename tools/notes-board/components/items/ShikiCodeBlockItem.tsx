@@ -75,6 +75,7 @@ interface ShikiCodeBlockItemProps {
   onCodeChange?: (code: string) => void;
   onLanguageChange?: (language: string) => void;
   isPreview?: boolean;
+  isViewMode?: boolean;
 }
 
 const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
@@ -88,6 +89,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   onCodeChange,
   onLanguageChange,
   isPreview = false,
+  isViewMode = false,
 }) => {
   const [highlightedCode, setHighlightedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -488,59 +490,61 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               >
                 <div style={{ display: 'flex', flex: 1, gap: '16px' }}>
                   {/* Editor */}
-                  <div style={{ flex: 1, position: 'relative', zIndex: 100002 }}>
-                    <textarea
-                      value={editorCode}
-                      onChange={(e) => {
-                        const newCode = e.target.value;
-                        setEditorCode(newCode);
-                        // Update preview immediately
-                        const updatePreview = async () => {
-                          try {
-                            const highlighter = await getHighlighter();
-                            const highlighted = highlighter.codeToHtml(newCode, { 
-                              lang: selectedLanguage as shiki.BundledLanguage,
-                              themes: {
-                                light: 'github-dark',
-                                dark: 'github-dark'
-                              }
-                            });
-                            const highlightedWithClass = highlighted.replace(
-                              '<pre class="shiki"',
-                              '<pre class="shiki shiki-code-block"'
-                            );
-                            setHighlightedCode(highlightedWithClass);
-                          } catch (err) {
-                            console.error('Highlighting error:', err);
-                          }
-                        };
-                        updatePreview();
-                      }}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        minHeight: '200px',
-                        backgroundColor: '#1e1e1e',
-                        color: '#fff',
-                        border: 'none',
-                        outline: 'none',
-                        fontFamily: 'monospace',
-                        fontSize: '14px',
-                        lineHeight: '1.5',
-                        padding: '12px',
-                        borderRadius: '4px',
-                        resize: 'none',
-                        whiteSpace: 'pre',
-                        tabSize: 2,
-                        position: 'relative',
-                        zIndex: 100003,
-                      }}
-                      spellCheck={false}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                    />
-                  </div>
+                  {!isViewMode && (
+                    <div style={{ flex: 1, position: 'relative', zIndex: 100002 }}>
+                      <textarea
+                        value={editorCode}
+                        onChange={(e) => {
+                          const newCode = e.target.value;
+                          setEditorCode(newCode);
+                          // Update preview immediately
+                          const updatePreview = async () => {
+                            try {
+                              const highlighter = await getHighlighter();
+                              const highlighted = highlighter.codeToHtml(newCode, { 
+                                lang: selectedLanguage as shiki.BundledLanguage,
+                                themes: {
+                                  light: 'github-dark',
+                                  dark: 'github-dark'
+                                }
+                              });
+                              const highlightedWithClass = highlighted.replace(
+                                '<pre class="shiki"',
+                                '<pre class="shiki shiki-code-block"'
+                              );
+                              setHighlightedCode(highlightedWithClass);
+                            } catch (err) {
+                              console.error('Highlighting error:', err);
+                            }
+                          };
+                          updatePreview();
+                        }}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          minHeight: '200px',
+                          backgroundColor: '#1e1e1e',
+                          color: '#fff',
+                          border: 'none',
+                          outline: 'none',
+                          fontFamily: 'monospace',
+                          fontSize: '14px',
+                          lineHeight: '1.5',
+                          padding: '12px',
+                          borderRadius: '4px',
+                          resize: 'none',
+                          whiteSpace: 'pre',
+                          tabSize: 2,
+                          position: 'relative',
+                          zIndex: 100003,
+                        }}
+                        spellCheck={false}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                      />
+                    </div>
+                  )}
                   {/* Preview */}
                   <div style={{ flex: 1, overflow: 'auto', position: 'relative', zIndex: 100002 }}>
                     <div 
