@@ -1,89 +1,41 @@
 {
   "items": [
     {
-      "id": "box-1748505820179",
-      "type": "box",
-      "position": {
-        "x": 396.5,
-        "y": 170
-      },
-      "size": {
-        "width": 619,
-        "height": 244
-      },
-      "props": {
-        "color": "#4a90e2",
-        "size": 100,
-        "height": 80
-      },
-      "label": "DDD"
-    },
-    {
-      "id": "boxSet-1748505827131",
+      "id": "boxSet-1748510850381",
       "type": "boxSet",
       "position": {
-        "x": 532.5,
-        "y": 237
+        "x": 495.5,
+        "y": 225
       },
       "size": {
-        "width": 323,
-        "height": 124
+        "width": 367,
+        "height": 165
       },
       "props": {},
-      "comment": "**Co to?** Granica, w której dany model biznesowy i wszechobecny język mają sens. Ten sam termin może znaczyć co innego w różnych kontekstach.\nPrzykład: \"Produkt\" w kontekście sprzedaży (cena, opis marketingowy) to co innego niż \"Produkt\" w kontekście magazynu (ilość, lokalizacja).\n\n**Po co?** Upraszcza modele. Zamiast jednego gigantycznego, skomplikowanego modelu \"Produktu\", masz mniejsze, bardziej wyspecjalizowane.\nW Javie: Często oddzielne moduły, pakiety (np. com.mojsklep.sprzedaz, com.mojsklep.magazyn). Klasa Produkt może istnieć w obu, ale będzie miała inne pola i metody.",
-      "commentLabel": "Bounded Context (Ograniczony Kontekst)"
+      "comment": "",
+      "commentLabel": "BoundedContext"
     },
     {
-      "id": "boxSet-1748506409447",
+      "id": "boxSet-1748510860494",
       "type": "boxSet",
       "position": {
-        "x": 557.5,
-        "y": 309
+        "x": 516.5,
+        "y": 305
       },
       "size": {
         "width": 20,
         "height": 20
       },
       "props": {},
-      "comment": "Obiekt, który opisuje pewną cechę lub wartość. Nie ma tożsamości (ID), liczą się tylko jego atrybuty. Jest niemutowalny (niezmienialny po utworzeniu).",
-      "commentLabel": "Value Object"
+      "comment": "",
+      "commentLabel": "ValueObject"
     },
     {
-      "id": "separator-1748510289400",
-      "type": "separator",
-      "position": {
-        "x": 869.5,
-        "y": 239
-      },
-      "size": {
-        "width": 10,
-        "height": 144
-      },
-      "props": {
-        "color": "#e0e0e0"
-      }
-    },
-    {
-      "id": "boxSet-1748510301064",
-      "type": "boxSet",
-      "position": {
-        "x": 978.5,
-        "y": 299
-      },
-      "size": {
-        "width": 20,
-        "height": 20
-      },
-      "props": {},
-      "comment": "Code",
-      "commentLabel": "Java"
-    },
-    {
-      "id": "twoPointsPath-1748510318624",
+      "id": "twoPointsPath-1748510866677",
       "type": "twoPointsPath",
       "position": {
-        "x": 602.5,
-        "y": 416
+        "x": 515.5,
+        "y": 265
       },
       "size": {
         "width": 200,
@@ -104,11 +56,11 @@
       ]
     },
     {
-      "id": "boxSet-1748510322865",
+      "id": "boxSet-1748510869268",
       "type": "boxSet",
       "position": {
-        "x": 775.5,
-        "y": 457
+        "x": 692.5,
+        "y": 306
       },
       "size": {
         "width": 20,
@@ -116,14 +68,46 @@
       },
       "props": {},
       "comment": "",
-      "commentLabel": "To"
+      "commentLabel": "Entity"
     },
     {
-      "id": "boxSet-1748510344164",
+      "id": "boxSet-1748510878453",
       "type": "boxSet",
       "position": {
-        "x": 602.5,
-        "y": 459
+        "x": 496.5,
+        "y": 475
+      },
+      "size": {
+        "width": 359,
+        "height": 136
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "DDD Domain"
+    },
+    {
+      "id": "arrow-1748510884576",
+      "type": "arrow",
+      "position": {
+        "x": 608.5,
+        "y": 420
+      },
+      "size": {
+        "width": 120,
+        "height": 40
+      },
+      "props": {
+        "segments": 3,
+        "rotation": 90,
+        "isAnimating": false
+      }
+    },
+    {
+      "id": "boxSet-1748510896437",
+      "type": "boxSet",
+      "position": {
+        "x": 549.5,
+        "y": 528
       },
       "size": {
         "width": 20,
@@ -131,9 +115,69 @@
       },
       "props": {},
       "comment": "",
-      "commentLabel": "From"
+      "commentLabel": "Car"
+    },
+    {
+      "id": "boxSet-1748510901359",
+      "type": "boxSet",
+      "position": {
+        "x": 650.5,
+        "y": 573
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "Parking"
+    },
+    {
+      "id": "boxSet-1748510907916",
+      "type": "boxSet",
+      "position": {
+        "x": 779.5,
+        "y": 504
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "Words"
+    },
+    {
+      "id": "separator-1748510914845",
+      "type": "separator",
+      "position": {
+        "x": 886.5,
+        "y": 293
+      },
+      "size": {
+        "width": 10,
+        "height": 287
+      },
+      "props": {
+        "color": "#e0e0e0"
+      }
+    },
+    {
+      "id": "boxSet-1748510919700",
+      "type": "boxSet",
+      "position": {
+        "x": 932.5,
+        "y": 384
+      },
+      "size": {
+        "width": 291,
+        "height": 139
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "Planning Session"
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-29T09:19:11.416Z"
+  "exportDate": "2025-05-29T09:28:51.413Z"
 }
