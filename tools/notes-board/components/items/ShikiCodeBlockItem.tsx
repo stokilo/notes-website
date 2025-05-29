@@ -506,7 +506,17 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 >
                   {/* Editor */}
                   {!isViewMode && (
-                    <div style={{ flex: 1, position: 'relative', zIndex: 100002 }}>
+                    <div 
+                      style={{ flex: 1, position: 'relative', zIndex: 100002 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Ensure textarea gets focus when clicking the container
+                        const textarea = e.currentTarget.querySelector('textarea');
+                        if (textarea) {
+                          textarea.focus();
+                        }
+                      }}
+                    >
                       <textarea
                         value={editorCode}
                         onChange={(e) => {
@@ -533,6 +543,21 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                             }
                           };
                           updatePreview();
+                        }}
+                        onFocus={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onBlur={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onKeyUp={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onKeyPress={(e) => {
+                          e.stopPropagation();
                         }}
                         style={{
                           width: '100%',
