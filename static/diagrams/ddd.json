@@ -23,48 +23,23 @@
         "y": 305
       },
       "size": {
-        "width": 20,
-        "height": 20
+        "width": 65,
+        "height": 49
       },
       "props": {},
       "comment": "",
       "commentLabel": "ValueObject"
     },
     {
-      "id": "twoPointsPath-1748510866677",
-      "type": "twoPointsPath",
-      "position": {
-        "x": 515.5,
-        "y": 265
-      },
-      "size": {
-        "width": 200,
-        "height": 100
-      },
-      "props": {
-        "isAnimating": true
-      },
-      "circlePositions": [
-        {
-          "x": 40,
-          "y": 50
-        },
-        {
-          "x": 160,
-          "y": 50
-        }
-      ]
-    },
-    {
       "id": "boxSet-1748510869268",
       "type": "boxSet",
       "position": {
-        "x": 692.5,
-        "y": 306
+        "x": 778.5,
+        "y": 307
       },
       "size": {
-        "width": 20,
-        "height": 20
+        "width": 104,
+        "height": 54
       },
       "props": {},
       "comment": "",
@@ -106,12 +81,12 @@
       "id": "boxSet-1748510896437",
       "type": "boxSet",
       "position": {
-        "x": 549.5,
-        "y": 528
+        "x": 498.5,
+        "y": 533
       },
       "size": {
-        "width": 20,
-        "height": 20
+        "width": 96,
+        "height": 57
       },
       "props": {},
       "comment": "",
@@ -125,8 +100,8 @@
         "y": 573
       },
       "size": {
-        "width": 20,
-        "height": 20
+        "width": 88,
+        "height": 58
       },
       "props": {},
       "comment": "",
@@ -140,8 +115,8 @@
         "y": 504
       },
       "size": {
-        "width": 20,
-        "height": 20
+        "width": 82,
+        "height": 59
       },
       "props": {},
       "comment": "",
@@ -176,8 +151,61 @@
       "props": {},
       "comment": "",
       "commentLabel": "Planning Session"
+    },
+    {
+      "id": "box-1748512460750",
+      "type": "box",
+      "position": {
+        "x": 1005.5,
+        "y": 168
+      },
+      "size": {
+        "width": 100,
+        "height": 100
+      },
+      "props": {
+        "color": "#4a90e2",
+        "size": 100,
+        "height": 80
+      },
+      "label": "Test"
+    },
+    {
+      "id": "circle-1748512467606",
+      "type": "circle",
+      "position": {
+        "x": 1196.5,
+        "y": 252
+      },
+      "size": {
+        "width": 100,
+        "height": 100
+      },
+      "props": {
+        "width": 100,
+        "length": 200
+      },
+      "label": "second"
+    },
+    {
+      "id": "code-1748516950653",
+      "type": "codeBlock",
+      "position": {
+        "x": 805.5,
+        "y": 321
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": "package org.sstec.resourceserver;\n\nimport org.springframework.context.annotation.Bean;\nimport org.springframework.context.annotation.Configuration;\nimport org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;\nimport org.springframework.security.config.annotation.web.builders.HttpSecurity;\nimport org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;\nimport org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;\nimport org.springframework.security.config.http.SessionCreationPolicy;\nimport org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;\nimport org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;\nimport org.springframework.security.web.SecurityFilterChain;\n\n@Configuration\n@EnableWebSecurity\n@EnableMethodSecurity(jsr250Enabled = true, securedEnabled = true) // Optional: for method-level security\npublic class SecurityConfig {\n\n    @Bean\n    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {\n        http\n                .csrf(AbstractHttpConfigurer::disable)\n                .authorizeHttpRequests(authorizeRequests ->\n                        authorizeRequests\n                                .requestMatchers(\"/api/public/**\").permitAll()\n                                .requestMatchers(\"/api/admin/**\").hasRole(\"APP_ADMIN\") // Only users with ROLE_APP_ADMIN\n                                .requestMatchers(\"/api/user/**\").hasAnyRole(\"APP_USER\", \"APP_ADMIN\") // Users with ROLE_APP_USER or ROLE_APP_ADMIN\n                                .requestMatchers(\"/api/hello\").authenticated() // Any authenticated user\n                                .anyRequest().authenticated()\n                )\n                .oauth2ResourceServer(oauth2 -> oauth2\n                        .jwt(jwt -> jwt\n                                .jwtAuthenticationConverter(jwtAuthenticationConverter()) // (1)\n                        )\n                )\n                .sessionManagement(session -> session\n                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)\n                );\n\n        return http.build();\n    }\n\n    // (2) Bean to configure how JWT claims are converted to GrantedAuthority objects\n    @Bean\n    public JwtAuthenticationConverter jwtAuthenticationConverter() {\n        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();\n        // (3) Tell Spring to look for roles in 'realm_access.roles'\n        grantedAuthoritiesConverter.setAuthoritiesClaimName(\"realm_access.roles\");\n        // (4) Add a prefix to the role names (e.g., \"APP_USER\" becomes \"ROLE_APP_USER\")\n        // This is standard Spring Security practice for hasRole() checks\n        grantedAuthoritiesConverter.setAuthorityPrefix(\"ROLE_\");\n\n        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();\n        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);\n        return jwtAuthenticationConverter;\n    }\n}"
+      }
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-29T09:28:51.413Z"
+  "exportDate": "2025-05-29T11:09:39.146Z"
 }
