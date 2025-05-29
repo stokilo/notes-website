@@ -1,39 +1,54 @@
 {
   "items": [
     {
-      "id": "code-1748497228288",
-      "type": "codeBlock",
+      "id": "box-1748505820179",
+      "type": "box",
       "position": {
-        "x": 901.5,
-        "y": 447
+        "x": 419.5,
+        "y": 181
       },
       "size": {
-        "width": 48,
-        "height": 24
+        "width": 619,
+        "height": 244
       },
       "props": {
-        "width": 48,
-        "height": 24,
-        "language": "shell",
-        "code": "package org.sstec.resourceserver;\n\nimport org.springframework.context.annotation.Bean;\nimport org.springframework.context.annotation.Configuration;\nimport org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;\nimport org.springframework.security.config.annotation.web.builders.HttpSecurity;\nimport org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;\nimport org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;\nimport org.springframework.security.config.http.SessionCreationPolicy;\nimport org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;\nimport org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;\nimport org.springframework.security.web.SecurityFilterChain;\n\n@Configuration\n@EnableWebSecurity\n@EnableMethodSecurity(jsr250Enabled = true, securedEnabled = true) // Optional: for method-level security\npublic class SecurityConfig {\n\n    @Bean\n    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {\n        http\n                .csrf(AbstractHttpConfigurer::disable)\n                .authorizeHttpRequests(authorizeRequests ->\n                        authorizeRequests\n                                .requestMatchers(\"/api/public/**\").permitAll()\n                                .requestMatchers(\"/api/admin/**\").hasRole(\"APP_ADMIN\") // Only users with ROLE_APP_ADMIN\n                                .requestMatchers(\"/api/user/**\").hasAnyRole(\"APP_USER\", \"APP_ADMIN\") // Users with ROLE_APP_USER or ROLE_APP_ADMIN\n                                .requestMatchers(\"/api/hello\").authenticated() // Any authenticated user\n                                .anyRequest().authenticated()\n                )\n                .oauth2ResourceServer(oauth2 -> oauth2\n                        .jwt(jwt -> jwt\n                                .jwtAuthenticationConverter(jwtAuthenticationConverter()) // (1)\n                        )\n                )\n                .sessionManagement(session -> session\n                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)\n                );\n\n        return http.build();\n    }\n\n    // (2) Bean to configure how JWT claims are converted to GrantedAuthority objects\n    @Bean\n    public JwtAuthenticationConverter jwtAuthenticationConverter() {\n        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();\n        // (3) Tell Spring to look for roles in 'realm_access.roles'\n        grantedAuthoritiesConverter.setAuthoritiesClaimName(\"realm_access.roles\");\n        // (4) Add a prefix to the role names (e.g., \"APP_USER\" becomes \"ROLE_APP_USER\")\n        // This is standard Spring Security practice for hasRole() checks\n        grantedAuthoritiesConverter.setAuthorityPrefix(\"ROLE_\");\n\n        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();\n        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);\n        return jwtAuthenticationConverter;\n    }\n}"
-      }
+        "color": "#4a90e2",
+        "size": 100,
+        "height": 80
+      },
+      "label": "DDD"
     },
     {
-      "id": "boxSet-1748501329286",
+      "id": "boxSet-1748505827131",
       "type": "boxSet",
       "position": {
-        "x": 912.5,
-        "y": 325
+        "x": 532.5,
+        "y": 237
+      },
+      "size": {
+        "width": 323,
+        "height": 124
+      },
+      "props": {},
+      "comment": "**Co to?** Granica, w której dany model biznesowy i wszechobecny język mają sens. Ten sam termin może znaczyć co innego w różnych kontekstach.\nPrzykład: \"Produkt\" w kontekście sprzedaży (cena, opis marketingowy) to co innego niż \"Produkt\" w kontekście magazynu (ilość, lokalizacja).\n\n**Po co?** Upraszcza modele. Zamiast jednego gigantycznego, skomplikowanego modelu \"Produktu\", masz mniejsze, bardziej wyspecjalizowane.\nW Javie: Często oddzielne moduły, pakiety (np. com.mojsklep.sprzedaz, com.mojsklep.magazyn). Klasa Produkt może istnieć w obu, ale będzie miała inne pola i metody.",
+      "commentLabel": "Bounded Context (Ograniczony Kontekst)"
+    },
+    {
+      "id": "boxSet-1748506409447",
+      "type": "boxSet",
+      "position": {
+        "x": 557.5,
+        "y": 309
       },
       "size": {
         "width": 20,
         "height": 20
       },
       "props": {},
-      "comment": "# test\n\n## simple\n\n#### simples\n\n**bold**",
-      "commentLabel": "comment"
+      "comment": "Obiekt, który opisuje pewną cechę lub wartość. Nie ma tożsamości (ID), liczą się tylko jego atrybuty. Jest niemutowalny (niezmienialny po utworzeniu).",
+      "commentLabel": "Value Object"
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-29T07:20:31.252Z"
+  "exportDate": "2025-05-29T08:13:56.042Z"
 }

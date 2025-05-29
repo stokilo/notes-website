@@ -240,7 +240,17 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
                 type="text"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
-                onKeyDown={handleLabelKeyDown}
+                onFocus={(e) => e.stopPropagation()}
+                onBlur={(e) => e.stopPropagation()}
+                onKeyUp={(e) => e.stopPropagation()}
+                onKeyPress={(e) => e.stopPropagation()}
+                onPaste={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+                    e.stopPropagation();
+                  }
+                  handleLabelKeyDown(e);
+                }}
                 placeholder="Enter a label for this comment"
                 ref={labelInputRef}
                 style={{
@@ -256,7 +266,17 @@ const CommentEditor: React.FC<CommentEditorProps> = ({
               ref={editorRef}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onFocus={(e) => e.stopPropagation()}
+              onBlur={(e) => e.stopPropagation()}
+              onKeyUp={(e) => e.stopPropagation()}
+              onKeyPress={(e) => e.stopPropagation()}
+              onPaste={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+                  e.stopPropagation();
+                }
+                handleKeyDown(e);
+              }}
               style={{
                 padding: '12px',
                 flex: 1,
