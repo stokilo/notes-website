@@ -21,6 +21,7 @@ const TextItem: React.FC<TextItemProps> = ({
   hasBorder = true,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [showEditIcon, setShowEditIcon] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -36,6 +37,12 @@ const TextItem: React.FC<TextItemProps> = ({
       e.stopPropagation();
       setIsEditing(true);
     }
+  };
+
+  const handleEditIconClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditing(true);
   };
 
   const handleBlur = () => {
@@ -57,6 +64,24 @@ const TextItem: React.FC<TextItemProps> = ({
       return;
     }
 
+    // Handle CMD+C or CTRL+C
+    if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+      e.stopPropagation();
+      return;
+    }
+
+    // Handle CMD+V or CTRL+V
+    if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+      e.stopPropagation();
+      return;
+    }
+
+    // Handle CMD+X or CTRL+X
+    if ((e.metaKey || e.ctrlKey) && e.key === 'x') {
+      e.stopPropagation();
+      return;
+    }
+
     // Handle Shift+Enter to finish editing
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
@@ -75,6 +100,8 @@ const TextItem: React.FC<TextItemProps> = ({
     <div
       onClick={handleClick}
       onMouseDown={handleMouseDown}
+      onMouseEnter={() => !isViewMode && setShowEditIcon(true)}
+      onMouseLeave={() => setShowEditIcon(false)}
       style={{
         width: '100%',
         height: '100%',
@@ -84,8 +111,31 @@ const TextItem: React.FC<TextItemProps> = ({
         borderRadius: '4px',
         border: hasBorder ? (isSelected && !isViewMode ? '1px solid rgba(74, 144, 226, 0.3)' : '1px solid #e0e0e0') : 'none',
         cursor: isViewMode ? 'default' : 'text',
+        position: 'relative',
       }}
     >
+      {!isViewMode && showEditIcon && !isEditing && (
+        <div
+          onClick={handleEditIconClick}
+          style={{
+            position: 'absolute',
+            top: '4px',
+            right: '4px',
+            width: '20px',
+            height: '20px',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            zIndex: 1,
+          }}
+        >
+          ✎
+        </div>
+      )}
       {isEditing && !isViewMode ? (
         <textarea
           ref={textareaRef}
