@@ -14,6 +14,7 @@ import CirclesPathItem from '../items/CirclesPathItem';
 import TwoPointsPathItem from '../items/TwoPointsPathItem';
 import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 import TextItem from '../items/TextItem';
+import FolderStructureItem from '../items/FolderStructureItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -28,7 +29,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'circlesPath' | 'twoPointsPath' | 'codeBlock' | 'text';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'circlesPath' | 'twoPointsPath' | 'codeBlock' | 'text' | 'folderStructure';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -44,6 +45,13 @@ interface DraggableItem {
   circlePositions?: Array<{ x: number; y: number }>;
   isViewMode?: boolean;
   text?: string;
+  folderData?: Array<{
+    id: string;
+    name: string;
+    type: 'file' | 'folder';
+    children?: Array<any>;
+    isExpanded?: boolean;
+  }>;
 }
 
 interface SelectionArea {
@@ -1336,6 +1344,15 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             hasBorder={item.props?.hasBorder !== false}
           />
         )}
+        {item.type === 'folderStructure' && (
+          <FolderStructureItem
+            width={item.size.width}
+            height={item.size.height}
+            data={item.folderData}
+            onDataChange={(newData) => handleFolderDataChange(item.id, newData)}
+            isViewMode={isViewMode}
+          />
+        )}
       </DraggableItem>
     );
   };
@@ -1375,6 +1392,56 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 hasBorder: !(item.props?.hasBorder ?? true)
               }
             }
+          : item
+      )
+    );
+  };
+
+  const addFolderStructure = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: `folderStructure-${Date.now()}`,
+      type: 'folderStructure',
+      position,
+      size: { width: 300, height: 400 },
+      props: {},
+      folderData: [
+        {
+          id: 'root',
+          name: 'Project',
+          type: 'folder',
+          isExpanded: true,
+          children: [
+            {
+              id: 'src',
+              name: 'src',
+              type: 'folder',
+              isExpanded: true,
+              children: [
+                { id: 'index.ts', name: 'index.ts', type: 'file' },
+                { id: 'app.ts', name: 'app.ts', type: 'file' }
+              ]
+            },
+            {
+              id: 'public',
+              name: 'public',
+              type: 'folder',
+              isExpanded: true,
+              children: [
+                { id: 'index.html', name: 'index.html', type: 'file' }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+    setItemsWithHistory(prev => [...prev, newItem]);
+  };
+
+  const handleFolderDataChange = (itemId: string, newData: Array<any>) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId
+          ? { ...item, folderData: newData }
           : item
       )
     );
@@ -1499,6 +1566,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               }}
               onAddGrid={() => {}}
               onAddText={addText}
+              onAddFolderStructure={addFolderStructure}
             />
           </>
         )}
