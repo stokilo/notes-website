@@ -1,15 +1,30 @@
 {
   "items": [
     {
-      "id": "folderStructure-1748588001025",
-      "type": "folderStructure",
+      "id": "boxSet-1748588343570",
+      "type": "boxSet",
       "position": {
-        "x": 202,
-        "y": 189
+        "x": 344,
+        "y": 194
       },
       "size": {
-        "width": 483,
-        "height": 323
+        "width": 662,
+        "height": 334
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "DDD"
+    },
+    {
+      "id": "folderStructure-1748588365437",
+      "type": "folderStructure",
+      "position": {
+        "x": 385,
+        "y": 294
+      },
+      "size": {
+        "width": 300,
+        "height": 400
       },
       "props": {},
       "folderData": [
@@ -27,7 +42,7 @@
               "children": [
                 {
                   "id": "index.ts",
-                  "name": "SecuirtyWebService.java",
+                  "name": "Start.java",
                   "type": "file"
                 },
                 {
@@ -55,11 +70,11 @@
       ]
     },
     {
-      "id": "code-1748588301378",
+      "id": "code-1748588372621",
       "type": "codeBlock",
       "position": {
-        "x": 467,
-        "y": 268
+        "x": 553,
+        "y": 374
       },
       "size": {
         "width": 48,
@@ -69,28 +84,26 @@
         "width": 48,
         "height": 24,
         "language": "java",
-        "code": "class Text {\n}"
+        "code": "class Start {\n}"
       }
     },
     {
-      "id": "code-1748588314578",
-      "type": "codeBlock",
+      "id": "text-1748588382449",
+      "type": "text",
       "position": {
-        "x": 354,
-        "y": 299
+        "x": 661,
+        "y": 331
       },
       "size": {
-        "width": 48,
-        "height": 24
+        "width": 203,
+        "height": 150
       },
       "props": {
-        "width": 48,
-        "height": 24,
-        "language": "typescript",
-        "code": "type EE {\n}"
-      }
+        "hasBorder": true
+      },
+      "text": "This is **new**\n\nAnd this is **old**"
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-30T06:58:48.547Z"
+  "exportDate": "2025-05-30T07:00:01.840Z"
 }
