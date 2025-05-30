@@ -291,6 +291,28 @@ const FolderStructureItem: React.FC<FolderStructureItemProps> = ({
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
                     onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                    title="Add Folder"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => handleAddItem(node.id, 'file')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      color: '#4CAF50',
+                      fontSize: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0.7,
+                      transition: 'opacity 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                    title="Add File"
                   >
                     +
                   </button>
@@ -311,6 +333,7 @@ const FolderStructureItem: React.FC<FolderStructureItemProps> = ({
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
                     onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                    title="Remove"
                   >
                     -
                   </button>
@@ -334,6 +357,7 @@ const FolderStructureItem: React.FC<FolderStructureItemProps> = ({
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                  title="Remove"
                 >
                   -
                 </button>
