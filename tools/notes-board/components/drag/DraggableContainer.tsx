@@ -1333,6 +1333,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             onTextChange={(newText) => handleTextChange(item.id, newText)}
             isViewMode={isViewMode}
             isSelected={selectedItemIds.includes(item.id)}
+            hasBorder={item.props?.hasBorder !== false}
           />
         )}
       </DraggableItem>
@@ -1345,7 +1346,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       type: 'text',
       position,
       size: { width: 200, height: 100 },
-      props: {},
+      props: {
+        hasBorder: true
+      },
       text: 'Click to edit text',
     };
     setItemsWithHistory(prev => [...prev, newItem]);
@@ -1356,6 +1359,22 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       prevItems.map(item =>
         item.id === itemId
           ? { ...item, text: newText }
+          : item
+      )
+    );
+  };
+
+  const handleToggleTextBorder = (itemId: string) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId
+          ? {
+              ...item,
+              props: {
+                ...(item.props || {}),
+                hasBorder: !(item.props?.hasBorder ?? true)
+              }
+            }
           : item
       )
     );
@@ -1679,7 +1698,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
             // For text items, only show base items
             if (item.type === 'text') {
-              return baseItems;
+              return [
+                {
+                  label: item.props?.hasBorder !== false ? 'Remove Border' : 'Add Border',
+                  onClick: () => handleToggleTextBorder(contextMenu.itemId),
+                },
+                ...baseItems,
+              ];
             }
 
             return [

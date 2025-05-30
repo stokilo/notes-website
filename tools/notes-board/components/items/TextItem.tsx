@@ -7,6 +7,7 @@ interface TextItemProps {
   onTextChange: (text: string) => void;
   isViewMode?: boolean;
   isSelected?: boolean;
+  hasBorder?: boolean;
 }
 
 const TextItem: React.FC<TextItemProps> = ({
@@ -16,6 +17,7 @@ const TextItem: React.FC<TextItemProps> = ({
   onTextChange,
   isViewMode = false,
   isSelected = false,
+  hasBorder = true,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -57,7 +59,7 @@ const TextItem: React.FC<TextItemProps> = ({
         boxSizing: 'border-box',
         backgroundColor: isSelected && !isViewMode ? 'rgba(74, 144, 226, 0.1)' : 'transparent',
         borderRadius: '4px',
-        border: isSelected && !isViewMode ? '1px solid rgba(74, 144, 226, 0.3)' : 'none',
+        border: hasBorder ? (isSelected && !isViewMode ? '1px solid rgba(74, 144, 226, 0.3)' : '1px solid #e0e0e0') : 'none',
       }}
     >
       {isEditing && !isViewMode ? (
