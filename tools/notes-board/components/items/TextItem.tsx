@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 interface TextItemProps {
   width: number;
@@ -29,8 +30,10 @@ const TextItem: React.FC<TextItemProps> = ({
     }
   }, [isEditing]);
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
     if (!isViewMode && !isEditing) {
+      e.preventDefault();
+      e.stopPropagation();
       setIsEditing(true);
     }
   };
@@ -52,6 +55,7 @@ const TextItem: React.FC<TextItemProps> = ({
 
   return (
     <div
+      onClick={handleClick}
       style={{
         width: '100%',
         height: '100%',
@@ -60,6 +64,7 @@ const TextItem: React.FC<TextItemProps> = ({
         backgroundColor: isSelected && !isViewMode ? 'rgba(74, 144, 226, 0.1)' : 'transparent',
         borderRadius: '4px',
         border: hasBorder ? (isSelected && !isViewMode ? '1px solid rgba(74, 144, 226, 0.3)' : '1px solid #e0e0e0') : 'none',
+        cursor: isViewMode ? 'default' : 'text',
       }}
     >
       {isEditing && !isViewMode ? (
@@ -76,25 +81,55 @@ const TextItem: React.FC<TextItemProps> = ({
             outline: 'none',
             resize: 'none',
             backgroundColor: 'transparent',
-            fontFamily: 'inherit',
-            fontSize: 'inherit',
-            lineHeight: 'inherit',
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            lineHeight: '1.5',
             padding: 0,
           }}
+          placeholder="Enter Markdown text here..."
         />
       ) : (
         <div
-          onClick={handleClick}
           style={{
             width: '100%',
             height: '100%',
             overflow: 'auto',
-            cursor: isViewMode ? 'default' : 'text',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
           }}
         >
-          {text}
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p style={{ margin: '0 0 1em 0' }}>{children}</p>,
+              h1: ({ children }) => <h1 style={{ fontSize: '1.5em', margin: '0.5em 0' }}>{children}</h1>,
+              h2: ({ children }) => <h2 style={{ fontSize: '1.3em', margin: '0.5em 0' }}>{children}</h2>,
+              h3: ({ children }) => <h3 style={{ fontSize: '1.1em', margin: '0.5em 0' }}>{children}</h3>,
+              ul: ({ children }) => <ul style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ul>,
+              ol: ({ children }) => <ol style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ol>,
+              li: ({ children }) => <li style={{ margin: '0.25em 0' }}>{children}</li>,
+              code: ({ children }) => (
+                <code style={{
+                  backgroundColor: '#f0f0f0',
+                  padding: '0.2em 0.4em',
+                  borderRadius: '3px',
+                  fontFamily: 'monospace',
+                }}>
+                  {children}
+                </code>
+              ),
+              pre: ({ children }) => (
+                <pre style={{
+                  backgroundColor: '#f0f0f0',
+                  padding: '1em',
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  margin: '0.5em 0',
+                }}>
+                  {children}
+                </pre>
+              ),
+            }}
+          >
+            {text}
+          </ReactMarkdown>
         </div>
       )}
     </div>
