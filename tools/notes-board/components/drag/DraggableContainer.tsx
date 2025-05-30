@@ -13,6 +13,7 @@ import ArrowItem from '../items/ArrowItem';
 import CirclesPathItem from '../items/CirclesPathItem';
 import TwoPointsPathItem from '../items/TwoPointsPathItem';
 import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
+import TextItem from '../items/TextItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -27,7 +28,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'circlesPath' | 'twoPointsPath' | 'codeBlock';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'circlesPath' | 'twoPointsPath' | 'codeBlock' | 'text';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -42,6 +43,7 @@ interface DraggableItem {
   attachedTo?: string;
   circlePositions?: Array<{ x: number; y: number }>;
   isViewMode?: boolean;
+  text?: string;
 }
 
 interface SelectionArea {
@@ -1323,10 +1325,41 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             isViewMode={isViewMode}
           />
         )}
+        {item.type === 'text' && (
+          <TextItem
+            width={item.size.width}
+            height={item.size.height}
+            text={item.text || ''}
+            onTextChange={(newText) => handleTextChange(item.id, newText)}
+            isViewMode={isViewMode}
+            isSelected={selectedItemIds.includes(item.id)}
+          />
+        )}
       </DraggableItem>
     );
   };
 
+  const addText = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: `text-${Date.now()}`,
+      type: 'text',
+      position,
+      size: { width: 200, height: 100 },
+      props: {},
+      text: 'Click to edit text',
+    };
+    setItemsWithHistory(prev => [...prev, newItem]);
+  };
+
+  const handleTextChange = (itemId: string, newText: string) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId
+          ? { ...item, text: newText }
+          : item
+      )
+    );
+  };
 
   return (
     <div
@@ -1446,6 +1479,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 setItemsWithHistory(prev => [...prev, newItem]);
               }}
               onAddGrid={() => {}}
+              onAddText={addText}
             />
           </>
         )}

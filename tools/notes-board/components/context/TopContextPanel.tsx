@@ -14,6 +14,7 @@ interface TopContextPanelProps {
   onAddTwoPointsPath: () => void;
   onAddCodeBlock: (position: { x: number; y: number }) => void;
   onAddGrid: () => void;
+  onAddText: (position: { x: number; y: number }) => void;
 }
 
 const TopContextPanel: React.FC<TopContextPanelProps> = ({
@@ -24,6 +25,7 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
   onAddTwoPointsPath,
   onAddCodeBlock,
   onAddGrid,
+  onAddText,
 }) => {
   return (
     <div
@@ -205,6 +207,32 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
             language="java"
             isPreview={true}
           />
+        </div>
+      </div>
+      <div
+        onClick={() => onAddText({ x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 20 })}
+        style={{
+          cursor: 'pointer',
+          padding: '8px',
+          borderRadius: '8px',
+          backgroundColor: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          transition: 'all 0.2s ease',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+        }}
+      >
+        <div style={{ width: 48, height: 24, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: '14px', color: '#666' }}>T</span>
         </div>
       </div>
     </div>
