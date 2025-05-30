@@ -1,211 +1,51 @@
 {
   "items": [
     {
-      "id": "boxSet-1748510850381",
-      "type": "boxSet",
+      "id": "text-1748585707152",
+      "type": "text",
       "position": {
-        "x": 495.5,
-        "y": 225
+        "x": 165,
+        "y": 94
       },
       "size": {
-        "width": 367,
-        "height": 165
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "BoundedContext"
-    },
-    {
-      "id": "boxSet-1748510860494",
-      "type": "boxSet",
-      "position": {
-        "x": 516.5,
-        "y": 305
-      },
-      "size": {
-        "width": 65,
-        "height": 49
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "ValueObject"
-    },
-    {
-      "id": "boxSet-1748510869268",
-      "type": "boxSet",
-      "position": {
-        "x": 778.5,
-        "y": 307
-      },
-      "size": {
-        "width": 104,
-        "height": 54
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "Entity"
-    },
-    {
-      "id": "boxSet-1748510878453",
-      "type": "boxSet",
-      "position": {
-        "x": 496.5,
-        "y": 475
-      },
-      "size": {
-        "width": 359,
-        "height": 136
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "DDD Domain"
-    },
-    {
-      "id": "arrow-1748510884576",
-      "type": "arrow",
-      "position": {
-        "x": 608.5,
-        "y": 420
-      },
-      "size": {
-        "width": 120,
-        "height": 40
+        "width": 269,
+        "height": 377
       },
       "props": {
-        "segments": 3,
-        "rotation": 90,
-        "isAnimating": false
-      }
+        "hasBorder": true
+      },
+      "text": "1. First item\n2. Second item\n3. Third item\n    1. Indented item\n    2. Indented item\n4. Fourth item"
     },
     {
-      "id": "boxSet-1748510896437",
+      "id": "boxSet-1748585823822",
       "type": "boxSet",
       "position": {
-        "x": 498.5,
-        "y": 533
+        "x": 577,
+        "y": 197
       },
       "size": {
-        "width": 96,
-        "height": 57
+        "width": 338,
+        "height": 373
       },
-      "props": {},
-      "comment": "",
-      "commentLabel": "Car"
+      "props": {}
     },
     {
-      "id": "boxSet-1748510901359",
-      "type": "boxSet",
+      "id": "text-1748585826347",
+      "type": "text",
       "position": {
-        "x": 650.5,
-        "y": 573
+        "x": 620,
+        "y": 219
       },
       "size": {
-        "width": 88,
-        "height": 58
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "Parking"
-    },
-    {
-      "id": "boxSet-1748510907916",
-      "type": "boxSet",
-      "position": {
-        "x": 779.5,
-        "y": 504
-      },
-      "size": {
-        "width": 82,
-        "height": 59
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "Words"
-    },
-    {
-      "id": "separator-1748510914845",
-      "type": "separator",
-      "position": {
-        "x": 886.5,
-        "y": 293
-      },
-      "size": {
-        "width": 10,
-        "height": 287
+        "width": 240,
+        "height": 217
       },
       "props": {
-        "color": "#e0e0e0"
-      }
-    },
-    {
-      "id": "boxSet-1748510919700",
-      "type": "boxSet",
-      "position": {
-        "x": 932.5,
-        "y": 384
+        "hasBorder": true
       },
-      "size": {
-        "width": 291,
-        "height": 139
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "Planning Session"
-    },
-    {
-      "id": "box-1748512460750",
-      "type": "box",
-      "position": {
-        "x": 1005.5,
-        "y": 168
-      },
-      "size": {
-        "width": 100,
-        "height": 100
-      },
-      "props": {
-        "color": "#4a90e2",
-        "size": 100,
-        "height": 80
-      },
-      "label": "Test"
-    },
-    {
-      "id": "circle-1748512467606",
-      "type": "circle",
-      "position": {
-        "x": 1196.5,
-        "y": 252
-      },
-      "size": {
-        "width": 100,
-        "height": 100
-      },
-      "props": {
-        "width": 100,
-        "length": 200
-      },
-      "label": "second"
-    },
-    {
-      "id": "code-1748516950653",
-      "type": "codeBlock",
-      "position": {
-        "x": 805.5,
-        "y": 321
-      },
-      "size": {
-        "width": 48,
-        "height": 24
-      },
-      "props": {
-        "width": 48,
-        "height": 24,
-        "language": "java",
-        "code": "package org.sstec.resourceserver;\n\nimport org.springframework.context.annotation.Bean;\nimport org.springframework.context.annotation.Configuration;\nimport org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;\nimport org.springframework.security.config.annotation.web.builders.HttpSecurity;\nimport org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;\nimport org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;\nimport org.springframework.security.config.http.SessionCreationPolicy;\nimport org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;\nimport org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;\nimport org.springframework.security.web.SecurityFilterChain;\n\n@Configuration\n@EnableWebSecurity\n@EnableMethodSecurity(jsr250Enabled = true, securedEnabled = true) // Optional: for method-level security\npublic class SecurityConfig {\n\n    @Bean\n    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {\n        http\n                .csrf(AbstractHttpConfigurer::disable)\n                .authorizeHttpRequests(authorizeRequests ->\n                        authorizeRequests\n                                .requestMatchers(\"/api/public/**\").permitAll()\n                                .requestMatchers(\"/api/admin/**\").hasRole(\"APP_ADMIN\") // Only users with ROLE_APP_ADMIN\n                                .requestMatchers(\"/api/user/**\").hasAnyRole(\"APP_USER\", \"APP_ADMIN\") // Users with ROLE_APP_USER or ROLE_APP_ADMIN\n                                .requestMatchers(\"/api/hello\").authenticated() // Any authenticated user\n                                .anyRequest().authenticated()\n                )\n                .oauth2ResourceServer(oauth2 -> oauth2\n                        .jwt(jwt -> jwt\n                                .jwtAuthenticationConverter(jwtAuthenticationConverter()) // (1)\n                        )\n                )\n                .sessionManagement(session -> session\n                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)\n                );\n\n        return http.build();\n    }\n\n    // (2) Bean to configure how JWT claims are converted to GrantedAuthority objects\n    @Bean\n    public JwtAuthenticationConverter jwtAuthenticationConverter() {\n        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();\n        // (3) Tell Spring to look for roles in 'realm_access.roles'\n        grantedAuthoritiesConverter.setAuthoritiesClaimName(\"realm_access.roles\");\n        // (4) Add a prefix to the role names (e.g., \"APP_USER\" becomes \"ROLE_APP_USER\")\n        // This is standard Spring Security practice for hasRole() checks\n        grantedAuthoritiesConverter.setAuthorityPrefix(\"ROLE_\");\n\n        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();\n        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);\n        return jwtAuthenticationConverter;\n    }\n}"
-      }
+      "text": "1. First item\n2. Second item\n3. Third item\n    1. Indented item\n    2. Indented item\n4. Fourth item"
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-29T11:09:39.146Z"
+  "exportDate": "2025-05-30T06:17:16.723Z"
 }
