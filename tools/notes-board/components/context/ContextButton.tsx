@@ -7,6 +7,7 @@ interface ContextButtonProps {
   title?: string;
   backgroundColor?: string;
   textColor?: string;
+  iconStyle?: React.CSSProperties;
 }
 
 const ContextButton: React.FC<ContextButtonProps> = ({
@@ -16,6 +17,7 @@ const ContextButton: React.FC<ContextButtonProps> = ({
   title,
   backgroundColor = 'white',
   textColor = 'black',
+  iconStyle,
 }) => {
   return (
     <button
@@ -37,7 +39,7 @@ const ContextButton: React.FC<ContextButtonProps> = ({
       }}
     >
       {typeof icon === 'string' ? (
-        <img src={icon} alt="" style={{ width: '24px', height: '24px' }} />
+        <img src={icon} alt="" style={{ width: '24px', height: '24px', ...iconStyle }} />
       ) : (
         icon
       )}
