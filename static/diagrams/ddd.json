@@ -53,8 +53,44 @@
           ]
         }
       ]
+    },
+    {
+      "id": "code-1748588301378",
+      "type": "codeBlock",
+      "position": {
+        "x": 467,
+        "y": 268
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": "class Text {\n}"
+      }
+    },
+    {
+      "id": "code-1748588314578",
+      "type": "codeBlock",
+      "position": {
+        "x": 354,
+        "y": 299
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "typescript",
+        "code": "type EE {\n}"
+      }
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-30T06:57:28.415Z"
+  "exportDate": "2025-05-30T06:58:48.547Z"
 }
