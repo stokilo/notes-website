@@ -1,51 +1,60 @@
 {
   "items": [
     {
-      "id": "text-1748585707152",
-      "type": "text",
+      "id": "folderStructure-1748588001025",
+      "type": "folderStructure",
       "position": {
-        "x": 165,
-        "y": 94
+        "x": 202,
+        "y": 189
       },
       "size": {
-        "width": 269,
-        "height": 377
+        "width": 483,
+        "height": 323
       },
-      "props": {
-        "hasBorder": true
-      },
-      "text": "1. First item\n2. Second item\n3. Third item\n    1. Indented item\n    2. Indented item\n4. Fourth item"
-    },
-    {
-      "id": "boxSet-1748585823822",
-      "type": "boxSet",
-      "position": {
-        "x": 577,
-        "y": 197
-      },
-      "size": {
-        "width": 338,
-        "height": 373
-      },
-      "props": {}
-    },
-    {
-      "id": "text-1748585826347",
-      "type": "text",
-      "position": {
-        "x": 620,
-        "y": 219
-      },
-      "size": {
-        "width": 240,
-        "height": 217
-      },
-      "props": {
-        "hasBorder": true
-      },
-      "text": "1. First item\n2. Second item\n3. Third item\n    1. Indented item\n    2. Indented item\n4. Fourth item"
+      "props": {},
+      "folderData": [
+        {
+          "id": "root",
+          "name": "Project",
+          "type": "folder",
+          "isExpanded": true,
+          "children": [
+            {
+              "id": "src",
+              "name": "src",
+              "type": "folder",
+              "isExpanded": true,
+              "children": [
+                {
+                  "id": "index.ts",
+                  "name": "SecuirtyWebService.java",
+                  "type": "file"
+                },
+                {
+                  "id": "app.ts",
+                  "name": "app.ts",
+                  "type": "file"
+                }
+              ]
+            },
+            {
+              "id": "public",
+              "name": "public",
+              "type": "folder",
+              "isExpanded": true,
+              "children": [
+                {
+                  "id": "index.html",
+                  "name": "index.html",
+                  "type": "file"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-30T06:17:16.723Z"
+  "exportDate": "2025-05-30T06:57:28.415Z"
 }
