@@ -41,23 +41,25 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         icon="/box.svg"
         text=""
         title="Add Building"
+        iconStyle={{ width: '18px', height: '18px' }}
       />
       <ContextButton
         onClick={onAddCircle}
         icon="/circle.svg"
         text=""
         title="Add Street"
+        iconStyle={{ width: '18px', height: '18px' }}
       />
       <div style={{ width: '100%', height: '1px', backgroundColor: '#ccc', margin: '4px 0' }} />
       <ContextButton
         onClick={onExport}
-        icon={<MdFileDownload size={24} />}
+        icon={<MdFileDownload size={18} />}
         text=""
         title="Export Scene"
       />
       <ContextButton
         onClick={onImport}
-        icon={<MdFileUpload size={24} />}
+        icon={<MdFileUpload size={18} />}
         text=""
         title="Import Scene"
       />
@@ -69,6 +71,7 @@ const ContextPanel: React.FC<ContextPanelProps> = ({
         title="Clear Scene"
         backgroundColor="#ff4444"
         textColor="white"
+        iconStyle={{ width: '18px', height: '18px' }}
       />
     </div>
   );
