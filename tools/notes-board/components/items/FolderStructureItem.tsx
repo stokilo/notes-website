@@ -118,6 +118,54 @@ const FolderStructureItem: React.FC<FolderStructureItemProps> = ({
     }
   };
 
+  const handleAddItem = (parentId: string, type: 'file' | 'folder') => {
+    const newId = `${type}-${Date.now()}`;
+    const newName = type === 'folder' ? 'New Folder' : 'New File';
+
+    const updateNode = (nodes: FileNode[]): FileNode[] => {
+      return nodes.map(node => {
+        if (node.id === parentId) {
+          return {
+            ...node,
+            children: [
+              ...(node.children || []),
+              {
+                id: newId,
+                name: newName,
+                type,
+                ...(type === 'folder' ? { children: [], isExpanded: true } : {})
+              }
+            ]
+          };
+        }
+        if (node.children) {
+          return { ...node, children: updateNode(node.children) };
+        }
+        return node;
+      });
+    };
+
+    onDataChange?.(updateNode(data));
+    setEditingNode(newId);
+    setEditValue(newName);
+  };
+
+  const handleRemoveItem = (nodeId: string) => {
+    const updateNode = (nodes: FileNode[]): FileNode[] => {
+      return nodes.filter(node => {
+        if (node.id === nodeId) {
+          return false;
+        }
+        if (node.children) {
+          node.children = updateNode(node.children);
+        }
+        return true;
+      });
+    };
+
+    onDataChange?.(updateNode(data));
+  };
+
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
     switch (extension) {
@@ -162,10 +210,7 @@ const FolderStructureItem: React.FC<FolderStructureItemProps> = ({
             padding: '4px 8px',
             cursor: isViewMode ? 'default' : 'pointer',
             borderRadius: '4px',
-            transition: 'background-color 0.2s ease',
-            ':hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.05)'
-            }
+            transition: 'background-color 0.2s ease'
           }}
         >
           {isFolder && (
@@ -217,11 +262,83 @@ const FolderStructureItem: React.FC<FolderStructureItemProps> = ({
               style={{ 
                 fontSize: '14px',
                 color: isFolder ? '#2196F3' : '#333',
-                fontWeight: isFolder ? 500 : 400
+                fontWeight: isFolder ? 500 : 400,
+                flex: 1
               }}
             >
               {node.name}
             </span>
+          )}
+
+          {!isViewMode && (
+            <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
+              {isFolder && (
+                <>
+                  <button
+                    onClick={() => handleAddItem(node.id, 'folder')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      color: '#2196F3',
+                      fontSize: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0.7,
+                      transition: 'opacity 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => handleRemoveItem(node.id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      color: '#f44336',
+                      fontSize: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0.7,
+                      transition: 'opacity 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                  >
+                    -
+                  </button>
+                </>
+              )}
+              {!isFolder && (
+                <button
+                  onClick={() => handleRemoveItem(node.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    color: '#f44336',
+                    fontSize: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 0.7,
+                    transition: 'opacity 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                >
+                  -
+                </button>
+              )}
+            </div>
           )}
         </div>
         {isFolder && isExpanded && node.children && (
