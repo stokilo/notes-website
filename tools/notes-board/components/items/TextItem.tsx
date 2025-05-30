@@ -47,6 +47,17 @@ const TextItem: React.FC<TextItemProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle CMD+A or CTRL+A
+    if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (textareaRef.current) {
+        textareaRef.current.select();
+      }
+      return;
+    }
+
+    // Handle Shift+Enter to finish editing
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
       setIsEditing(false);
