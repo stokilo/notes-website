@@ -1677,6 +1677,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               ];
             }
 
+            // For text items, only show base items
+            if (item.type === 'text') {
+              return baseItems;
+            }
+
             return [
               {
                 label: 'Add Label',
