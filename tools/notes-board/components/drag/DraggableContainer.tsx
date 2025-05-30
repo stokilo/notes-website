@@ -1406,31 +1406,11 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       props: {},
       folderData: [
         {
-          id: 'root',
-          name: 'Project',
+          id: 'src',
+          name: 'src',
           type: 'folder',
           isExpanded: true,
-          children: [
-            {
-              id: 'src',
-              name: 'src',
-              type: 'folder',
-              isExpanded: true,
-              children: [
-                { id: 'index.ts', name: 'index.ts', type: 'file' },
-                { id: 'app.ts', name: 'app.ts', type: 'file' }
-              ]
-            },
-            {
-              id: 'public',
-              name: 'public',
-              type: 'folder',
-              isExpanded: true,
-              children: [
-                { id: 'index.html', name: 'index.html', type: 'file' }
-              ]
-            }
-          ]
+          children: []
         }
       ]
     };

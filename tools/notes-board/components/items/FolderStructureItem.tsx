@@ -34,31 +34,11 @@ const FolderStructureItem: React.FC<FolderStructureItemProps> = ({
   height = 400,
   data = [
     {
-      id: 'root',
-      name: 'Project',
+      id: 'src',
+      name: 'src',
       type: 'folder',
       isExpanded: true,
-      children: [
-        {
-          id: 'src',
-          name: 'src',
-          type: 'folder',
-          isExpanded: true,
-          children: [
-            { id: 'index.ts', name: 'index.ts', type: 'file' },
-            { id: 'app.ts', name: 'app.ts', type: 'file' }
-          ]
-        },
-        {
-          id: 'public',
-          name: 'public',
-          type: 'folder',
-          isExpanded: true,
-          children: [
-            { id: 'index.html', name: 'index.html', type: 'file' }
-          ]
-        }
-      ]
+      children: []
     }
   ],
   onDataChange,
@@ -120,7 +100,7 @@ const FolderStructureItem: React.FC<FolderStructureItemProps> = ({
 
   const handleAddItem = (parentId: string, type: 'file' | 'folder') => {
     const newId = `${type}-${Date.now()}`;
-    const newName = type === 'folder' ? 'New Folder' : 'New File';
+    const newName = type === 'folder' ? 'New Folder' : 'File.java';
 
     const updateNode = (nodes: FileNode[]): FileNode[] => {
       return nodes.map(node => {
