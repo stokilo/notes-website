@@ -60,13 +60,21 @@ const TextItem: React.FC<TextItemProps> = ({
     // Handle Shift+Enter to finish editing
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
+      e.stopPropagation();
       setIsEditing(false);
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isEditing) {
+      e.stopPropagation();
     }
   };
 
   return (
     <div
       onClick={handleClick}
+      onMouseDown={handleMouseDown}
       style={{
         width: '100%',
         height: '100%',
@@ -85,6 +93,7 @@ const TextItem: React.FC<TextItemProps> = ({
           onChange={handleChange}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onMouseDown={handleMouseDown}
           style={{
             width: '100%',
             height: '100%',
