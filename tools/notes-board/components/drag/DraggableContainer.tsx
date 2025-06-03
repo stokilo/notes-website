@@ -1378,6 +1378,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             height={item.size.height}
             animated={item.props.animated !== false}
             label={item.label}
+            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
         )}
       </DraggableItem>
