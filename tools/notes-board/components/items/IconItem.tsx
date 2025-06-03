@@ -78,79 +78,69 @@ const IconItem: React.FC<IconItemProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: '-20px',
+            top: '-15px',
             left: '50%',
             transform: 'translateX(-50%)',
-            zIndex: 1001,
-            pointerEvents: 'none',
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
+            color: '#ffffff',
+            padding: `${Math.max(2, Math.min(6, Math.floor(labelBase * 0.1)))}px ${Math.max(4, Math.min(8, Math.floor(labelBase * 0.1)))}px`,
+            fontSize: `${Math.max(10, Math.min(14, Math.floor(labelBase * 0.15)))}px`,
+            whiteSpace: 'nowrap',
+            maxWidth: `${Math.min(200, width * 2)}px`,
+            textAlign: 'center',
+            zIndex: 1000,
+            cursor: 'pointer',
+            fontWeight: 600,
+            background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+            borderRadius: '6px',
+            boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(99, 102, 241, 0.1)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(99, 102, 241, 0.2)',
+            transition: 'all 0.3s ease',
+            margin: '0 auto',
+            display: 'inline-block',
+            pointerEvents: 'auto',
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsEditing(true);
+            setEditValue(label || '');
+            setTimeout(() => {
+              if (inputRef.current) inputRef.current.select();
+            }, 0);
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
           }}
         >
-          <div
-            style={{
-              color: '#ffffff',
-              padding: `${Math.max(2, Math.floor(labelBase * 0.10))}px ${Math.max(4, Math.floor(width * 0.10))}px`,
-              fontSize: `${Math.max(8, Math.floor(labelBase * 0.10))}px`,
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              maxWidth: `${width * 3}px`,
-              textAlign: 'center',
-              background: 'linear-gradient(135deg, #3498db 0%, #2176bd 100%)',
-              borderRadius: '6px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer',
-              margin: '0 auto',
-              display: 'inline-block',
-              pointerEvents: 'auto',
-            }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsEditing(true);
-              setEditValue(label || '');
-              setTimeout(() => {
-                if (inputRef.current) inputRef.current.select();
-              }, 0);
-            }}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
-            {isEditing ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleLabelSubmit}
-                onKeyDown={handleKeyDown}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#333',
-                  fontSize: '12px',
-                  width: '100%',
-                  minWidth: '100%',
-                  outline: 'none',
-                  textAlign: 'center',
-                  userSelect: 'text',
-                  padding: 0,
-                  margin: 0,
-                  boxSizing: 'border-box',
-                }}
-                autoFocus
-              />
-            ) : (
-              label
-            )}
-          </div>
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleLabelSubmit}
+              onKeyDown={handleKeyDown}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#333',
+                fontSize: '12px',
+                width: '100%',
+                minWidth: '100%',
+                outline: 'none',
+                textAlign: 'center',
+                userSelect: 'text',
+                padding: 0,
+                margin: 0,
+                boxSizing: 'border-box',
+              }}
+              autoFocus
+            />
+          ) : (
+            label
+          )}
         </div>
       )}
       {iconUrl && (
