@@ -61,17 +61,6 @@ interface SelectionArea {
   isSelecting: boolean;
 }
 
-const popularDbTypes = [
-  'MySQL',
-  'PostgreSQL',
-  'MongoDB',
-  'MariaDB',
-  'Oracle',
-  'SQLite',
-  'Redis',
-  'MSSQL',
-];
-
 const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' }) => {
   const [items, setItems] = useState<DraggableItem[]>([]);
   const [history, setHistory] = useState<DraggableItem[][]>([]);
@@ -1388,7 +1377,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             width={item.size.width}
             height={item.size.height}
             animated={item.props.animated !== false}
-            dbType={item.props.dbType || 'MySQL'}
+            label={item.label}
           />
         )}
       </DraggableItem>
@@ -1474,16 +1463,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       props: { animated: true },
     };
     setItemsWithHistory(prev => [...prev, newItem]);
-  };
-
-  const handleDatabaseTypeChange = (itemId: string, dbType: string) => {
-    setItemsWithHistory(prevItems =>
-      prevItems.map(item =>
-        item.id === itemId && item.type === 'database'
-          ? { ...item, props: { ...item.props, dbType } }
-          : item
-      )
-    );
   };
 
   return (
@@ -1771,7 +1750,6 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                         itemId: contextMenu.itemId,
                         position: { x: contextMenu.x, y: contextMenu.y },
                       });
-                      setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
                     },
                   },
                   ...baseItems,
@@ -1843,11 +1821,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             if (item.type === 'database') {
               return [
                 {
-                  label: 'Database Type',
-                  submenu: popularDbTypes.map(type => ({
-                    label: type,
-                    onClick: () => handleDatabaseTypeChange(contextMenu.itemId, type),
-                  })),
+                  label: 'Add Label',
+                  onClick: () => handleLabelChange(contextMenu.itemId, ''),
                 },
                 ...baseItems,
               ];
@@ -1856,9 +1831,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             return [
               {
                 label: 'Add Label',
-                onClick: () => {
-                  handleLabelChange(contextMenu.itemId, '');
-                },
+                onClick: () => handleLabelChange(contextMenu.itemId, ''),
               },
               ...baseItems,
             ];
