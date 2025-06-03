@@ -1,80 +1,46 @@
 {
   "items": [
     {
-      "id": "boxSet-1748588343570",
-      "type": "boxSet",
+      "id": "arrow-1748959351815",
+      "type": "arrow",
       "position": {
-        "x": 344,
-        "y": 194
+        "x": 590,
+        "y": 313
       },
       "size": {
-        "width": 662,
-        "height": 334
+        "width": 229,
+        "height": 42
       },
-      "props": {},
-      "comment": "",
-      "commentLabel": "DDD"
+      "props": {
+        "segments": 3,
+        "rotation": 0,
+        "isAnimating": false,
+        "curve": -0.3
+      }
     },
     {
-      "id": "folderStructure-1748588365437",
-      "type": "folderStructure",
+      "id": "icon-1748959365880",
+      "type": "icon",
       "position": {
-        "x": 385,
-        "y": 294
+        "x": 530,
+        "y": 305
       },
       "size": {
-        "width": 300,
-        "height": 400
+        "width": 64,
+        "height": 64
       },
-      "props": {},
-      "folderData": [
-        {
-          "id": "root",
-          "name": "Project",
-          "type": "folder",
-          "isExpanded": true,
-          "children": [
-            {
-              "id": "src",
-              "name": "src",
-              "type": "folder",
-              "isExpanded": true,
-              "children": [
-                {
-                  "id": "index.ts",
-                  "name": "Start.java",
-                  "type": "file"
-                },
-                {
-                  "id": "app.ts",
-                  "name": "app.ts",
-                  "type": "file"
-                }
-              ]
-            },
-            {
-              "id": "public",
-              "name": "public",
-              "type": "folder",
-              "isExpanded": true,
-              "children": [
-                {
-                  "id": "index.html",
-                  "name": "index.html",
-                  "type": "file"
-                }
-              ]
-            }
-          ]
-        }
-      ]
+      "props": {
+        "animated": true
+      },
+      "iconName": "devicon:mariadb",
+      "label": "RDS_X01"
     },
     {
-      "id": "code-1748588372621",
+      "id": "code-1748959388469",
       "type": "codeBlock",
       "position": {
-        "x": 553,
-        "y": 374
+        "x": 583,
+        "y": 340
       },
       "size": {
         "width": 48,
@@ -84,26 +50,44 @@
         "width": 48,
         "height": 24,
         "language": "java",
-        "code": "class Start {\n}"
+        "code": ""
       }
     },
     {
-      "id": "text-1748588382449",
-      "type": "text",
+      "id": "code-1748959392622",
+      "type": "codeBlock",
       "position": {
-        "x": 661,
-        "y": 331
+        "x": 613,
+        "y": 340
       },
       "size": {
-        "width": 203,
-        "height": 150
+        "width": 48,
+        "height": 24
       },
       "props": {
-        "hasBorder": true
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": ""
+      }
+    },
+    {
+      "id": "text-1748959400486",
+      "type": "text",
+      "position": {
+        "x": 819,
+        "y": 313
       },
-      "text": "This is **new**\n\nAnd this is **old**"
+      "size": {
+        "width": 180,
+        "height": 214
+      },
+      "props": {
+        "hasBorder": false
+      },
+      "text": "Ticketing:\n  - small\n  - big"
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-05-30T07:00:01.840Z"
+  "exportDate": "2025-06-03T14:03:43.000Z"
 }

@@ -13,7 +13,7 @@ interface IconItemProps {
 const IconItem: React.FC<IconItemProps> = ({
   width = 48,
   height = 48,
-  animated = true,
+  animated = false,
   label,
   onLabelChange,
   iconName = 'mdi:database',
@@ -53,19 +53,6 @@ const IconItem: React.FC<IconItemProps> = ({
     }
   }, [label]);
 
-  React.useEffect(() => {
-    if (!animated) return;
-    controls.start({
-      y: [0, -3, 2, 1],
-      scale: [1, 1.06, 1.04, 1],
-      transition: {
-        duration: 2.5,
-        repeat: Infinity,
-        ease: 'easeInOut',
-      },
-    });
-  }, [animated, controls]);
-
   const handleLabelSubmit = () => {
     setIsEditing(false);
     if (onLabelChange && editValue !== label) {
@@ -95,7 +82,7 @@ const IconItem: React.FC<IconItemProps> = ({
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1001,
-            pointerEvents: 'auto',
+            pointerEvents: 'none',
             width: '100%',
             display: 'flex',
             justifyContent: 'center',
@@ -120,6 +107,7 @@ const IconItem: React.FC<IconItemProps> = ({
               cursor: 'pointer',
               margin: '0 auto',
               display: 'inline-block',
+              pointerEvents: 'auto',
             }}
             onClick={(e) => {
               e.preventDefault();
@@ -130,7 +118,10 @@ const IconItem: React.FC<IconItemProps> = ({
                 if (inputRef.current) inputRef.current.select();
               }, 0);
             }}
-            onMouseDown={(e) => e.preventDefault()}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             {isEditing ? (
               <input
@@ -170,6 +161,11 @@ const IconItem: React.FC<IconItemProps> = ({
             width: Math.min(width, height),
             height: Math.min(width, height),
             objectFit: 'contain',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
           }}
         />
       )}

@@ -34,19 +34,6 @@ const DatabaseItem: React.FC<DatabaseItemProps> = ({
     }
   }, [label]);
 
-  React.useEffect(() => {
-    if (!animated) return;
-    controls.start({
-      y: [0, -3, 2, 1],
-      scale: [1, 1.06, 1.04, 1],
-      transition: {
-        duration: 2.5,
-        repeat: Infinity,
-        ease: 'easeInOut',
-      },
-    });
-  }, [animated, controls]);
-
   const handleLabelSubmit = () => {
     setIsEditing(false);
     if (onLabelChange && editValue !== label) {

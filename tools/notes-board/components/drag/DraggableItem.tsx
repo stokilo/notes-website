@@ -256,8 +256,8 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
       transition={disableAnimations ? {} : {
         rotate: { duration: 0.5, ease: "easeInOut" },
         scale: { duration: 0.2, ease: "easeInOut" },
-        x: { duration: 0, ease: "linear" },
-        y: { duration: 0, ease: "linear" },
+        x: { type: "spring", stiffness: 300, damping: 30 },
+        y: { type: "spring", stiffness: 300, damping: 30 },
         width: { duration: 0, ease: "linear" },
         height: { duration: 0, ease: "linear" },
       }}
