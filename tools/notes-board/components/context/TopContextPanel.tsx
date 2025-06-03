@@ -117,7 +117,7 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
           e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
         }}
       >
-        <ArrowItem width={48} height={16} segments={3} />
+        <ArrowItem width={48} height={16} animated={false} />
       </div>
       <div
         onClick={onAddCirclesPath}
