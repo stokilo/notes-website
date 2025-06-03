@@ -39,37 +39,16 @@ const IconSearchDialog: React.FC<IconSearchDialogProps> = ({ onClose, onSelect }
 
       setIsLoading(true);
       try {
-        // Search through each icon set
-        const searchPromises = ICON_SETS.map(async (prefix) => {
-          try {
-            const response = await fetch(
-              `https://api.iconify.design/api/icons?prefix=${prefix}&query=${encodeURIComponent(searchQuery)}&limit=20`
-            );
-            if (response.ok) {
-              const data = await response.json();
-              return (data.icons || []).map((name: string) => ({ prefix, name }));
-            }
-          } catch (error) {
-            console.error(`Error searching ${prefix} icons:`, error);
-          }
-          return [];
-        });
-
-        const results = await Promise.all(searchPromises);
-        const allIcons = results.flat().filter((icon): icon is IconInfo => 
-          Boolean(icon.prefix && icon.name)
+        const response = await fetch(
+          `https://api.iconify.design/search?query=${encodeURIComponent(searchQuery)}&limit=50`
         );
-        
-        // Sort results by relevance (exact matches first)
-        const sortedResults = allIcons.sort((a, b) => {
-          const aExactMatch = a.name.toLowerCase() === searchQuery.toLowerCase();
-          const bExactMatch = b.name.toLowerCase() === searchQuery.toLowerCase();
-          if (aExactMatch && !bExactMatch) return -1;
-          if (!aExactMatch && bExactMatch) return 1;
-          return 0;
-        });
-
-        setSearchResults(sortedResults);
+        if (response.ok) {
+          const data = await response.json();
+          setSearchResults(data.icons.map((icon: string) => {
+            const [prefix, name] = icon.split(':');
+            return { prefix, name };
+          }));
+        }
       } catch (error) {
         console.error('Error searching icons:', error);
         setSearchResults([]);
