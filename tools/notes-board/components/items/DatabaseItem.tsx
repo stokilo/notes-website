@@ -37,8 +37,8 @@ const DatabaseItem: React.FC<DatabaseItemProps> = ({
   React.useEffect(() => {
     if (!animated) return;
     controls.start({
-      y: [0, -6, 0, 6, 0],
-      scale: [1, 1.08, 1, 0.95, 1],
+      y: [0, -3, 2, 1],
+      scale: [1, 1.06, 1.04, 1],
       transition: {
         duration: 2.5,
         repeat: Infinity,
