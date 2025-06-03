@@ -77,6 +77,10 @@ const DatabaseItem: React.FC<DatabaseItemProps> = ({
             transform: 'translateX(-50%)',
             zIndex: 1001,
             pointerEvents: 'auto',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
           }}
         >
           <div
@@ -95,6 +99,8 @@ const DatabaseItem: React.FC<DatabaseItemProps> = ({
               border: '1px solid rgba(255, 255, 255, 0.1)',
               transition: 'all 0.3s ease',
               cursor: 'pointer',
+              margin: '0 auto',
+              display: 'inline-block',
             }}
             onClick={(e) => {
               e.preventDefault();
