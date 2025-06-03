@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface MenuItem {
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
   icon?: React.ReactNode;
+  submenu?: MenuItem[];
 }
 
 interface ContextMenuProps {
@@ -21,6 +22,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   className = '',
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [activeSubmenu, setActiveSubmenu] = useState<number | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -32,6 +34,109 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
+
+  const renderMenuItem = (item: MenuItem, index: number) => {
+    const hasSubmenu = item.submenu && item.submenu.length > 0;
+    const isSubmenuActive = activeSubmenu === index;
+
+    return (
+      <div key={index} style={{ position: 'relative' }}>
+        <button
+          onClick={() => {
+            if (hasSubmenu) {
+              setActiveSubmenu(isSubmenuActive ? null : index);
+            } else if (item.onClick) {
+              item.onClick();
+              onClose();
+            }
+          }}
+          disabled={item.disabled}
+          style={{
+            width: '100%',
+            padding: '8px 16px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            textAlign: 'left',
+            cursor: item.disabled ? 'not-allowed' : 'pointer',
+            color: item.disabled ? '#999' : '#333',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '14px',
+          }}
+          onMouseEnter={(e) => {
+            if (!item.disabled) {
+              e.currentTarget.style.backgroundColor = '#f5f5f5';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isSubmenuActive) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {item.icon}
+            <span>{item.label}</span>
+          </div>
+          {hasSubmenu && (
+            <span style={{ marginLeft: '8px' }}>▶</span>
+          )}
+        </button>
+        {hasSubmenu && isSubmenuActive && (
+          <div
+            style={{
+              position: 'absolute',
+              left: '100%',
+              top: 0,
+              backgroundColor: 'white',
+              borderRadius: '4px',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+              minWidth: '200px',
+              zIndex: 1001,
+            }}
+            onMouseLeave={() => setActiveSubmenu(null)}
+          >
+            {item.submenu!.map((subItem, subIndex) => (
+              <button
+                key={subIndex}
+                onClick={() => {
+                  if (subItem.onClick) {
+                    subItem.onClick();
+                    onClose();
+                  }
+                }}
+                disabled={subItem.disabled}
+                style={{
+                  width: '100%',
+                  padding: '8px 16px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  textAlign: 'left',
+                  cursor: subItem.disabled ? 'not-allowed' : 'pointer',
+                  color: subItem.disabled ? '#999' : '#333',
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontSize: '14px',
+                }}
+                onMouseEnter={(e) => {
+                  if (!subItem.disabled) {
+                    e.currentTarget.style.backgroundColor = '#f5f5f5';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                {subItem.icon}
+                <span>{subItem.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -48,39 +153,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         minWidth: '200px',
       }}
     >
-      {items.map((item, index) => (
-        <button
-          key={index}
-          onClick={() => {
-            item.onClick();
-            onClose();
-          }}
-          disabled={item.disabled}
-          style={{
-            width: '100%',
-            padding: '8px 16px',
-            border: 'none',
-            backgroundColor: 'transparent',
-            textAlign: 'left',
-            cursor: item.disabled ? 'not-allowed' : 'pointer',
-            color: item.disabled ? '#999' : '#333',
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: '14px',
-          }}
-          onMouseEnter={(e) => {
-            if (!item.disabled) {
-              e.currentTarget.style.backgroundColor = '#f5f5f5';
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </button>
-      ))}
+      {items.map((item, index) => renderMenuItem(item, index))}
     </div>
   );
 };

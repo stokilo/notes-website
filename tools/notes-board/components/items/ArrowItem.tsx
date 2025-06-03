@@ -6,6 +6,7 @@ interface ArrowItemProps {
   height?: number;
   rotation?: number;
   animated?: boolean;
+  curve?: number; // Add curve property (-1 to 1, where 0 is straight)
 }
 
 const ArrowItem: React.FC<ArrowItemProps> = ({
@@ -13,6 +14,7 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
   height = 40,
   rotation = 0,
   animated = true,
+  curve = 0, // Default to straight arrow
 }) => {
   // Arrow shaft coordinates
   const shaftStart = { x: height * 0.3, y: height / 2 };
@@ -24,6 +26,12 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
   const shaftEnd = { x: width - height * 0.3 - gap - arrowHeadLength, y: height / 2 };
   const arrowTip = { x: width - height * 0.3, y: height / 2 };
   const dashArray = 10;
+
+  // Calculate control point for the curve
+  const controlPoint = {
+    x: (shaftStart.x + shaftEnd.x) / 2,
+    y: shaftStart.y + (curve * height * 0.5) // Adjust curve height based on the curve parameter
+  };
 
   // Animate dash offset (optionally)
   const [dashOffset, setDashOffset] = React.useState(0);
@@ -59,12 +67,10 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
       }}
     >
       <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
-        {/* Arrow shaft */}
-        <motion.line
-          x1={shaftStart.x}
-          y1={shaftStart.y}
-          x2={shaftEnd.x}
-          y2={shaftEnd.y}
+        {/* Arrow shaft - using quadratic Bezier curve */}
+        <motion.path
+          d={`M ${shaftStart.x} ${shaftStart.y} Q ${controlPoint.x} ${controlPoint.y} ${shaftEnd.x} ${shaftEnd.y}`}
+          fill="none"
           stroke="#000"
           strokeWidth={4}
           strokeDasharray={dashArray}

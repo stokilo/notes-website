@@ -870,7 +870,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       props: { 
         segments: 3,
         rotation: 0,
-        isAnimating: false
+        isAnimating: false,
+        curve: 0
       },
     };
     setItemsWithHistory(prev => [...prev, newItem]);
@@ -891,6 +892,22 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       );
       return updatedItems;
     });
+  };
+
+  const handleArrowCurve = (itemId: string, curve: number) => {
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId && item.type === 'arrow'
+          ? {
+              ...item,
+              props: {
+                ...item.props,
+                curve
+              }
+            }
+          : item
+      )
+    );
   };
 
   const addCirclesPath = (position: { x: number; y: number }) => {
@@ -1266,6 +1283,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             segments={item.props.segments}
             rotation={item.props.rotation}
             isAnimating={item.props.isAnimating}
+            curve={item.props.curve}
           />
         )}
         {item.type === 'circlesPath' && (
@@ -1645,6 +1663,31 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 {
                   label: item.props.isAnimating ? 'Stop Animation' : 'Start Animation',
                   onClick: () => handleToggleArrowAnimation(contextMenu.itemId),
+                },
+                {
+                  label: 'Curve',
+                  submenu: [
+                    {
+                      label: 'Straight',
+                      onClick: () => handleArrowCurve(contextMenu.itemId, 0),
+                    },
+                    {
+                      label: 'Slight Up',
+                      onClick: () => handleArrowCurve(contextMenu.itemId, 0.3),
+                    },
+                    {
+                      label: 'Slight Down',
+                      onClick: () => handleArrowCurve(contextMenu.itemId, -0.3),
+                    },
+                    {
+                      label: 'Strong Up',
+                      onClick: () => handleArrowCurve(contextMenu.itemId, 0.7),
+                    },
+                    {
+                      label: 'Strong Down',
+                      onClick: () => handleArrowCurve(contextMenu.itemId, -0.7),
+                    },
+                  ],
                 },
                 {
                   label: 'Rotate 90° Clockwise',
