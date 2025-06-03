@@ -16,6 +16,7 @@ import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 import TextItem from '../items/TextItem';
 import FolderStructureItem from '../items/FolderStructureItem';
 import DatabaseItem from '../items/DatabaseItem';
+import IconItem from '../items/IconItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -30,7 +31,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'circlesPath' | 'twoPointsPath' | 'codeBlock' | 'text' | 'folderStructure' | 'database';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'circlesPath' | 'twoPointsPath' | 'codeBlock' | 'text' | 'folderStructure' | 'database' | 'icon';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -53,6 +54,7 @@ interface DraggableItem {
     children?: Array<any>;
     isExpanded?: boolean;
   }>;
+  iconName?: string;
 }
 
 interface SelectionArea {
@@ -1381,6 +1383,16 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
           />
         )}
+        {item.type === 'icon' && (
+          <IconItem
+            width={item.size.width}
+            height={item.size.height}
+            animated={item.props.animated !== false}
+            label={item.label}
+            onLabelChange={(newLabel) => handleLabelChange(item.id, newLabel)}
+            iconName={item.iconName}
+          />
+        )}
       </DraggableItem>
     );
   };
@@ -1462,6 +1474,18 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
       position,
       size: { width: 64, height: 64 },
       props: { animated: true },
+    };
+    setItemsWithHistory(prev => [...prev, newItem]);
+  };
+
+  const addIcon = (position: { x: number; y: number }, iconName: string) => {
+    const newItem: DraggableItem = {
+      id: `icon-${Date.now()}`,
+      type: 'icon',
+      position,
+      size: { width: 64, height: 64 },
+      props: { animated: true },
+      iconName,
     };
     setItemsWithHistory(prev => [...prev, newItem]);
   };
@@ -1587,6 +1611,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               onAddText={addText}
               onAddFolderStructure={addFolderStructure}
               onAddDatabase={addDatabase}
+              onAddIcon={addIcon}
             />
           </>
         )}
