@@ -102,4 +102,14 @@ export const JavaIcon: React.FC<IconProps> = ({ size = 24 }) => (
     <path d="M9 5H15V7H9V5Z" fill="white"/>
     <path d="M9 19H15V21H9V19Z" fill="white"/>
   </svg>
+);
+
+export const DatabaseIcon: React.FC<IconProps> = ({ size = 24, color = '#4a90e2' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="12" cy="6" rx="8" ry="3" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="2"/>
+    <ellipse cx="12" cy="18" rx="8" ry="3" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="2"/>
+    <rect x="4" y="6" width="16" height="12" rx="8" fill={color} fillOpacity="0.10" stroke={color} strokeWidth="2"/>
+    <ellipse cx="12" cy="18" rx="8" ry="3" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="2"/>
+    <ellipse cx="12" cy="6" rx="8" ry="3" fill={color} fillOpacity="0.25" stroke={color} strokeWidth="2"/>
+  </svg>
 ); 

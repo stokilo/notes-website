@@ -15,6 +15,7 @@ import TwoPointsPathItem from '../items/TwoPointsPathItem';
 import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
 import TextItem from '../items/TextItem';
 import FolderStructureItem from '../items/FolderStructureItem';
+import DatabaseItem from '../items/DatabaseItem';
 
 const STORAGE_KEY = 'draggable-items';
 const HISTORY_STORAGE_KEY = 'draggable-items-history';
@@ -29,7 +30,7 @@ interface DraggableContainerProps {
 
 interface DraggableItem {
   id: string;
-  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'circlesPath' | 'twoPointsPath' | 'codeBlock' | 'text' | 'folderStructure';
+  type: 'box' | 'circle' | 'boxSet' | 'boxSetContainer' | 'separator' | 'arrow' | 'circlesPath' | 'twoPointsPath' | 'codeBlock' | 'text' | 'folderStructure' | 'database';
   position: { x: number; y: number };
   size: { width: number; height: number };
   props?: any;
@@ -1371,6 +1372,13 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             isViewMode={isViewMode}
           />
         )}
+        {item.type === 'database' && (
+          <DatabaseItem
+            width={item.size.width}
+            height={item.size.height}
+            animated={item.props.animated !== false}
+          />
+        )}
       </DraggableItem>
     );
   };
@@ -1443,6 +1451,17 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           : item
       )
     );
+  };
+
+  const addDatabase = (position: { x: number; y: number }) => {
+    const newItem: DraggableItem = {
+      id: `database-${Date.now()}`,
+      type: 'database',
+      position,
+      size: { width: 64, height: 64 },
+      props: { animated: true },
+    };
+    setItemsWithHistory(prev => [...prev, newItem]);
   };
 
   return (
@@ -1565,6 +1584,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               onAddGrid={() => {}}
               onAddText={addText}
               onAddFolderStructure={addFolderStructure}
+              onAddDatabase={addDatabase}
             />
           </>
         )}

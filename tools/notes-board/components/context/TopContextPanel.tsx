@@ -5,7 +5,7 @@ import ArrowItem from '../items/ArrowItem';
 import CirclesPathItem from '../items/CirclesPathItem';
 import TwoPointsPathItem from '../items/TwoPointsPathItem';
 import ShikiCodeBlockItem from '../items/ShikiCodeBlockItem';
-import { FolderIcon } from '../icons/FileIcons';
+import { FolderIcon, DatabaseIcon } from '../icons/FileIcons';
 
 interface TopContextPanelProps {
   onAddSingleBoxSet: () => void;
@@ -17,6 +17,7 @@ interface TopContextPanelProps {
   onAddGrid: () => void;
   onAddText: (position: { x: number; y: number }) => void;
   onAddFolderStructure: (position: { x: number; y: number }) => void;
+  onAddDatabase: (position: { x: number; y: number }) => void;
 }
 
 const TopContextPanel: React.FC<TopContextPanelProps> = ({
@@ -29,6 +30,7 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
   onAddGrid,
   onAddText,
   onAddFolderStructure,
+  onAddDatabase,
 }) => {
   return (
     <div
@@ -263,6 +265,30 @@ const TopContextPanel: React.FC<TopContextPanelProps> = ({
         <div style={{ width: 48, height: 24, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <FolderIcon size={24} />
         </div>
+      </div>
+      <div
+        onClick={() => onAddDatabase({ x: window.innerWidth / 2 - 32, y: window.innerHeight / 2 - 32 })}
+        style={{
+          cursor: 'pointer',
+          padding: '8px',
+          borderRadius: '8px',
+          backgroundColor: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          transition: 'all 0.2s ease',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+        }}
+      >
+        <DatabaseIcon size={32} color="#4a90e2" />
       </div>
     </div>
   );
