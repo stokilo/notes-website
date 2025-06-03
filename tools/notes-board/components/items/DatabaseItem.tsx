@@ -6,12 +6,14 @@ interface DatabaseItemProps {
   width?: number;
   height?: number;
   animated?: boolean;
+  dbType?: string;
 }
 
 const DatabaseItem: React.FC<DatabaseItemProps> = ({
   width = 48,
   height = 48,
   animated = true,
+  dbType = 'MySQL',
 }) => {
   // Animation controls
   const controls = useAnimation();
@@ -34,7 +36,7 @@ const DatabaseItem: React.FC<DatabaseItemProps> = ({
       animate={animated ? controls : {}}
       style={{ width, height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
-      <DatabaseIcon size={Math.min(width, height)} color="#4a90e2" />
+      <DatabaseIcon size={Math.min(width, height)} dbTypeText={dbType} />
     </motion.div>
   );
 };

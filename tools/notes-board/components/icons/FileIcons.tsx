@@ -104,12 +104,24 @@ export const JavaIcon: React.FC<IconProps> = ({ size = 24 }) => (
   </svg>
 );
 
-export const DatabaseIcon: React.FC<IconProps> = ({ size = 24, color = '#4a90e2' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="12" cy="6" rx="8" ry="3" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="2"/>
-    <ellipse cx="12" cy="18" rx="8" ry="3" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="2"/>
-    <rect x="4" y="6" width="16" height="12" rx="8" fill={color} fillOpacity="0.10" stroke={color} strokeWidth="2"/>
-    <ellipse cx="12" cy="18" rx="8" ry="3" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="2"/>
-    <ellipse cx="12" cy="6" rx="8" ry="3" fill={color} fillOpacity="0.25" stroke={color} strokeWidth="2"/>
+interface DatabaseIconProps extends IconProps {
+  dbTypeText?: string;
+}
+
+export const DatabaseIcon: React.FC<DatabaseIconProps> = ({ size = 24, color = '#3498db', dbTypeText = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Rounded square */}
+    <rect x="6" y="8" width="26" height="26" rx="5" stroke={color} strokeWidth="2.5" fill="none" />
+    {/* Database drum (cylinder) */}
+    <ellipse cx="32" cy="30" rx="8" ry="3.5" stroke={color} strokeWidth="2.5" fill="#fff" />
+    <rect x="24" y="30" width="16" height="10" rx="8" stroke={color} strokeWidth="2.5" fill="#fff" />
+    <ellipse cx="32" cy="40" rx="8" ry="3.5" stroke={color} strokeWidth="2.5" fill="#fff" />
+    {/* 2 horizontal lines for drum layers */}
+    <ellipse cx="32" cy="34" rx="8" ry="3.5" stroke={color} strokeWidth="1.2" fill="none" />
+    <ellipse cx="32" cy="37" rx="8" ry="3.5" stroke={color} strokeWidth="1.2" fill="none" />
+    {/* Text inside the square */}
+    {dbTypeText && (
+      <text x="10" y="24" fontSize="10" fontWeight="bold" fill={color} fontFamily="Arial, Helvetica, sans-serif">{dbTypeText}</text>
+    )}
   </svg>
 ); 

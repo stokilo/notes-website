@@ -46,7 +46,7 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
       const now = Date.now();
       const dt = now - last;
       last = now;
-      setDashOffset((prev) => (prev + dt * 0.03) % (dashArray * 2)); // slower
+      setDashOffset((prev) => (prev + dt * 0.009) % (dashArray * 2)); // slower
       frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
