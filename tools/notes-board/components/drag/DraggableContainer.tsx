@@ -1340,7 +1340,23 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             language={item.props.language}
             code={item.props.code}
             showPreview={codePreviewItemId === item.id}
-            onClosePreview={() => setCodePreviewItemId(null)}
+            onClosePreview={() => {
+              setCodePreviewItemId(null);
+              setItemsWithHistory(prevItems =>
+                prevItems.map(prevItem =>
+                  prevItem.id === item.id
+                    ? {
+                        ...prevItem,
+                        props: {
+                          ...prevItem.props,
+                          showEditor: false
+                        }
+                      }
+                    : prevItem
+                )
+              );
+            }}
+            onShowPreview={() => setCodePreviewItemId(item.id)}
             onCodeChange={(newCode) => {
               setItemsWithHistory(prevItems =>
                 prevItems.map(prevItem =>
@@ -1358,6 +1374,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             }}
             onLanguageChange={(newLanguage) => handleLanguageChange(item.id, newLanguage)}
             isViewMode={isViewMode}
+            showEditor={item.props.showEditor}
           />
         )}
         {item.type === 'text' && (
@@ -1872,6 +1889,26 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                     setCodePreviewItemId(contextMenu.itemId);
                     setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
                   },
+                },
+                {
+                  label: 'Edit Code',
+                  onClick: () => {
+                    setItemsWithHistory(prevItems =>
+                      prevItems.map(prevItem =>
+                        prevItem.id === contextMenu.itemId
+                          ? {
+                              ...prevItem,
+                              props: {
+                                ...prevItem.props,
+                                showEditor: true
+                              }
+                            }
+                          : prevItem
+                      )
+                    );
+                    setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+                  },
+                  disabled: isViewMode
                 },
                 ...baseItems,
               ];

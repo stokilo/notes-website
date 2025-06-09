@@ -80,6 +80,8 @@ interface ShikiCodeBlockItemProps {
   onLanguageChange?: (language: string) => void;
   isPreview?: boolean;
   isViewMode?: boolean;
+  showEditor?: boolean;
+  onShowPreview?: () => void;
 }
 
 const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
@@ -94,15 +96,21 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   onLanguageChange,
   isPreview = false,
   isViewMode = false,
+  showEditor = false,
+  onShowPreview,
 }) => {
   const [highlightedCode, setHighlightedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
   const [editorCode, setEditorCode] = useState(code);
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // Update editor code when code prop changes
+  useEffect(() => {
+    setEditorCode(code);
+  }, [code]);
 
   // Update selected language when prop changes
   useEffect(() => {
@@ -218,7 +226,6 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
 
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         onClosePreview?.();
-        setShowEditor(false);
       }
     };
 
@@ -231,15 +238,16 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   const handleClick = (e: React.MouseEvent) => {
     if (isPreview) return;
     e.stopPropagation();
-    setShowEditor(true);
-    setEditorCode(code || '');
-    setSelectedLanguage(language || 'java');
+    if (isViewMode) {
+      // In view mode, show preview
+      onShowPreview?.();
+    }
   };
 
   const handleSave = () => {
     onCodeChange?.(editorCode);
     onLanguageChange?.(selectedLanguage);
-    setShowEditor(false);
+    onClosePreview?.();
   };
 
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -358,7 +366,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
             onClick={(e) => {
               // Only close if clicking the backdrop itself
               if (e.target === e.currentTarget) {
-                setShowEditor(false);
+                onClosePreview?.();
               }
             }}
           >
@@ -460,7 +468,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                     </button>
                   )}
                   <button
-                    onClick={() => setShowEditor(false)}
+                    onClick={() => onClosePreview?.()}
                     style={{
                       background: '#3d3d3d',
                       border: 'none',
@@ -649,6 +657,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            margin: 'auto',
           }}
         >
           {/* Header */}
@@ -661,6 +670,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               justifyContent: 'space-between',
               alignItems: 'center',
               boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+              flexShrink: 0,
             }}
           >
             <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
@@ -704,6 +714,9 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               overflow: 'auto',
               padding: '16px',
               position: 'relative',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
             }}
           >
             {isLoading ? (
@@ -731,6 +744,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   backgroundColor: '#ffffff',
                   borderRadius: '4px',
                   padding: '16px',
+                  width: '100%',
+                  maxWidth: '100%',
                 }}
               />
             )}
