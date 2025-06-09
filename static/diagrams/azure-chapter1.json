@@ -32,7 +32,7 @@
         "animated": true
       },
       "iconName": "carbon:microservices-1",
-      "label": "Payment Service"
+      "label": "Product Service"
     },
     {
       "id": "icon-1749458882912",
@@ -208,8 +208,8 @@
       "id": "icon-1749459107526",
       "type": "icon",
       "position": {
-        "x": 509,
-        "y": 741
+        "x": 408.09090909090907,
+        "y": 814.6363636363637
       },
       "size": {
         "width": 64,
@@ -225,8 +225,8 @@
       "id": "arrow-1749459127051",
       "type": "arrow",
       "position": {
-        "x": 423,
-        "y": 667
+        "x": 382.99999999999994,
+        "y": 700.6363636363637
       },
       "size": {
         "width": 120,
@@ -234,12 +234,120 @@
       },
       "props": {
         "segments": 3,
-        "rotation": 45,
+        "rotation": 90,
         "isAnimating": false,
         "curve": 0
+      }
+    },
+    {
+      "id": "code-1749459603378",
+      "type": "codeBlock",
+      "position": {
+        "x": 841.1818181818181,
+        "y": 646.2727272727273
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": "@RestController\n@RequestMapping(\"/api/products\")\npublic class ProductController {\n    @GetMapping\n    @PreAuthorize(\"hasAuthority('SCOPE_Products.Read')\") // Sprawdza, czy token JWT ma odpowiedni scope\n    public List<String> getProducts() {\n        // Wypisz dane zalogowanego użytkownika dla weryfikacji\n        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();\n        System.out.println(\"Product-Service called by: \" + authentication.getName());\n        return List.of(\"Laptop\", \"Mouse\", \"Keyboard\");\n    }\n}"
+      }
+    },
+    {
+      "id": "code-1749459640662",
+      "type": "codeBlock",
+      "position": {
+        "x": 840.0909090909089,
+        "y": 688.8181818181819
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "toml",
+        "code": "spring:\n  security:\n    oauth2:\n      resourceserver:\n        jwt:\n          # To Azure AD dostarcza konfigurację przez ten endpoint\n          issuer-uri: https://login.microsoftonline.com/<YOUR_TENANT_ID>/v2.0 \n\n# Konfiguracja specyficzna dla Azure Spring startera\nazure:\n  activedirectory:\n    tenant-id: <YOUR_TENANT_ID>\n    app-id-uri: api://<CLIENT_ID_OF_PRODUCT_SERVICE> # Application ID URI z kroku 0.1"
+      }
+    },
+    {
+      "id": "code-1749459675327",
+      "type": "codeBlock",
+      "position": {
+        "x": 450.090909090909,
+        "y": 645.1818181818182
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "toml",
+        "code": "# Adres Product-Service (lokalnie lub w Azure)\nproduct-service-url: http://localhost:8081 \n\nspring:\n  security:\n    oauth2:\n      # Konfiguracja jako Resource Server (do walidacji tokenu od użytkownika)\n      resourceserver:\n        jwt:\n          issuer-uri: https://login.microsoftonline.com/<YOUR_TENANT_ID>/v2.0\n      # Konfiguracja jako Client (do wywołania Product-Service)\n      client:\n        provider:\n          azure:\n            issuer-uri: https://login.microsoftonline.com/<YOUR_TENANT_ID>/v2.0\n        registration:\n          obo-client: # Dowolna nazwa\n            provider: azure\n            client-id: <CLIENT_ID_OF_ORDER_SERVICE>\n            client-secret: <CLIENT_SECRET_OF_ORDER_SERVICE>\n            authorization-grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer\n            scope: api://<CLIENT_ID_OF_PRODUCT_SERVICE>/Products.Read # Scope, którego żądamy\n\n# Konfiguracja Azure\nazure:\n  activedirectory:\n    tenant-id: <YOUR_TENANT_ID>"
+      }
+    },
+    {
+      "id": "code-1749459689882",
+      "type": "codeBlock",
+      "position": {
+        "x": 450.090909090909,
+        "y": 673.3636363636364
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": "@Configuration\n@EnableWebSecurity\n@EnableMethodSecurity\npublic class SecurityConfig {\n    @Bean\n    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {\n        http.authorizeHttpRequests(authz -> authz.anyRequest().authenticated())\n            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));\n        return http.build();\n    }\n\n    // Konfiguracja WebClienta do komunikacji między serwisami\n    @Bean\n    WebClient webClient(OAuth2AuthorizedClientManager authorizedClientManager) {\n        // Tworzymy filtr, który automatycznie dołączy token OBO do każdego żądania\n        ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client =\n                new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);\n        oauth2Client.setDefaultOAuth2AuthorizedClient(true);\n        return WebClient.builder()\n                .apply(oauth2Client.oauth2Configuration())\n                .build();\n    }\n}"
+      }
+    },
+    {
+      "id": "code-1749459732643",
+      "type": "codeBlock",
+      "position": {
+        "x": 451,
+        "y": 713.3636363636364
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": "@RestController\n@RequestMapping(\"/api/orders\")\npublic class OrderController {\n    private final OrderService orderService;\n    // Wstrzykujemy skonfigurowanego WebClienta\n    public OrderController(OrderService orderService) { this.orderService = orderService; }\n\n    @GetMapping\n    @PreAuthorize(\"hasAuthority('SCOPE_Orders.Read')\") // Załóżmy, że Order-Service też ma swój scope\n    public Map<String, Object> createOrder() {\n        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();\n        String user = authentication.getName();\n        \n        // Wywołaj serwis, który pobierze dane z Product-Service\n        List<String> products = orderService.getProductsFromRemoteService();\n\n        return Map.of(\n            \"orderFor\", user,\n            \"products\", products,\n            \"status\", \"Order Created\"\n        );\n    }\n}\n\n@Service\npublic class OrderService {\n    private final WebClient webClient;\n    private final String productServiceUrl;\n\n    public OrderService(WebClient webClient, @Value(\"${product-service-url}\") String productServiceUrl) {\n        this.webClient = webClient;\n        this.productServiceUrl = productServiceUrl;\n    }\n\n    public List<String> getProductsFromRemoteService() {\n        // WebClient automatycznie wykona przepływ OBO i dołączy właściwy token\n        return webClient\n                .get()\n                .uri(productServiceUrl + \"/api/products\")\n                // Nazwa rejestracji klienta z application.yml\n                .attributes(ServletOAuth2AuthorizedClientExchangeFilterFunction.clientRegistrationId(\"obo-client\"))\n                .retrieve()\n                .bodyToMono(new ParameterizedTypeReference<List<String>>() {})\n                .block(); // Używamy block() dla prostoty, w realnej aplikacji lepiej używać podejścia reaktywnego\n    }\n}"
+      }
+    },
+    {
+      "id": "code-1749459752510",
+      "type": "codeBlock",
+      "position": {
+        "x": 586.4545454545454,
+        "y": 756.0909090909091
+      },
+      "size": {
+        "width": 48,
+        "height": 24
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "toml",
+        "code": "// Aby nie trzymać client-secret w pliku application.yml, przeniesiemy go do Azure Key Vault.\n<dependency>\n    <groupId>com.azure.spring</groupId>\n    <artifactId>azure-spring-boot-starter-keyvault-secrets</artifactId>\n</dependency>\n\nazure:\n  keyvault:\n    uri: https://<YOUR_KEY_VAULT_NAME>.vault.azure.net/\n\n# ... w sekcji spring.security.oauth2.client.registration.obo-client\nclient-secret: ${order-service-client-secret} # Spring automatycznie pobierze tę wartość z Key Vault"
       }
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-06-09T08:56:06.029Z"
+  "exportDate": "2025-06-09T09:03:05.596Z"
 }
