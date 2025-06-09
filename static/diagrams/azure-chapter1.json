@@ -1,34 +1,6 @@
 {
   "items": [
     {
-      "id": "boxSet-1748424545303",
-      "type": "boxSet",
-      "position": {
-        "x": 503.5,
-        "y": -39
-      },
-      "size": {
-        "width": 20,
-        "height": 20
-      },
-      "props": {}
-    },
-    {
-      "id": "boxSet-1748424548079",
-      "type": "boxSet",
-      "position": {
-        "x": 208.5,
-        "y": -75
-      },
-      "size": {
-        "width": 112,
-        "height": 20
-      },
-      "props": {},
-      "comment": "",
-      "commentLabel": "this is comment"
-    },
-    {
       "id": "icon-1749458839687",
       "type": "icon",
       "position": {
@@ -269,5 +241,5 @@
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-06-09T08:53:02.243Z"
+  "exportDate": "2025-06-09T08:56:06.029Z"
 }
