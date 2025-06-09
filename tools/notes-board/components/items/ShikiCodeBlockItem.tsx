@@ -389,8 +389,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         onClick={handleClick}
       >
         <svg
-          width={width * 0.6}
-          height={height * 0.6}
+          width={width * 1.2}
+          height={height * 1.2}
           viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
