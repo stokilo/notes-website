@@ -55,6 +55,9 @@ interface DraggableItem {
     isExpanded?: boolean;
   }>;
   iconName?: string;
+  code?: string;
+  language?: string;
+  url?: string;
 }
 
 interface SelectionArea {
@@ -808,7 +811,126 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
   const handleContextMenu = (e: React.MouseEvent, itemId: string) => {
     e.preventDefault();
-    e.stopPropagation();
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const menuItems = [];
+
+    if (item.type === 'codeBlock') {
+      menuItems.push(
+        { label: 'Show Code', onClick: () => {
+          setCodePreviewItemId(itemId);
+          setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+        }},
+        { label: 'Edit Code', onClick: () => {
+          setItemsWithHistory(prevItems =>
+            prevItems.map(prevItem =>
+              prevItem.id === itemId
+                ? {
+                    ...prevItem,
+                    props: {
+                      ...prevItem.props,
+                      showEditor: true
+                    }
+                  }
+                : prevItem
+            )
+          );
+          setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+        }},
+        { label: item.label ? 'Edit Label' : 'Add Label', onClick: () => {
+          setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+          // Create a temporary input element for editing
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = item.label || '';
+          input.style.position = 'absolute';
+          input.style.left = `${e.clientX}px`;
+          input.style.top = `${e.clientY}px`;
+          input.style.zIndex = '1000';
+          input.style.padding = '4px';
+          input.style.border = '1px solid #4a90e2';
+          input.style.borderRadius = '4px';
+          input.style.fontSize = '14px';
+          input.style.minWidth = '100px';
+
+          const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+              setItemsWithHistory(prevItems =>
+                prevItems.map(prevItem =>
+                  prevItem.id === itemId
+                    ? {
+                        ...prevItem,
+                        label: input.value
+                      }
+                    : prevItem
+                )
+              );
+              cleanup();
+            } else if (e.key === 'Escape') {
+              cleanup();
+            }
+          };
+
+          const handleClickOutside = (e: MouseEvent) => {
+            if (e.target !== input) {
+              setItemsWithHistory(prevItems =>
+                prevItems.map(prevItem =>
+                  prevItem.id === itemId
+                    ? {
+                        ...prevItem,
+                        label: input.value
+                      }
+                    : prevItem
+                )
+              );
+              cleanup();
+            }
+          };
+
+          const cleanup = () => {
+            input.remove();
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('mousedown', handleClickOutside);
+          };
+
+          document.body.appendChild(input);
+          input.focus();
+          input.select();
+
+          document.addEventListener('keydown', handleKeyDown);
+          document.addEventListener('mousedown', handleClickOutside);
+        }},
+        { label: 'Remove Label', onClick: () => {
+          setItemsWithHistory(prevItems =>
+            prevItems.map(prevItem =>
+              prevItem.id === itemId
+                ? {
+                    ...prevItem,
+                    label: undefined
+                  }
+                : prevItem
+            )
+          );
+          setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+        },
+        disabled: !item.label
+      },
+        { label: 'Delete', onClick: () => handleDeleteItem(itemId) }
+      );
+    } else if (item.type === 'text') {
+      menuItems.push(
+        { label: item.props?.hasBorder !== false ? 'Remove Border' : 'Add Border', onClick: () => handleToggleTextBorder(itemId) },
+        { label: 'Delete', onClick: () => handleDeleteItem(itemId) }
+      );
+    } else {
+      menuItems.push(
+        { label: 'Copy', onClick: () => handleCopy(itemId) },
+        { label: 'Paste', onClick: handlePaste, disabled: !copiedItem },
+        { label: 'Delete', onClick: () => handleDeleteItem(itemId) }
+      );
+    }
+
     setSelectedItemIds([itemId]);
     setContextMenu({
       show: true,
@@ -887,8 +1009,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
   };
 
   const handleToggleArrowAnimation = (itemId: string) => {
-    setItemsWithHistory(prevItems => {
-      const updatedItems = prevItems.map(item =>
+    setItemsWithHistory(prevItems =>
+      prevItems.map(item =>
         item.id === itemId && item.type === 'arrow'
           ? {
               ...item,
@@ -898,9 +1020,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
               }
             }
           : item
-      );
-      return updatedItems;
-    });
+      )
+    );
   };
 
   const handleArrowCurve = (itemId: string, curve: number) => {
@@ -1337,8 +1458,9 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           <ShikiCodeBlockItem
             width={item.size.width}
             height={item.size.height}
-            language={item.props.language}
-            code={item.props.code}
+            code={item.props?.code}
+            url={item.props?.url}
+            language={item.props?.language}
             showPreview={codePreviewItemId === item.id}
             onClosePreview={() => {
               setCodePreviewItemId(null);
@@ -1374,7 +1496,8 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
             }}
             onLanguageChange={(newLanguage) => handleLanguageChange(item.id, newLanguage)}
             isViewMode={isViewMode}
-            showEditor={item.props.showEditor}
+            showEditor={item.props?.showEditor}
+            label={item.label}
           />
         )}
         {item.type === 'text' && (
@@ -1790,7 +1913,7 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
                     document.addEventListener('keydown', handleKeyDown);
                     document.addEventListener('mousedown', handleClickOutside);
-                  },
+                  }
                 },
                 {
                   label: 'Curve',
@@ -1909,6 +2032,89 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                     setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
                   },
                   disabled: isViewMode
+                },
+                {
+                  label: item.label ? 'Edit Label' : 'Add Label',
+                  onClick: () => {
+                    setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+                    // Create a temporary input element for editing
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = item.label || '';
+                    input.style.position = 'absolute';
+                    input.style.left = `${contextMenu.x}px`;
+                    input.style.top = `${contextMenu.y}px`;
+                    input.style.zIndex = '1000';
+                    input.style.padding = '4px';
+                    input.style.border = '1px solid #4a90e2';
+                    input.style.borderRadius = '4px';
+                    input.style.fontSize = '14px';
+                    input.style.minWidth = '100px';
+
+                    const handleKeyDown = (e: KeyboardEvent) => {
+                      if (e.key === 'Enter') {
+                        setItemsWithHistory(prevItems =>
+                          prevItems.map(prevItem =>
+                            prevItem.id === contextMenu.itemId
+                              ? {
+                                  ...prevItem,
+                                  label: input.value
+                                }
+                              : prevItem
+                          )
+                        );
+                        cleanup();
+                      } else if (e.key === 'Escape') {
+                        cleanup();
+                      }
+                    };
+
+                    const handleClickOutside = (e: MouseEvent) => {
+                      if (e.target !== input) {
+                        setItemsWithHistory(prevItems =>
+                          prevItems.map(prevItem =>
+                            prevItem.id === contextMenu.itemId
+                              ? {
+                                  ...prevItem,
+                                  label: input.value
+                                }
+                              : prevItem
+                          )
+                        );
+                        cleanup();
+                      }
+                    };
+
+                    const cleanup = () => {
+                      input.remove();
+                      document.removeEventListener('keydown', handleKeyDown);
+                      document.removeEventListener('mousedown', handleClickOutside);
+                    };
+
+                    document.body.appendChild(input);
+                    input.focus();
+                    input.select();
+
+                    document.addEventListener('keydown', handleKeyDown);
+                    document.addEventListener('mousedown', handleClickOutside);
+                  }
+                },
+                {
+                  label: 'Remove Label',
+                  onClick: () => {
+                    setItemsWithHistory(prevItems =>
+                      prevItems.map(prevItem =>
+                        prevItem.id === contextMenu.itemId
+                          ? {
+                              ...prevItem,
+                              label: undefined
+                            }
+                          : prevItem
+                      )
+                    );
+                    setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+                  },
+                  disabled: !item.label
                 },
                 ...baseItems,
               ];

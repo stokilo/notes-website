@@ -82,6 +82,7 @@ interface ShikiCodeBlockItemProps {
   isViewMode?: boolean;
   showEditor?: boolean;
   onShowPreview?: () => void;
+  label?: string;
 }
 
 const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
@@ -98,6 +99,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   isViewMode = false,
   showEditor = false,
   onShowPreview,
+  label,
 }) => {
   const [highlightedCode, setHighlightedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -106,6 +108,14 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const [boxColor, setBoxColor] = useState('#4a90e2');
+
+  useEffect(() => {
+    // Generate random colors for the box
+    const hue = Math.floor(Math.random() * 360);
+    const mainColor = `hsl(${hue}, 70%, 85%)`; // Lighter, more pastel color
+    setBoxColor(mainColor);
+  }, []);
 
   // Update editor code when code prop changes
   useEffect(() => {
@@ -320,8 +330,46 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         position: 'relative', 
         width, 
         height,
+        marginTop: label ? '25px' : '0',
       }}
     >
+      {/* Label indicator */}
+      {label && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1001,
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              color: '#ffffff',
+              padding: `${Math.min(4, Math.max(2, Math.floor(height * 0.10)))}px ${Math.min(8, Math.max(4, Math.floor(width * 0.10)))}px`,
+              fontSize: `${Math.min(12, Math.max(8, Math.floor(height * 0.10)))}px`,
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              maxWidth: `${Math.min(200, width * 2)}px`,
+              minWidth: '40px',
+              textAlign: 'center',
+              background: boxColor.replace('85%)', '65%)'),
+              borderRadius: '6px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              transition: 'all 0.3s ease',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {label}
+          </div>
+        </div>
+      )}
+
       {/* Code icon */}
       <div
         style={{
