@@ -107,6 +107,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   const [editorCode, setEditorCode] = useState(code);
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
+  const [fontSize, setFontSize] = useState(14);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [boxColor, setBoxColor] = useState('#4a90e2');
 
@@ -751,7 +752,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 flexShrink: 0,
               }}
             >
-              <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
+              <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {selectedLanguage.toUpperCase()} Code Preview
                 {url && (
                   <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
@@ -759,30 +760,117 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   </span>
                 )}
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClosePreview?.();
-                }}
-                style={{
-                  background: '#3d3d3d',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  transition: 'background-color 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#4d4d4d';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3d3d3d';
-                }}
-              >
-                Close
-              </button>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                {/* Font size controls */}
+                <div 
+                  style={{ display: 'flex', gap: '8px', alignItems: 'center' }}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setFontSize(prev => Math.max(8, prev - 2));
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    style={{
+                      background: '#3d3d3d',
+                      border: 'none',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      padding: '8px 16px',
+                      borderRadius: '4px',
+                      fontSize: '16px',
+                      transition: 'background-color 0.2s ease',
+                      minWidth: '44px',
+                      minHeight: '44px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#4d4d4d';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3d3d3d';
+                    }}
+                  >
+                    A-
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setFontSize(prev => Math.min(32, prev + 2));
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    style={{
+                      background: '#3d3d3d',
+                      border: 'none',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      padding: '8px 16px',
+                      borderRadius: '4px',
+                      fontSize: '16px',
+                      transition: 'background-color 0.2s ease',
+                      minWidth: '44px',
+                      minHeight: '44px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#4d4d4d';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3d3d3d';
+                    }}
+                  >
+                    A+
+                  </button>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onClosePreview?.();
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  style={{
+                    background: '#3d3d3d',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    transition: 'background-color 0.2s ease',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#4d4d4d';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#3d3d3d';
+                  }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
             {/* Code content */}
@@ -824,6 +912,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                     padding: '16px',
                     width: '100%',
                     maxWidth: '100%',
+                    fontSize: `${fontSize}px`,
                   }}
                 />
               )}
@@ -844,7 +933,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
           }
           .shiki-code-block code {
             font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
+            font-size: ${fontSize}px;
             line-height: 1.5;
             display: block;
           }
