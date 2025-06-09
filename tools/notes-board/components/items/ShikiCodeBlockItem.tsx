@@ -241,6 +241,14 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
     if (isViewMode) {
       // In view mode, show preview
       onShowPreview?.();
+      // Ensure the preview is centered by scrolling to the center of the viewport
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      window.scrollTo({
+        top: (document.documentElement.scrollHeight - viewportHeight) / 2,
+        left: (document.documentElement.scrollWidth - viewportWidth) / 2,
+        behavior: 'smooth'
+      });
     }
   };
 
@@ -640,117 +648,137 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
       )}
 
       {/* Code preview dialog */}
-      {showPreview && (
+      {showPreview && ReactDOM.createPortal(
         <div
           style={{
             position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 1100,
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            width: '80vw',
-            maxWidth: '1200px',
-            maxHeight: '80vh',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 99999,
             display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            margin: 'auto',
+            alignItems: 'center',
+            justifyContent: 'center',
+            isolation: 'isolate',
+          }}
+          onClick={(e) => {
+            // Only close if clicking the backdrop itself
+            if (e.target === e.currentTarget) {
+              onClosePreview?.();
+            }
           }}
         >
-          {/* Header */}
           <div
             style={{
-              padding: `${Math.max(1, Math.floor(height * 0.1))}px ${Math.max(2, Math.floor(width * 0.1))}px`,
-              backgroundColor: '#4a90e2',
-              borderBottom: '1px solid #4d4d4d',
+              position: 'relative',
+              zIndex: 100000,
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              width: '80vw',
+              maxWidth: '1200px',
+              maxHeight: '80vh',
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-              flexShrink: 0,
+              flexDirection: 'column',
+              overflow: 'hidden',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
-              {selectedLanguage.toUpperCase()} Code Preview
-              {url && (
-                <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
-                  from {url}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClosePreview?.();
-              }}
+            {/* Header */}
+            <div
               style={{
-                background: '#3d3d3d',
-                border: 'none',
-                color: '#fff',
-                cursor: 'pointer',
-                padding: '6px 12px',
-                borderRadius: '4px',
-                fontSize: '14px',
-                transition: 'background-color 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#4d4d4d';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#3d3d3d';
+                padding: `${Math.max(1, Math.floor(height * 0.1))}px ${Math.max(2, Math.floor(width * 0.1))}px`,
+                backgroundColor: '#4a90e2',
+                borderBottom: '1px solid #4d4d4d',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                flexShrink: 0,
               }}
             >
-              Close
-            </button>
-          </div>
-
-          {/* Code content */}
-          <div
-            style={{
-              flex: 1,
-              overflow: 'auto',
-              padding: '16px',
-              position: 'relative',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'flex-start',
-            }}
-          >
-            {isLoading ? (
-              <div style={{ 
-                color: '#000', 
-                textAlign: 'center', 
-                padding: '20px',
-                fontSize: '14px'
-              }}>
-                Loading code...
+              <div style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
+                {selectedLanguage.toUpperCase()} Code Preview
+                {url && (
+                  <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
+                    from {url}
+                  </span>
+                )}
               </div>
-            ) : error ? (
-              <div style={{ 
-                color: '#ff6b6b', 
-                textAlign: 'center', 
-                padding: '20px',
-                fontSize: '14px'
-              }}>
-                {error}
-              </div>
-            ) : (
-              <div 
-                dangerouslySetInnerHTML={{ __html: highlightedCode }} 
-                style={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '4px',
-                  padding: '16px',
-                  width: '100%',
-                  maxWidth: '100%',
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClosePreview?.();
                 }}
-              />
-            )}
+                style={{
+                  background: '#3d3d3d',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  transition: 'background-color 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#4d4d4d';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3d3d3d';
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Code content */}
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: '16px',
+                position: 'relative',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-start',
+              }}
+            >
+              {isLoading ? (
+                <div style={{ 
+                  color: '#000', 
+                  textAlign: 'center', 
+                  padding: '20px',
+                  fontSize: '14px'
+                }}>
+                  Loading code...
+                </div>
+              ) : error ? (
+                <div style={{ 
+                  color: '#ff6b6b', 
+                  textAlign: 'center', 
+                  padding: '20px',
+                  fontSize: '14px'
+                }}>
+                  {error}
+                </div>
+              ) : (
+                <div 
+                  dangerouslySetInnerHTML={{ __html: highlightedCode }} 
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '4px',
+                    padding: '16px',
+                    width: '100%',
+                    maxWidth: '100%',
+                  }}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <style>
