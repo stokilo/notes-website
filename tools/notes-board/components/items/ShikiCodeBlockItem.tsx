@@ -330,7 +330,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         position: 'relative', 
         width, 
         height,
-        marginTop: label ? '25px' : '0',
+        marginTop: label ? '50px' : '0',
+        paddingTop: isViewMode && label ? '20px' : '0',
       }}
     >
       {/* Label indicator */}
@@ -338,11 +339,12 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: '-20px',
+            top: isViewMode ? '-20px' : '-20px',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1001,
             pointerEvents: 'none',
+            padding: isViewMode ? '0 5x' : '0',
           }}
         >
           <div
@@ -363,6 +365,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               transition: 'all 0.3s ease',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              position: 'relative',
+              left: isViewMode ? '0' : '0',
             }}
           >
             {label}
