@@ -55,7 +55,7 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
         position: 'relative', 
         width, 
         height,
-        marginTop: comment ? '25px' : '0',
+        marginTop: commentLabel ? '30px' : '0',
         opacity: isPlaceholder && commentLabel ? 0.3 : 1,
         cursor: isViewMode ? 'pointer' : 'default',
       }} 
@@ -72,6 +72,7 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
             transform: 'translateX(-50%)',
             zIndex: 1001,
             pointerEvents: 'none',
+            padding: isViewMode ? '0 25px' : '0',
           }}
         >
           <div
