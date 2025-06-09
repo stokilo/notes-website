@@ -383,6 +383,12 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if we're currently editing a label
+      const isEditingLabel = document.querySelector('input[type="text"]:focus');
+      if (isEditingLabel) {
+        return; // Don't handle keyboard shortcuts while editing
+      }
+
       // Check for CMD+Z (Mac) or CTRL+Z (Windows)
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault();
@@ -1283,10 +1289,10 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
           <ArrowItem
             width={item.size.width}
             height={item.size.height}
-            segments={item.props.segments}
             rotation={item.props.rotation}
             isAnimating={item.props.isAnimating}
             curve={item.props.curve}
+            label={item.label}
           />
         )}
         {item.type === 'circlesPath' && (
@@ -1710,6 +1716,64 @@ const DraggableContainer: React.FC<DraggableContainerProps> = ({ className = '' 
                 {
                   label: item.props.isAnimating ? 'Stop Animation' : 'Start Animation',
                   onClick: () => handleToggleArrowAnimation(contextMenu.itemId),
+                },
+                {
+                  label: item.label ? 'Edit Label' : 'Add Label',
+                  onClick: () => {
+                    // Temporarily disable animation while editing
+                    const wasAnimating = item.props.isAnimating;
+                    if (wasAnimating) {
+                      handleToggleArrowAnimation(contextMenu.itemId);
+                    }
+
+                    setContextMenu({ show: false, x: 0, y: 0, itemId: '' });
+                    // Create a temporary input element for editing
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = item.label || '';
+                    input.style.position = 'absolute';
+                    input.style.left = `${contextMenu.x}px`;
+                    input.style.top = `${contextMenu.y}px`;
+                    input.style.zIndex = '1000';
+                    input.style.padding = '4px';
+                    input.style.border = '1px solid #4a90e2';
+                    input.style.borderRadius = '4px';
+                    input.style.fontSize = '14px';
+                    input.style.minWidth = '100px';
+
+                    const handleKeyDown = (e: KeyboardEvent) => {
+                      if (e.key === 'Enter') {
+                        handleLabelChange(contextMenu.itemId, input.value);
+                        cleanup();
+                      } else if (e.key === 'Escape') {
+                        cleanup();
+                      }
+                    };
+
+                    const handleClickOutside = (e: MouseEvent) => {
+                      if (e.target !== input) {
+                        handleLabelChange(contextMenu.itemId, input.value);
+                        cleanup();
+                      }
+                    };
+
+                    const cleanup = () => {
+                      input.remove();
+                      document.removeEventListener('keydown', handleKeyDown);
+                      document.removeEventListener('mousedown', handleClickOutside);
+                      // Restore animation state if it was enabled before
+                      if (wasAnimating) {
+                        handleToggleArrowAnimation(contextMenu.itemId);
+                      }
+                    };
+
+                    document.body.appendChild(input);
+                    input.focus();
+                    input.select();
+
+                    document.addEventListener('keydown', handleKeyDown);
+                    document.addEventListener('mousedown', handleClickOutside);
+                  },
                 },
                 {
                   label: 'Curve',

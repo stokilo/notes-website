@@ -6,7 +6,9 @@ interface ArrowItemProps {
   height?: number;
   rotation?: number;
   animated?: boolean;
+  isAnimating?: boolean;
   curve?: number; // Add curve property (-1 to 1, where 0 is straight)
+  label?: string; // Add label property
 }
 
 const ArrowItem: React.FC<ArrowItemProps> = ({
@@ -14,7 +16,9 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
   height = 40,
   rotation = 0,
   animated = true,
+  isAnimating = false,
   curve = 0, // Default to straight arrow
+  label, // Add label to props
 }) => {
   // Arrow shaft coordinates
   const shaftStart = { x: height * 0.3, y: height / 2 };
@@ -36,7 +40,7 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
   // Animate dash offset (optionally)
   const [dashOffset, setDashOffset] = React.useState(0);
   React.useEffect(() => {
-    if (!animated) {
+    if (!animated || !isAnimating) {
       setDashOffset(0);
       return;
     }
@@ -51,7 +55,25 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
     };
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [animated]);
+  }, [animated, isAnimating]);
+
+  // Calculate label position based on rotation
+  const getLabelTransform = () => {
+    // Adjust label position based on rotation angle
+    const angle = rotation % 360;
+    let yOffset = -10; // Default offset above the arrow
+    
+    // Adjust vertical position based on rotation
+    if (angle > 45 && angle <= 135) {
+      yOffset = 20; // Below the arrow for downward pointing
+    } else if (angle > 135 && angle <= 225) {
+      yOffset = 20; // Below the arrow for leftward pointing
+    } else if (angle > 225 && angle <= 315) {
+      yOffset = -10; // Above the arrow for upward pointing
+    }
+    
+    return `translate(${width / 2}, ${height / 2 + yOffset}) rotate(${-rotation})`;
+  };
 
   return (
     <motion.div
@@ -88,6 +110,23 @@ const ArrowItem: React.FC<ArrowItemProps> = ({
           stroke="#000"
           strokeWidth={3}
         />
+        {/* Label */}
+        {label && (
+          <text
+            x={0}
+            y={0}
+            textAnchor="middle"
+            fill="#000"
+            fontSize="14"
+            style={{
+              userSelect: 'none',
+              pointerEvents: 'none'
+            }}
+            transform={getLabelTransform()}
+          >
+            {label}
+          </text>
+        )}
       </svg>
     </motion.div>
   );

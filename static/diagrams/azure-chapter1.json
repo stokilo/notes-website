@@ -4,8 +4,8 @@
       "id": "icon-1749458839687",
       "type": "icon",
       "position": {
-        "x": 413,
-        "y": 582
+        "x": 427,
+        "y": 562
       },
       "size": {
         "width": 64,
@@ -21,8 +21,8 @@
       "id": "icon-1749458853804",
       "type": "icon",
       "position": {
-        "x": 824,
-        "y": 576
+        "x": 825,
+        "y": 552
       },
       "size": {
         "width": 64,
@@ -38,8 +38,8 @@
       "id": "icon-1749458882912",
       "type": "icon",
       "position": {
-        "x": 621,
-        "y": 343
+        "x": 762,
+        "y": 342
       },
       "size": {
         "width": 64,
@@ -72,76 +72,46 @@
       "id": "arrow-1749458918744",
       "type": "arrow",
       "position": {
-        "x": 495,
+        "x": 521,
         "y": 330
       },
       "size": {
-        "width": 120,
-        "height": 40
+        "width": 229,
+        "height": 29
       },
       "props": {
         "segments": 3,
         "rotation": 0,
         "isAnimating": false,
         "curve": 0
-      }
-    },
-    {
-      "id": "text-1749458921777",
-      "type": "text",
-      "position": {
-        "x": 497,
-        "y": 292
       },
-      "size": {
-        "width": 132,
-        "height": 76
-      },
-      "props": {
-        "hasBorder": false
-      },
-      "text": " Login\n"
+      "label": "Login"
     },
     {
       "id": "arrow-1749458947453",
       "type": "arrow",
       "position": {
-        "x": 497,
-        "y": 377
+        "x": 526,
+        "y": 378
       },
       "size": {
-        "width": 120,
-        "height": 40
+        "width": 218,
+        "height": 25
       },
       "props": {
         "segments": 3,
-        "rotation": -180,
+        "rotation": 720,
         "isAnimating": false,
         "curve": 0
-      }
-    },
-    {
-      "id": "text-1749458954085",
-      "type": "text",
-      "position": {
-        "x": 493,
-        "y": 415
       },
-      "size": {
-        "width": 274,
-        "height": 61
-      },
-      "props": {
-        "hasBorder": false
-      },
-      "text": "JWT with permissions"
+      "label": "JWT"
     },
     {
       "id": "arrow-1749458983844",
       "type": "arrow",
       "position": {
-        "x": 397,
-        "y": 501
+        "x": 405,
+        "y": 463
       },
       "size": {
         "width": 116,
@@ -152,64 +122,34 @@
         "rotation": 90,
         "isAnimating": false,
         "curve": 0
-      }
+      },
+      "label": "Call"
     },
     {
       "id": "arrow-1749459009032",
       "type": "arrow",
       "position": {
-        "x": 505,
-        "y": 600
+        "x": 510,
+        "y": 579
       },
       "size": {
-        "width": 283,
-        "height": 35
+        "width": 289,
+        "height": 29
       },
       "props": {
         "segments": 3,
         "rotation": 0,
         "isAnimating": false,
         "curve": 0
-      }
-    },
-    {
-      "id": "text-1749459016395",
-      "type": "text",
-      "position": {
-        "x": 504,
-        "y": 554
       },
-      "size": {
-        "width": 168,
-        "height": 64
-      },
-      "props": {
-        "hasBorder": false
-      },
-      "text": "Call with obo_token"
-    },
-    {
-      "id": "text-1749459083518",
-      "type": "text",
-      "position": {
-        "x": 466,
-        "y": 485
-      },
-      "size": {
-        "width": 200,
-        "height": 100
-      },
-      "props": {
-        "hasBorder": false
-      },
-      "text": "Call with user_token"
+      "label": "Call with obo_token"
     },
     {
       "id": "icon-1749459107526",
       "type": "icon",
       "position": {
-        "x": 408.09090909090907,
-        "y": 814.6363636363637
+        "x": 426.09090909090907,
+        "y": 781.6363636363637
       },
       "size": {
         "width": 64,
@@ -225,8 +165,8 @@
       "id": "arrow-1749459127051",
       "type": "arrow",
       "position": {
-        "x": 382.99999999999994,
-        "y": 700.6363636363637
+        "x": 402.99999999999994,
+        "y": 683.6363636363637
       },
       "size": {
         "width": 120,
@@ -243,8 +183,8 @@
       "id": "code-1749459603378",
       "type": "codeBlock",
       "position": {
-        "x": 841.1818181818181,
-        "y": 646.2727272727273
+        "x": 838.1818181818181,
+        "y": 640.2727272727273
       },
       "size": {
         "width": 48,
@@ -261,8 +201,8 @@
       "id": "code-1749459640662",
       "type": "codeBlock",
       "position": {
-        "x": 840.0909090909089,
-        "y": 688.8181818181819
+        "x": 838.0909090909089,
+        "y": 677.8181818181819
       },
       "size": {
         "width": 48,
@@ -279,8 +219,8 @@
       "id": "code-1749459675327",
       "type": "codeBlock",
       "position": {
-        "x": 450.090909090909,
-        "y": 645.1818181818182
+        "x": 473.090909090909,
+        "y": 643.1818181818182
       },
       "size": {
         "width": 48,
@@ -297,8 +237,8 @@
       "id": "code-1749459689882",
       "type": "codeBlock",
       "position": {
-        "x": 450.090909090909,
-        "y": 673.3636363636364
+        "x": 472.090909090909,
+        "y": 675.3636363636364
       },
       "size": {
         "width": 48,
@@ -315,8 +255,8 @@
       "id": "code-1749459732643",
       "type": "codeBlock",
       "position": {
-        "x": 451,
-        "y": 713.3636363636364
+        "x": 472,
+        "y": 705.3636363636364
       },
       "size": {
         "width": 48,
@@ -333,8 +273,8 @@
       "id": "code-1749459752510",
       "type": "codeBlock",
       "position": {
-        "x": 586.4545454545454,
-        "y": 756.0909090909091
+        "x": 491.4545454545454,
+        "y": 806.0909090909091
       },
       "size": {
         "width": 48,
@@ -349,5 +289,5 @@
     }
   ],
   "version": "1.0",
-  "exportDate": "2025-06-09T09:03:05.596Z"
+  "exportDate": "2025-06-09T09:26:42.482Z"
 }
