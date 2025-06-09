@@ -108,6 +108,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(14);
+  const [copySuccess, setCopySuccess] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [boxColor, setBoxColor] = useState('#4a90e2');
 
@@ -323,6 +324,18 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
       updateHighlightedCode();
     }
   }, [editorCode, selectedLanguage, showEditor]);
+
+  const handleCopyCode = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+    }
+  };
 
   return (
     <div 
@@ -738,6 +751,7 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
               overflow: 'hidden',
             }}
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div
@@ -884,6 +898,8 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                 justifyContent: 'center',
                 alignItems: 'flex-start',
               }}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             >
               {isLoading ? (
                 <div style={{ 
@@ -904,17 +920,49 @@ const ShikiCodeBlockItem: React.FC<ShikiCodeBlockItemProps> = ({
                   {error}
                 </div>
               ) : (
-                <div 
-                  dangerouslySetInnerHTML={{ __html: highlightedCode }} 
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '4px',
-                    padding: '16px',
-                    width: '100%',
-                    maxWidth: '100%',
-                    fontSize: `${fontSize}px`,
-                  }}
-                />
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <button
+                    onClick={handleCopyCode}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      background: '#3d3d3d',
+                      border: 'none',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      padding: '8px 16px',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      transition: 'all 0.2s ease',
+                      minWidth: '44px',
+                      minHeight: '44px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 1000,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#4d4d4d';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3d3d3d';
+                    }}
+                  >
+                    {copySuccess ? '✓ Copied!' : 'Copy'}
+                  </button>
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: highlightedCode }} 
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderRadius: '4px',
+                      padding: '16px',
+                      width: '100%',
+                      maxWidth: '100%',
+                      fontSize: `${fontSize}px`,
+                    }}
+                  />
+                </div>
               )}
             </div>
           </div>
