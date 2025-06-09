@@ -83,7 +83,7 @@ const IconItem: React.FC<IconItemProps> = ({
             transform: 'translateX(-50%)',
             color: '#ffffff',
             padding: `${Math.max(2, Math.min(6, Math.floor(labelBase * 0.1)))}px ${Math.max(4, Math.min(8, Math.floor(labelBase * 0.1)))}px`,
-            fontSize: `${Math.max(10, Math.min(14, Math.floor(labelBase * 0.15)))}px`,
+            fontSize: `${Math.max(8, Math.min(12, Math.floor(labelBase * 0.10)))}px`,
             whiteSpace: 'nowrap',
             maxWidth: `${Math.min(200, width * 2)}px`,
             textAlign: 'center',
