@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "id": "boxSet-1749470037009",
+      "type": "boxSet",
+      "position": {
+        "x": 256,
+        "y": 164
+      },
+      "size": {
+        "width": 731,
+        "height": 309
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "SOLID"
+    },
+    {
+      "id": "code-1749470385926",
+      "type": "codeBlock",
+      "position": {
+        "x": 309,
+        "y": 233
+      },
+      "size": {
+        "width": 86,
+        "height": 60
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": "import java.math.BigDecimal;\nimport java.time.Instant;\nimport java.util.UUID;\n\n// Enum dla metod płatności\npublic enum PaymentMethod {\n    CREDIT_CARD, PAYPAL, CRYPTO\n}\n\n// Sealed interface - tylko zdefiniowane klasy mogą ją implementować.\n// To daje kompilatorowi wiedzę o wszystkich możliwych typach.\npublic sealed interface PaymentDetails permits CreditCardDetails, PayPalDetails {\n    PaymentMethod getMethod();\n}\n\n// Record dla karty kredytowej - niezmienne, zwięzłe.\npublic record CreditCardDetails(\n    String cardNumber,\n    String cardHolderName,\n    String expiryDate, // np. \"12/25\"\n    String cvv\n) implements PaymentDetails {\n    @Override\n    public PaymentMethod getMethod() {\n        return PaymentMethod.CREDIT_CARD;\n    }\n}\n\n// Record dla PayPal.\npublic record PayPalDetails(String email) implements PaymentDetails {\n    @Override\n    public PaymentMethod getMethod() {\n        return PaymentMethod.PAYPAL;\n    }\n}\n\n// Główne żądanie płatności.\npublic record PaymentRequest(\n    BigDecimal amount,\n    String currency,\n    PaymentDetails paymentDetails\n) {}\n\n// Wynik płatności - również jako sealed interface.\npublic sealed interface PaymentResult permits PaymentResult.Success, PaymentResult.Failure {\n    record Success(String transactionId, Instant timestamp) implements PaymentResult {}\n    record Failure(String reason, Instant timestamp) implements PaymentResult {}\n}",
+        "showEditor": false
+      },
+      "label": "Models"
+    },
+    {
+      "id": "code-1749470439377",
+      "type": "codeBlock",
+      "position": {
+        "x": 400,
+        "y": 284
+      },
+      "size": {
+        "width": 102,
+        "height": 85
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": "import java.util.List;\n\n// I - Interface Segregation: Mały, spójny interfejs dla procesorów płatności.\npublic interface PaymentProcessor {\n    PaymentResult process(PaymentRequest request);\n    boolean supports(PaymentMethod method);\n}\n\n// I - Oddzielny interfejs dla walidacji.\npublic interface PaymentValidator {\n    List<String> validate(PaymentRequest request);\n}\n\n// I - Oddzielny interfejs dla repozytorium transakcji.\npublic interface TransactionRepository {\n    void save(PaymentRequest request, PaymentResult result);\n}",
+        "showEditor": false
+      },
+      "label": "Interfaces"
+    },
+    {
+      "id": "code-1749470477177",
+      "type": "codeBlock",
+      "position": {
+        "x": 483,
+        "y": 210
+      },
+      "size": {
+        "width": 151,
+        "height": 117
+      },
+      "props": {
+        "width": 48,
+        "height": 24,
+        "language": "java",
+        "code": "import java.math.BigDecimal;\nimport java.time.Instant;\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.UUID;\nimport java.util.concurrent.ConcurrentHashMap;\n\n// S - Odpowiedzialność: Walidacja płatności.\nclass SimplePaymentValidator implements PaymentValidator {\n    @Override\n    public List<String> validate(PaymentRequest request) {\n        var errors = new ArrayList<String>();\n        if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {\n            errors.add(\"Amount must be positive.\");\n        }\n        if (request.currency() == null || request.currency().isBlank()) {\n            errors.add(\"Currency is required.\");\n        }\n        // Można dodać bardziej szczegółową walidację dla każdego typu PaymentDetails\n        return Collections.unmodifiableList(errors);\n    }\n}\n\n// S - Odpowiedzialność: Przetwarzanie płatności kartą.\n// L - Liskov Substitution: Może być użyty wszędzie tam, gdzie oczekiwany jest PaymentProcessor.\nclass CreditCardProcessor implements PaymentProcessor {\n    @Override\n    public PaymentResult process(PaymentRequest request) {\n        // Pattern matching do bezpiecznego rzutowania\n        if (request.paymentDetails() instanceof CreditCardDetails ccd) {\n            System.out.println(\"Processing Credit Card payment for \" + ccd.cardHolderName() + \"...\");\n            // Symulacja komunikacji z bramką płatniczą\n            System.out.println(\"Connecting to Visa/Mastercard gateway...\");\n            return new PaymentResult.Success(UUID.randomUUID().toString(), Instant.now());\n        }\n        return new PaymentResult.Failure(\"Invalid details for Credit Card processing\", Instant.now());\n    }\n\n    @Override\n    public boolean supports(PaymentMethod method) {\n        return PaymentMethod.CREDIT_CARD.equals(method);\n    }\n}\n\n// S - Odpowiedzialność: Przetwarzanie płatności PayPal.\n// L - Liskov Substitution.\nclass PayPalProcessor implements PaymentProcessor {\n    @Override\n    public PaymentResult process(PaymentRequest request) {\n        if (request.paymentDetails() instanceof PayPalDetails ppd) {\n            System.out.println(\"Redirecting to PayPal for user: \" + ppd.email() + \"...\");\n            // Symulacja API PayPal\n            System.out.println(\"PayPal payment successful.\");\n            return new PaymentResult.Success(UUID.randomUUID().toString(), Instant.now());\n        }\n        return new PaymentResult.Failure(\"Invalid details for PayPal processing\", Instant.now());\n    }\n\n    @Override\n    public boolean supports(PaymentMethod method) {\n        return PaymentMethod.PAYPAL.equals(method);\n    }\n}\n\n// S - Odpowiedzialność: Zapisywanie transakcji (tutaj w pamięci).\nclass InMemoryTransactionRepository implements TransactionRepository {\n    private final Map<String, PaymentResult> transactions = new ConcurrentHashMap<>();\n\n    @Override\n    public void save(PaymentRequest request, PaymentResult result) {\n        if (result instanceof PaymentResult.Success s) {\n            System.out.println(\"Saving transaction: \" + s.transactionId());\n            transactions.put(s.transactionId(), result);\n        } else if (result instanceof PaymentResult.Failure f) {\n            System.out.println(\"Logging failed payment attempt: \" + f.reason());\n        }\n    }\n}",
+        "showEditor": false
+      },
+      "label": "Implementation"
+    }
+  ],
+  "version": "1.0",
+  "exportDate": "2025-06-09T12:03:04.793Z"
+}
