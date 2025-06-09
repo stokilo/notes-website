@@ -1,0 +1,273 @@
+{
+  "items": [
+    {
+      "id": "boxSet-1748424545303",
+      "type": "boxSet",
+      "position": {
+        "x": 503.5,
+        "y": -39
+      },
+      "size": {
+        "width": 20,
+        "height": 20
+      },
+      "props": {}
+    },
+    {
+      "id": "boxSet-1748424548079",
+      "type": "boxSet",
+      "position": {
+        "x": 208.5,
+        "y": -75
+      },
+      "size": {
+        "width": 112,
+        "height": 20
+      },
+      "props": {},
+      "comment": "",
+      "commentLabel": "this is comment"
+    },
+    {
+      "id": "icon-1749458839687",
+      "type": "icon",
+      "position": {
+        "x": 413,
+        "y": 582
+      },
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "props": {
+        "animated": true
+      },
+      "iconName": "carbon:microservices-1",
+      "label": "Order Service"
+    },
+    {
+      "id": "icon-1749458853804",
+      "type": "icon",
+      "position": {
+        "x": 824,
+        "y": 576
+      },
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "props": {
+        "animated": true
+      },
+      "iconName": "carbon:microservices-1",
+      "label": "Payment Service"
+    },
+    {
+      "id": "icon-1749458882912",
+      "type": "icon",
+      "position": {
+        "x": 621,
+        "y": 343
+      },
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "props": {
+        "animated": true
+      },
+      "iconName": "devicon:azure",
+      "label": "EntraID"
+    },
+    {
+      "id": "icon-1749458904562",
+      "type": "icon",
+      "position": {
+        "x": 430,
+        "y": 341
+      },
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "props": {
+        "animated": true
+      },
+      "iconName": "devicon:postman",
+      "label": "User"
+    },
+    {
+      "id": "arrow-1749458918744",
+      "type": "arrow",
+      "position": {
+        "x": 495,
+        "y": 330
+      },
+      "size": {
+        "width": 120,
+        "height": 40
+      },
+      "props": {
+        "segments": 3,
+        "rotation": 0,
+        "isAnimating": false,
+        "curve": 0
+      }
+    },
+    {
+      "id": "text-1749458921777",
+      "type": "text",
+      "position": {
+        "x": 497,
+        "y": 292
+      },
+      "size": {
+        "width": 132,
+        "height": 76
+      },
+      "props": {
+        "hasBorder": false
+      },
+      "text": " Login\n"
+    },
+    {
+      "id": "arrow-1749458947453",
+      "type": "arrow",
+      "position": {
+        "x": 497,
+        "y": 377
+      },
+      "size": {
+        "width": 120,
+        "height": 40
+      },
+      "props": {
+        "segments": 3,
+        "rotation": -180,
+        "isAnimating": false,
+        "curve": 0
+      }
+    },
+    {
+      "id": "text-1749458954085",
+      "type": "text",
+      "position": {
+        "x": 493,
+        "y": 415
+      },
+      "size": {
+        "width": 274,
+        "height": 61
+      },
+      "props": {
+        "hasBorder": false
+      },
+      "text": "JWT with permissions"
+    },
+    {
+      "id": "arrow-1749458983844",
+      "type": "arrow",
+      "position": {
+        "x": 397,
+        "y": 501
+      },
+      "size": {
+        "width": 116,
+        "height": 26
+      },
+      "props": {
+        "segments": 3,
+        "rotation": 90,
+        "isAnimating": false,
+        "curve": 0
+      }
+    },
+    {
+      "id": "arrow-1749459009032",
+      "type": "arrow",
+      "position": {
+        "x": 505,
+        "y": 600
+      },
+      "size": {
+        "width": 283,
+        "height": 35
+      },
+      "props": {
+        "segments": 3,
+        "rotation": 0,
+        "isAnimating": false,
+        "curve": 0
+      }
+    },
+    {
+      "id": "text-1749459016395",
+      "type": "text",
+      "position": {
+        "x": 504,
+        "y": 554
+      },
+      "size": {
+        "width": 168,
+        "height": 64
+      },
+      "props": {
+        "hasBorder": false
+      },
+      "text": "Call with obo_token"
+    },
+    {
+      "id": "text-1749459083518",
+      "type": "text",
+      "position": {
+        "x": 466,
+        "y": 485
+      },
+      "size": {
+        "width": 200,
+        "height": 100
+      },
+      "props": {
+        "hasBorder": false
+      },
+      "text": "Call with user_token"
+    },
+    {
+      "id": "icon-1749459107526",
+      "type": "icon",
+      "position": {
+        "x": 509,
+        "y": 741
+      },
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "props": {
+        "animated": true
+      },
+      "iconName": "devicon:postman",
+      "label": "User"
+    },
+    {
+      "id": "arrow-1749459127051",
+      "type": "arrow",
+      "position": {
+        "x": 423,
+        "y": 667
+      },
+      "size": {
+        "width": 120,
+        "height": 40
+      },
+      "props": {
+        "segments": 3,
+        "rotation": 45,
+        "isAnimating": false,
+        "curve": 0
+      }
+    }
+  ],
+  "version": "1.0",
+  "exportDate": "2025-06-09T08:53:02.243Z"
+}

@@ -77,11 +77,12 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
           <div
             style={{
               color: '#ffffff',
-              padding: `${Math.max(2, Math.floor(height * 0.10))}px ${Math.max(4, Math.floor(width * 0.10))}px`,
-              fontSize: `${Math.max(8, Math.floor(height * 0.10))}px`,
+              padding: `${Math.min(4, Math.max(2, Math.floor(height * 0.10)))}px ${Math.min(8, Math.max(4, Math.floor(width * 0.10)))}px`,
+              fontSize: `${Math.min(12, Math.max(8, Math.floor(height * 0.10)))}px`,
               fontWeight: 600,
               whiteSpace: 'nowrap',
-              maxWidth: `${width * 3}px`,
+              maxWidth: `${Math.min(200, width * 2)}px`,
+              minWidth: '40px',
               textAlign: 'center',
               background: boxColor.replace('85%)', '65%)'),
               borderRadius: '6px',
@@ -89,6 +90,8 @@ const BoxSetItem: React.FC<BoxSetProps> = ({
               backdropFilter: 'blur(8px)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               transition: 'all 0.3s ease',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
             {commentLabel}
