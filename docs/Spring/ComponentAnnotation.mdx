@@ -1,0 +1,59 @@
+---
+sidebar_label: 'Component Annotation'
+sidebar_position: 1
+---
+
+# Extend Spring Component Annotation
+
+
+
+Dzięki temu, że jest ona oparta na adnotacji `@Component` ze Springa, klasy nią oznaczone będą automatycznie wykrywane i zarządzane przez Springa jako tzw. "ziarna" (beans).
+
+2.  **Komentarz Javadoc:**
+
+3.  **Definicja Adnotacji:**
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Component // Kluczowe dla Springa
+public @interface SpecialComponent {
+    // ...
+}
+```
+
+*   `public @interface SpecialComponent`: Deklaruje niestandardową adnotację o nazwie `SpecialComponent`.
+*   `@Target(ElementType.TYPE)`: Ta **meta-adnotacja** określa, że adnotacja `@SpecialComponent` może być stosowana tylko do *typów* (czyli do klas, interfejsów, wyliczeń, innych adnotacji). W praktyce, w tym kontekście, będzie najczęściej używana do oznaczania *klas*.
+*   `@Retention(RetentionPolicy.RUNTIME)`: Ta **meta-adnotacja** określa, że informacja o tej adnotacji ma być dostępna *w czasie działania programu* (runtime) za pomocą mechanizmu refleksji. Jest to niezbędne dla frameworków takich jak Spring, które w czasie działania skanują klasy w poszukiwaniu adnotacji, aby zarządzać komponentami.
+*   `@Documented`: Ta **meta-adnotacja** powoduje, że jeśli zastosujesz `@SpecialComponent` do jakiejś klasy i wygenerujesz dokumentację Javadoc dla tej klasy, informacja o zastosowaniu adnotacji `@SpecialComponent` zostanie zawarta w tej dokumentacji.
+*   `@Component`: To jest **najważniejsza meta-adnotacja** w kontekście Springa. Oznacza to, że *sama adnotacja `@SpecialComponent` dziedziczy zachowanie adnotacji `@Component`*. W efekcie, *każda klasa*, którą oznaczymy adnotacją `@SpecialComponent`, zostanie automatycznie potraktowana przez Springa tak, jakby była oznaczona adnotacją `@Component`. Oznacza to, że Spring ją wykryje podczas skanowania komponentów i utworzy z niej "ziarno" (bean) w swoim kontekście aplikacji.
+
+4.  **Atrybut Adnotacji (`String value()`) i `@AliasFor`:**
+```java
+/**
+ * The value may indicate a suggestion for a logical component name, to be turned into a Spring
+ * bean in case of an autodetected component.
+ *
+ * @return The suggested component name, if any (or empty String otherwise)
+ */
+@AliasFor(annotation = Component.class)
+String value() default "";
+```
+
+*   `String value() default "";`: Definiuje atrybut o nazwie `value` dla adnotacji `@SpecialComponent`. Ma on typ `String` i domyślną wartość (pusty łańcuch `""`). Atrybut `value` jest specjalny w adnotacjach Javy – jeśli jest jedynym atrybutem lub jedynym, dla którego nie podano wartości, można go pominąć przy użyciu adnotacji (np. zamiast `@SpecialComponent(value="nazwa")` można napisać `@SpecialComponent("nazwa")`).
+*   `@AliasFor(annotation = Component.class)`: Ta adnotacja ze Springa jest kluczowa. Mówi ona: "Atrybut `value` w *tej* adnotacji (`@SpecialComponent`) jest aliasem dla atrybutu `value` w adnotacji `@Component`".
+
+**Co to oznacza w praktyce (dzięki `@AliasFor` i `@Component`):**
+
+*   Gdy użyjesz adnotacji `@SpecialComponent` na klasie, np. `@SpecialComponent("mojSpecialComponent")`, wartość `"mojSpecialComponent"` którą podasz dla atrybutu `value` w `@SpecialComponent`, *jednocześnie* zostanie przekazana jako wartość dla atrybutu `value` w dziedziczonej adnotacji `@Component`.
+*   Atrybut `value` w adnotacji `@Component` służy do jawnego podania nazwy ziarna Springa.
+*   W efekcie, `@SpecialComponent("mojSpecialComponent")` na klasie jest równoważne z `@Component("mojSpecialComponent")`. Klasa zostanie zarejestrowana w kontekście Springa pod nazwą "mojSpecialComponent".
+*   Jeśli użyjesz `@SpecialComponent` bez podawania wartości (np. `@SpecialComponent` nad klasą), domyślna wartość `""` zostanie przekazana do `@Component.value()`. W takim przypadku Spring nada ziarnu domyślną nazwę (zazwyczaj opartą na nazwie klasy, np. `mojSpecialComponentImpl`).
+
+**Dlaczego tworzy się taką adnotację zamiast po prostu użyć `@Component`?**
+
+1.  **Semantyka i czytelność kodu:** `@SpecialComponent` jest znacznie bardziej konkretne i opisowe niż ogólne `@Component`. Od razu widać, że klasa oznaczona `@SpecialComponent` reprezentuje logikę biznesową związaną z konkretnym przypadkiem użycia, a nie jest po prostu jakimś dowolnym komponentem Springa (jak np. kontroler, serwis pomocniczy, repozytorium itp.).
+2.  **Warstwy Architektury:** Pomaga to w jasnym oddzieleniu warstwy logiki biznesowej od innych warstw aplikacji (np. warstwy prezentacji, warstwy dostępu do danych).
+3.  **Specyficzne przetwarzanie:** Mimo że nie widać tego w tym fragmencie kodu, posiadanie dedykowanej adnotacji `@SpecialComponent` pozwala na łatwe wyszukiwanie wszystkich klas tego typu i stosowanie do nich specyficznej logiki (np. przy użyciu aspektów Spring AOP), takiej jak logowanie, specyficzne zarządzanie transakcjami dla logiki biznesowej, walidacja wejścia do use case'ów itp.
+4.  **Konwencja w projekcie:** Wprowadza spójną konwencję oznaczania klas logiki biznesowej, ułatwiając utrzymanie kodu.
