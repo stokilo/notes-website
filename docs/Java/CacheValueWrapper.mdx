@@ -1,0 +1,99 @@
+---
+sidebar_label: 'ValueWrapper'
+sidebar_position: 1
+---
+
+# Why Spring internally wraps values in ValueWrapper
+
+Użycie `ValueWrapper` w Spring Cache Abstraction zamiast bezpośredniego zwracania wartości ma kluczowe znaczenie dla **jednoznacznego rozróżnienia dwóch sytuacji**:
+
+1.  **Brak wartości w cache dla danego klucza.**
+2.  **Wartość `null` została jawnie zapisana w cache dla danego klucza.**
+
+Rozważmy, co by się stało, gdyby metoda pobierająca z cache (`Cache.get(Object key)`) zwracała bezpośrednio `Object`:
+
+```java
+// Hipotetyczny interfejs cache zwracający bezpośrednio Object
+interface HypotheticalCache {
+    @Nullable
+    Object get(Object key);
+}
+
+HypotheticalCache cache = ...;
+Object value = cache.get("myKey");
+
+if (value == null) {
+    // Co to oznacza?
+    // 1. Klucz "myKey" nie istnieje w cache?
+    // 2. Klucz "myKey" istnieje, a jego wartość to faktycznie null?
+    // Nie da się tego rozróżnić!
+}
+```
+Taka implementacja prowadzi do niejednoznaczności. Nie wiadomo, czy `null` oznacza brak wpisu, czy też to, że dla danego klucza faktycznie przechowujemy wartość `null`.
+
+### Jak `ValueWrapper` rozwiązuje ten problem?
+
+Interfejs `Cache` w Springu definiuje metodę `get` w następujący sposób:
+
+```java
+public interface Cache {
+    // ... inne metody
+    @Nullable
+    ValueWrapper get(Object key);
+    // ... inne metody
+}
+```
+
+A `ValueWrapper` wygląda tak, jak podałeś:
+
+```java
+@FunctionalInterface
+interface ValueWrapper {
+    @Nullable
+    Object get();
+}
+```
+
+Teraz przepływ wygląda następująco:
+
+1.  Wołasz `cache.get("myKey")`.
+2.  **Jeśli klucz "myKey" nie istnieje w cache**, metoda `cache.get("myKey")` zwróci `null`.
+3.  **Jeśli klucz "myKey" istnieje w cache** (nawet jeśli jego przechowywana wartość to `null`), metoda `cache.get("myKey")` zwróci instancję `ValueWrapper`.
+4.  Dopiero na tej instancji `ValueWrapper` wołasz metodę `valueWrapper.get()`, aby uzyskać faktyczną przechowywaną wartość. Ta metoda może zwrócić `null`, jeśli taka wartość została zapisana.
+
+Przykład:
+
+```java
+Cache cache = ...; // Implementacja cache (np. z EhCache, Caffeine, Redis)
+
+// Scenariusz 1: Klucz nie istnieje w cache
+ValueWrapper wrapper1 = cache.get("nieistniejacyKlucz");
+if (wrapper1 == null) {
+    System.out.println("Klucz 'nieistniejacyKlucz' nie został znaleziony w cache.");
+}
+
+// Scenariusz 2: Klucz istnieje, a jego wartość to "jakaśWartość"
+cache.put("istniejacyKlucz", "jakaśWartość");
+ValueWrapper wrapper2 = cache.get("istniejacyKlucz");
+if (wrapper2 != null) {
+    Object wartosc = wrapper2.get(); // wartosc = "jakaśWartość"
+    System.out.println("Znaleziono wartość: " + wartosc);
+}
+
+// Scenariusz 3: Klucz istnieje, a jego wartość to null
+cache.put("kluczZNullem", null);
+ValueWrapper wrapper3 = cache.get("kluczZNullem");
+if (wrapper3 != null) {
+    Object wartoscNull = wrapper3.get(); // wartoscNull = null
+    System.out.println("Znaleziono wartość (która jest nullem): " + wartoscNull);
+    if (wartoscNull == null) {
+        System.out.println("Potwierdzone: wartość dla 'kluczZNullem' to null.");
+    }
+}
+```
+
+### Podsumowując
+
+`ValueWrapper` działa jako **kontener** lub **opakowanie** na wartość z cache. Jego głównym celem jest umożliwienie mechanizmowi cache'owania sygnalizowania, czy dany klucz w ogóle istnieje w cache, niezależnie od tego, czy przechowywana dla niego wartość jest `null` czy nie.
+
+Fakt, że jest to `@FunctionalInterface` wynika po prostu z tego, że ma jedną metodę abstrakcyjną (`get()`). To pozwala na jego ewentualne tworzenie przy użyciu wyrażeń lambda, chociaż w kontekście pobierania z cache, głównie konsumujemy już istniejące instancje `ValueWrapper` zwrócone przez implementację cache.
