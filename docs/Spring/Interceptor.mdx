@@ -1,0 +1,136 @@
+---
+sidebar_label: 'Interceptor'
+sidebar_position: 1
+---
+
+# Spring Interceptor Concept (Spring MVC)
+
+Okej, wyobraź sobie, że masz portiera (lub ochroniarza) w budynku biurowym (Twoja aplikacja Spring MVC). Zanim ktokolwiek (żądanie HTTP) wejdzie do konkretnego biura (metody w kontrolerze), musi przejść przez tego portiera. Portier może też sprawdzić osobę, gdy ta opuszcza biuro.
+
+**Spring Interceptor (przechwytywacz)** to właśnie taki "portier" dla żądań HTTP w aplikacjach Spring MVC. Pozwala on na wykonanie pewnych operacji **przed** dotarciem żądania do docelowego kontrolera oraz **po** jego obsłużeniu przez kontroler, ale **przed** wysłaniem odpowiedzi do klienta.
+
+**Kluczowe koncepcje:**
+
+1.  **Przechwytywanie żądań:** Interceptory "łapią" przychodzące żądania HTTP i wychodzące odpowiedzi.
+2.  **Cykl życia żądania:** Interceptory działają w określonych punktach cyklu życia żądania w Spring MVC.
+3.  **Logika współdzielona (Cross-Cutting Concerns):** Są idealne do implementacji logiki, która musi być wykonana dla wielu różnych żądań/kontrolerów, np.:
+*   Logowanie informacji o żądaniu.
+*   Uwierzytelnianie (sprawdzanie, czy użytkownik jest zalogowany).
+*   Autoryzacja (sprawdzanie, czy użytkownik ma uprawnienia do danej akcji).
+*   Modyfikacja modelu przed przekazaniem go do widoku.
+*   Obsługa sesji, ustawianie ciasteczek.
+*   Pomiar czasu wykonania żądania.
+
+**Jak działa Interceptor? (Metody interfejsu `HandlerInterceptor`)**
+
+Aby stworzyć interceptor, implementujesz interfejs `org.springframework.web.servlet.HandlerInterceptor` (lub rozszerzasz klasę `org.springframework.web.servlet.handler.HandlerInterceptorAdapter` w starszych wersjach Springa, choć teraz preferuje się implementację interfejsu z metodami domyślnymi).
+
+Ten interfejs definiuje trzy główne metody:
+
+1.  `preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)`:
+*   **Kiedy:** Wywoływana **przed** wykonaniem metody docelowego kontrolera (`handler`).
+*   **Co robi:** Możesz tu np. sprawdzić uprawnienia, zalogować szczegóły żądania, zmodyfikować żądanie.
+*   **Zwraca:**
+*   `true`: Przetwarzanie żądania jest kontynuowane, tzn. Spring MVC przekaże żądanie do następnego interceptora w łańcuchu lub do kontrolera.
+*   `false`: Przetwarzanie żądania jest zatrzymywane. Interceptor sam musi obsłużyć odpowiedź (np. wysłać błąd 403 Forbidden, przekierować na stronę logowania). W tym przypadku metody `postHandle` i `afterCompletion` **nie będą** wywołane.
+
+2.  `postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView)`:
+*   **Kiedy:** Wywoływana **po** wykonaniu metody kontrolera, ale **przed** wyrenderowaniem widoku.
+*   **Co robi:** Możesz tu zmodyfikować obiekt `ModelAndView` (np. dodać wspólne atrybuty do modelu dla wszystkich widoków), zanim zostanie on przekazany do mechanizmu renderowania widoku.
+*   **Warunek:** Wywoływana tylko, jeśli `preHandle` zwróciło `true` i kontroler nie rzucił wyjątku.
+
+3.  `afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)`:
+*   **Kiedy:** Wywoływana **po** zakończeniu całego cyklu przetwarzania żądania, czyli po wyrenderowaniu widoku (lub gdy wystąpił wyjątek).
+*   **Co robi:** Idealne miejsce na czyszczenie zasobów, końcowe logowanie, obsługę wyjątków (parametr `ex` zawiera ewentualny wyjątek).
+*   **Warunek:** Wywoływana zawsze, jeśli `preHandle` zwróciło `true`, niezależnie od tego, czy kontroler lub widok rzucił wyjątek.
+
+**Jak zarejestrować Interceptor?**
+
+Aby Spring wiedział o Twoim interceptorze, musisz go zarejestrować. Robi się to najczęściej poprzez implementację interfejsu `WebMvcConfigurer` i nadpisanie metody `addInterceptors`:
+
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        // Rejestracja Twojego interceptora
+        registry.addInterceptor(new MojInterceptor())
+                .addPathPatterns("/admin/**") // Stosuj tylko do ścieżek zaczynających się od /admin/
+                .excludePathPatterns("/admin/login"); // Wyklucz ścieżkę /admin/login
+
+        // Możesz dodać więcej interceptorów, kolejność ma znaczenie
+        // registry.addInterceptor(new InnyInterceptor()).addPathPatterns("/**");
+    }
+}
+
+// Przykładowy Interceptor
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class MojInterceptor implements HandlerInterceptor {
+
+    private static final Logger logger = LoggerFactory.getLogger(MojInterceptor.class);
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        logger.info("MojInterceptor: preHandle dla URI: {}", request.getRequestURI());
+        // np. sprawdzenie czy użytkownik jest zalogowany
+        // if (!isUserLoggedIn(request)) {
+        //     response.sendRedirect("/login");
+        //     return false;
+        // }
+        return true; // Kontynuuj przetwarzanie
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        if (modelAndView != null) {
+            logger.info("MojInterceptor: postHandle dla widoku: {}", modelAndView.getViewName());
+            // np. dodanie wspólnego atrybutu do modelu
+            // modelAndView.addObject("globalMessage", "Witaj na stronie!");
+        }
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        logger.info("MojInterceptor: afterCompletion dla URI: {}", request.getRequestURI());
+        if (ex != null) {
+            logger.error("Wystąpił błąd: ", ex);
+        }
+        // np. czyszczenie zasobów
+    }
+}
+```
+
+**Interceptor vs. Filtr (Servlet Filter):**
+
+To częste pytanie. Oto główne różnice:
+
+| Cecha                | Filtr (Servlet Filter)                                  | Interceptor (Spring MVC)                                   |
+| :------------------- | :------------------------------------------------------ | :--------------------------------------------------------- |
+| **Poziom działania** | Poziom Servlet API (przed `DispatcherServlet` Springa) | Poziom Spring MVC (wewnątrz `DispatcherServlet`)             |
+| **Kontekst**         | Ma dostęp do `ServletRequest` i `ServletResponse`     | Ma dostęp do kontekstu Springa, `HandlerMethod`, `ModelAndView` |
+| **Ziarna Springa**   | Domyślnie nie jest zarządzany przez Spring (choć można) | Jest ziarnem Springa, łatwa integracja z innymi ziarnami |
+| **Granularność**     | Mniej granularny, operuje na żądaniach przed Spring MVC | Bardziej granularny, może działać na podstawie konkretnego handlera |
+| **Zastosowanie**     | Np. kodowanie znaków, kompresja GZIP, ogólne bezpieczeństwo | Np. logowanie, autoryzacja, modyfikacja modelu Spring MVC  |
+
+**Podsumowując:**
+
+Spring Interceptor to potężne narzędzie do implementacji logiki, która musi być wykonana w różnych punktach cyklu życia żądania HTTP, bez zaśmiecania kodu kontrolerów. Pozwala na czyste oddzielenie tzw. "cross-cutting concerns".
+
+
+
+**Podsumowując:**
+
+*   **`HandlerInterceptor`:** Główny "portier" dla synchronicznych żądań w Spring MVC.
+*   **`CallableProcessingInterceptor` / `DeferredResultProcessingInterceptor` / `AsyncHandlerInterceptor`:** Specjalistyczni "portierzy" dostosowani do cyklu życia asynchronicznych żądań w Spring MVC. Pozwalają na interakcję w kluczowych momentach przetwarzania asynchronicznego, zarówno w wątku głównym, jak i w wątku wykonującym zadanie.
+*   **AOP `MethodInterceptor`:** Ogólny mechanizm "owijania" wywołań metod na dowolnych ziarnach Springa, służący do implementacji logiki przekrojowej (cross-cutting concerns).
