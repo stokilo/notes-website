@@ -1,0 +1,44 @@
+---
+sidebar_label: 'ConcurrentHashMap'
+sidebar_position: 1
+---
+
+# ConcurrentHashMap.newKeySet
+
+Jasne, rozbijmy ten kod kawałek po kawałku:
+
+```java
+private final Set<String> excludedPackages = ConcurrentHashMap.newKeySet(8);
+```
+
+6.  **`ConcurrentHashMap.newKeySet(8)`**:
+*   `ConcurrentHashMap`: To klasa z pakietu `java.util.concurrent`. Jest to implementacja mapy, która jest **bezpieczna wątkowo** (thread-safe) i zoptymalizowana pod kątem wysokiej współbieżności (wielu wątków operujących na niej jednocześnie). Zazwyczaj oferuje lepszą wydajność w środowiskach wielowątkowych niż np. `Collections.synchronizedMap(new HashMap<>())`.
+
+*   `.newKeySet()`: To statyczna metoda fabryczna klasy `ConcurrentHashMap`. Zwraca ona `Set`, który jest w rzeczywistości "widokiem" na klucze obiektu `ConcurrentHashMap`. Kiedy dodajesz element do tego `Setu`, tak naprawdę dodajesz klucz do wewnętrznej `ConcurrentHashMap` (z jakąś stałą, nieistotną wartością, np. `Boolean.TRUE`). Jest to efektywny sposób na uzyskanie bezpiecznego wątkowo `Setu`.
+
+
+
+Masz rację, `ConcurrentHashMap.newKeySet()` zwraca instancję klasy `KeySetView`.
+
+To bardzo sprytny sposób na uzyskanie bezpiecznego wątkowo `Setu` bez potrzeby pisania zupełnie nowej implementacji od zera.
+
+Oto dlaczego jest to tak inicjowane i jak to działa:
+
+1.  **Problem: Potrzeba bezpiecznego wątkowo `Setu`**
+Standardowe implementacje `Set` w Javie, takie jak `HashSet` czy `TreeSet`, nie są bezpieczne wątkowo. Jeśli wiele wątków próbuje jednocześnie modyfikować taki zbiór, może to prowadzić do niespójnego stanu i błędów (np. `ConcurrentModificationException` lub utraty danych).
+Można by użyć `Collections.synchronizedSet(new HashSet<>())`, ale to rozwiązanie synchronizuje dostęp do całego zbioru za pomocą jednego globalnego zamka (locka), co może stać się wąskim gardłem wydajności przy dużej liczbie wątków.
+
+2.  **Rozwiązanie: Wykorzystanie istniejącej, wydajnej struktury**
+`ConcurrentHashMap` jest już wysoce zoptymalizowaną, bezpieczną wątkowo implementacją mapy. Zamiast pisać od podstaw nową, bezpieczną wątkowo implementację `Setu`, twórcy Javy postanowili wykorzystać istniejącą infrastrukturę `ConcurrentHashMap`.
+
+3.  **Jak działa `KeySetView`?**
+*   **"Widok" na klucze mapy:** `KeySetView` to nie jest oddzielna kolekcja danych. Jest to specjalny "widok" (view) na *klucze* bazowego obiektu `ConcurrentHashMap`. Oznacza to, że operacje na `KeySetView` są w rzeczywistości delegowane do operacji na tym wewnętrznym `ConcurrentHashMap`.
+*   **Jak `Set` jest symulowany przez `Map`?** Klucze w mapie są z definicji unikalne – dokładnie tak, jak elementy w `Set`. Kiedy dodajesz element do `Setu` utworzonego przez `newKeySet()`, tak naprawdę dzieje się coś takiego:
+```java
+// Gdy robisz:
+// myKeySet.add("jakiśKlucz");
+
+// Wewnętrznie (koncepcyjnie) dzieje się:
+// bazowyConcurrentHashMap.put("jakiśKlucz", JAKAŚ_STAŁA_WARTOŚĆ);
+        ```
+Ta `JAKAŚ_STAŁA_WARTOŚĆ` to zazwyczaj predefiniowany, statyczny obiekt, np. `Boolean.TRUE`. Nie jest on istotny z punktu widzenia użytkownika `Setu` – liczy się tylko obecność klucza.
