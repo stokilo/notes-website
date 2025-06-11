@@ -5,6 +5,65 @@ sidebar_position: 1
 
 # Why Dependency Management for parent child modules in same project
 
+
+Example from [https://github.com/arturlaskowski/bigos-app/blob/f4c63b18c441b0b144a17c7d1ac5bd2e26d0eabf/](https://github.com/arturlaskowski/bigos-app/blob/f4c63b18c441b0b144a17c7d1ac5bd2e26d0eabf/)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.bigos.app</groupId>
+    <artifactId>bigos-app</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <modules>
+        <module>common</module>
+        <module>infrastructure</module>
+        <module>infrastructure/kafka</module>
+        <module>order-service</module>
+        <module>payment-service</module>
+        <module>restaurant-service</module>
+    </modules>
+    <packaging>pom</packaging>
+
+    <dependencyManagement>
+     <!--- ...  why this is in dependency management ?-->
+        <dependencies>
+            <dependency>
+                <groupId>com.bigos.app</groupId>
+                <artifactId>common-domain</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+     <!--- ... not like other external dependencies ?-->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <release>${java.version}</release>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+```
+
 Dobrze, wyjaśnijmy, dlaczego w tym pliku `pom.xml` sekcja `dependencyManagement` zawiera zależności, które są w rzeczywistości modułami budowanymi w ramach tego samego projektu wielomodułowego (tego parent POMa).
 
 To standardowa praktyka w projektach wielomodułowych w Mavenie i służy kilku kluczowym celom:
