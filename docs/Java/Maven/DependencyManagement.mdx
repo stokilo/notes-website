@@ -1,0 +1,24 @@
+---
+sidebar_label: 'Dependency Management'
+sidebar_position: 1
+---
+
+# Why Dependency Management for parent child modules in same project
+
+Dobrze, wyjaśnijmy, dlaczego w tym pliku `pom.xml` sekcja `dependencyManagement` zawiera zależności, które są w rzeczywistości modułami budowanymi w ramach tego samego projektu wielomodułowego (tego parent POMa).
+
+To standardowa praktyka w projektach wielomodułowych w Mavenie i służy kilku kluczowym celom:
+
+1.  **Centralne Zarządzanie Wersjami:** Najważniejszym celem `dependencyManagement` jest scentralizowanie deklaracji wersji zależności. Kiedy moduł A zależy od modułu B (oba zbudowane w ramach tego samego projektu `com.bigos.app`), chcesz mieć pewność, że zawsze zależy od tej *samej wersji* modułu B, która jest aktualnie budowana jako część projektu. Użycie ``${project.version}`` w `dependencyManagement` gwarantuje, że wszystkie wewnętrzne zależności będą miały tę samą wersję co główny projekt (`bigos-app`).
+
+2.  **Spójność w Modułach Potomnych:** Gdy moduł potomny (np. `order-service`) będzie potrzebował zależności do innego modułu wewnętrznego (np. `common-domain`), w jego własnym pliku `pom.xml` wystarczy, że zadeklaruje tę zależność w sekcji `<dependencies>` podając tylko `groupId` i `artifactId`:
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.bigos.app</groupId>
+        <artifactId>common-domain</artifactId>
+        <!-- Nie trzeba podawać wersji! Jest dziedziczona z parenta (dependencyManagement) -->
+    </dependency>
+    <!-- ... inne zależności ... -->
+</dependencies>
+    ```
