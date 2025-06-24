@@ -1,0 +1,47 @@
+---
+sidebar_label: 'Avro Decimal'
+sidebar_position: 1
+---
+
+# Lesson for java.math.BigDecimal in Avro
+
+**Elaborating the Core Issue**
+
+I'm now focusing on the main challenge: clearly illustrating how to correctly manage `BigDecimal` values when working with Avro schemas in Java. This means outlining the necessary steps for encoding and decoding these values, paying close attention to potential precision and scale issues. My goal is to craft a comprehensive guide that addresses common pitfalls and provides robust solutions. I need to make sure the user finds this guide clear and useful.
+
+
+**Clarifying Data Mapping**
+
+I'm currently fleshing out the optimal data mapping strategy, focusing on using a `record` type in Avro to precisely represent `BigDecimal` values. This will encapsulate both the unscaled value (as `bytes`) and the scale (as `int`), ensuring complete accuracy and efficient processing when writing and reading data. I'm aiming for a balance of clarity, performance, and compatibility with the Avro ecosystem.
+
+
+**Detailing Logical Implementation**
+
+I'm now focusing on detailing the logical implementation using Avro's `decimal` logical type. This includes outlining how to create Avro schemas that accurately represent `BigDecimal` values, emphasizing the need for precision and scale attributes. I'll describe how to handle the encoding and decoding process using Avro Java API and highlighting best practices for maintaining data integrity and avoid precision loss.
+
+
+**Outlining the Core Schema**
+
+I've just solidified the structure of the Polish response. I'm focusing on providing clear examples of Avro schemas using the `decimal` logical type, demonstrating both `bytes` and `fixed` representations. I'll highlight the critical role of the `precision` and `scale` attributes and their impact on data integrity. I'm keen on making the code generation step straightforward and explaining how to use Avro API correctly.
+
+
+**Structuring the Polish Response**
+
+I'm currently crafting the response structure to ensure clarity and coherence. It includes a concise introduction, detailed explanations of logical types (specifically `decimal`), examples of Avro schema definitions, and a step-by-step Java implementation guide. I plan to present both `bytes` and `fixed` representations for `decimal` and highlight their pros and cons. I will include clear code snippets and emphasize the automatic `BigDecimal` mapping for a practical hands-on guide.
+
+
+**Refining Schema Examples**
+
+I'm now refining the schema examples to ensure they're practical and clear. I will start with a simple record using the `bytes` representation of `decimal`, and expand on it with a complex example using the `fixed` representation. The main point is to demonstrate how to write and read these schemas.
+
+
+**Structuring the Polish Guide**
+
+I'm now arranging the structure to ensure a logical flow: introduction, explanation of logical types with a focus on `decimal`, providing examples with `bytes` and `fixed` representations. Java implementations, and a concise summary, are planned. I'll include practical examples of schema definitions, showing writing and reading Avro data, highlighting the automatic mapping of `BigDecimal`.
+
+
+**Outlining Initial Planning**
+
+I'm starting the Polish guide by breaking down the user's request, focusing on clear explanations and practical examples. I'll cover `BigDecimal` handling, emphasizing schema design and code implementation. My goal is to craft a comprehensive guide.
+
+
