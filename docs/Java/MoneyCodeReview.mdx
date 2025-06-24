@@ -1,0 +1,214 @@
+---
+sidebar_label: 'ValueWrapper'
+sidebar_position: 1
+---
+
+# Perform CR for following Money class
+
+```java
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+public record Money(BigDecimal amount) {
+
+    public static final Money ZERO = new Money(BigDecimal.ZERO);
+
+    public Money(BigDecimal amount) {
+        if (amount == null) {
+            throw new IllegalArgumentException();
+        }
+        this.amount = setScale(amount);
+    }
+
+    public Money add(Money money) {
+        return new Money(setScale(this.amount.add(money.amount())));
+    }
+
+    public Money subtract(Money money) {
+        return new Money(setScale(this.amount.subtract(money.amount())));
+    }
+
+    public boolean isGreaterThanZero() {
+        return this.amount != null && this.amount.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    public boolean isGreaterOrEqualThan(Money money) {
+        return this.amount != null && this.amount.compareTo(money.amount()) >= 0;
+    }
+
+    public Money multiply(int multiplier) {
+        return new Money(setScale(this.amount.multiply(new BigDecimal(multiplier))));
+    }
+
+    private BigDecimal setScale(BigDecimal input) {
+        return input.setScale(2, RoundingMode.HALF_EVEN);
+    }
+}
+```
+
+
+Jasne, z przyjemnością wykonam szczegółowe code review. To bardzo dobrze napisany fragment kodu, który jest świetnym kandydatem do drobnych ulepszeń.
+
+**Główne pytanie: Czy ten kod poprawnie działa?**
+
+**Tak, kod w obecnej formie będzie działał poprawnie.** Logika arytmetyczna i porównawcza jest solidna. Użycie `BigDecimal` jest prawidłowe, a walidacja `null` w konstruktorze zapewnia podstawowe bezpieczeństwo. Normalizacja skali (`setScale`) jest kluczowa i została zaimplementowana poprawnie.
+
+Poniżej znajdziesz szczegółową analizę, podzieloną na mocne strony, sugestie ulepszeń oraz przepisany kod.
+
+---
+
+### Co działa bardzo dobrze (mocne strony)
+
+1.  **Użycie `record`**: Idealny wybór dla niemutowalnego (immutable) obiektu wartości (Value Object) jak `Money`. Zapewnia to bezpieczeństwo wątkowe i przewidywalność.
+2.  **Użycie `BigDecimal`**: To jedyny słuszny wybór dla operacji finansowych w Javie, aby uniknąć błędów zaokrągleń znanych z typów `float` i `double`.
+3.  **Niemutowalność (Immutability)**: Metody `add`, `subtract`, `multiply` nie modyfikują bieżącego obiektu, tylko zwracają nową instancję `Money`. To fundamentalna zasada dla obiektów wartości.
+4.  **Normalizacja skali (`setScale`)**: Zapewnienie, że każda kwota ma taką samą skalę (2 miejsca po przecinku), jest kluczowe dla spójności i uniknięcia problemów przy porównaniach (`equals`).
+5.  **Tryb zaokrąglania `RoundingMode.HALF_EVEN`**: To tzw. "zaokrąglenie bankierskie". Jest to najlepszy tryb dla większości operacji finansowych, ponieważ minimalizuje skumulowane błędy statystyczne przy dużej liczbie operacji. Bardzo duży plus za świadomy wybór.
+6.  **Walidacja w konstruktorze**: Sprawdzanie, czy `amount` nie jest `null`, to podstawa budowania solidnych i niezawodnych obiektów.
+
+---
+
+### Co można poprawić (sugestie)
+
+Chociaż kod działa, można go uczynić bardziej zwięzłym, czytelnym i zgodnym z nowoczesnymi idiomami Javy.
+
+#### 1. Użyj konstruktora kompaktowego (Compact Constructor)
+
+Rekordy oferują specjalną, skróconą składnię konstruktora, przeznaczoną właśnie do walidacji i normalizacji. Twój obecny kod z pełnym konstruktorem kanonicznym jest nieco rozwlekły.
+
+**Obecnie:**
+```java
+public Money(BigDecimal amount) {
+    if (amount == null) {
+        throw new IllegalArgumentException();
+    }
+    this.amount = setScale(amount);
+}
+```
+
+**Sugerowana zmiana (zwięźlej i czytelniej):**
+```java
+public Money { // To jest konstruktor kompaktowy
+    if (amount == null) {
+        throw new IllegalArgumentException("Amount cannot be null");
+    }
+    // Normalizacja parametru wejściowego
+    amount = setScale(amount);
+}
+```
+W konstruktorze kompaktowym nie piszesz `this.amount = ...`. Java zrobi to za Ciebie po zakończeniu bloku kodu. Przypisanie do `amount` modyfikuje parametr, który następnie zostanie użyty do zainicjowania finalnego pola.
+
+#### 2. Usuń redundantne sprawdzenia `null`
+
+W metodach `isGreaterThanZero()` i `isGreaterOrEqualThan(Money money)` sprawdzasz, czy `this.amount` nie jest `null`.
+```java
+public boolean isGreaterThanZero() {
+    return this.amount != null && this.amount.compareTo(BigDecimal.ZERO) > 0;
+}
+```
+To sprawdzenie jest **zbędne**. Dzięki walidacji w konstruktorze masz **gwarancję**, że jeśli obiekt `Money` istnieje, to jego pole `amount` **nigdy nie będzie `null`**. Usunięcie tego warunku uprości kod i lepiej odzwierciedli niezmienniki (invariants) Twojej klasy.
+
+**Sugerowana zmiana:**
+```java
+public boolean isGreaterThanZero() {
+    return this.amount.compareTo(BigDecimal.ZERO) > 0;
+}
+
+public boolean isGreaterOrEqualThan(Money money) {
+    return this.amount.compareTo(money.amount()) >= 0;
+}
+```
+
+#### 3. Użyj `Objects.requireNonNull` dla lepszych komunikatów
+
+Zamiast `if (amount == null) throw new ...`, standardową i bardziej wyrazistą praktyką jest użycie `Objects.requireNonNull`. Domyślnie rzuca `NullPointerException`, co jest często bardziej semantycznie poprawne, ale można też dostarczyć własny komunikat i rzucić `IllegalArgumentException`. Jednak w tym przypadku `Objects.requireNonNull` z komunikatem jest idealne.
+
+**Sugerowana zmiana:**
+```java
+import java.util.Objects;
+// ... w konstruktorze kompaktowym
+Objects.requireNonNull(amount, "Amount for Money cannot be null.");
+```
+
+#### 4. Kwestia do przemyślenia: waluta (Currency)
+
+Twój obiekt `Money` reprezentuje kwotę, ale nie ma informacji o walucie. To sprawia, że operacje takie jak `add(new Money(...))` są potencjalnie niebezpieczne. Dodanie 100 USD do 100 EUR nie powinno dać w wyniku 200. W bardziej zaawansowanych systemach `Money` często jest definiowane jako `record Money(BigDecimal amount, Currency currency)` i metody arytmetyczne sprawdzają, czy waluty są zgodne. Na razie to tylko sugestia na przyszłość, jeśli projekt będzie się rozwijał.
+
+---
+
+### Przepisany kod (wersja po refaktoringu)
+
+Oto jak wyglądałby Twój kod po zastosowaniu powyższych sugestii.
+
+```java
+package com.bigos.common.domain.vo;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Objects;
+
+/**
+ * Reprezentuje niemutowalną wartość pieniężną.
+ * Gwarantuje, że kwota nigdy nie jest null i jest zawsze zaokrąglona
+ * do 2 miejsc po przecinku przy użyciu zaokrąglenia bankierskiego.
+ */
+public record Money(BigDecimal amount) {
+
+    public static final Money ZERO = new Money(BigDecimal.ZERO);
+
+    /**
+     * Konstruktor kompaktowy do walidacji i normalizacji danych wejściowych.
+     */
+    public Money {
+        // Używamy standardowej metody do sprawdzania nulla - jest bardziej zwięzła i idiomatyczna.
+        Objects.requireNonNull(amount, "Amount for Money cannot be null.");
+        // Normalizujemy parametr 'amount', który Java następnie przypisze do pola this.amount.
+        amount = amount.setScale(2, RoundingMode.HALF_EVEN);
+    }
+
+    // Ten konstruktor jest już niepotrzebny, ponieważ zastąpiliśmy go wersją kompaktową.
+    // public Money(BigDecimal amount) { ... }
+
+    public Money add(Money money) {
+        // Wynik dodawania jest przekazywany do konstruktora, który sam zadba o normalizację skali.
+        return new Money(this.amount.add(money.amount()));
+    }
+
+    public Money subtract(Money money) {
+        return new Money(this.amount.subtract(money.amount()));
+    }
+
+    /**
+     * Sprawdza, czy kwota jest większa od zera.
+     * Nie ma potrzeby sprawdzania `this.amount != null`, ponieważ konstruktor to gwarantuje.
+     */
+    public boolean isGreaterThanZero() {
+        return this.amount.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    /**
+     * Sprawdza, czy kwota jest większa lub równa innej kwocie.
+     */
+    public boolean isGreaterOrEqualThan(Money money) {
+        return this.amount.compareTo(money.amount()) >= 0;
+    }
+
+    public Money multiply(int multiplier) {
+        return new Money(this.amount.multiply(new BigDecimal(multiplier)));
+    }
+
+    // Ta metoda mogłaby pozostać, ale jej logika została przeniesiona bezpośrednio do konstruktora
+    // kompaktowego, co czyni ją zbędną, chyba że chcemy jej używać w wielu miejscach.
+    // Dla zwięzłości, przeniosłem jej logikę bezpośrednio.
+    // private BigDecimal setScale(BigDecimal input) { ... }
+}
+```
+
+### Podsumowanie
+
+Twój oryginalny kod **działa poprawnie** i jest dobrze przemyślany. Sugerowane zmiany nie naprawiają krytycznych błędów, ale podnoszą jakość kodu, czyniąc go:
+*   **Bardziej zwięzłym i czytelnym** (konstruktor kompaktowy).
+*   **Bardziej solidnym i jednoznacznym** (usunięcie zbędnych sprawdzeń `null`).
+*   **Bardziej zgodnym ze standardami** (użycie `Objects.requireNonNull`).
+
+To świetna robota! Wprowadzone zmiany to kolejny krok na drodze od "działającego kodu" do "czystego i eleganckiego kodu".
