@@ -1,0 +1,136 @@
+---
+sidebar_label: 'ValueWrapper'
+sidebar_position: 1
+---
+
+# Explain org.springframework.core.ParameterizedTypeReference
+
+Jasne, wyjaśnijmy to krok po kroku.
+
+`ParameterizedTypeReference` to klasa z biblioteki Spring Framework, której głównym celem jest **rozwiązanie problemu wymazywania typów generycznych (type erasure) w Javie**.
+
+W skrócie: pozwala ona na "przechwycenie" i przekazanie pełnej informacji o typie generycznym (np. `List<String>`, a nie tylko `List`) w czasie działania programu.
+
+---
+
+### 1. Problem: Wymazywanie Typów (Type Erasure)
+
+Zacznijmy od zrozumienia problemu, który `ParameterizedTypeReference` rozwiązuje.
+
+W Javie typy generyczne (te w nawiasach ostrych `< >`) istnieją głównie w czasie kompilacji. Kompilator sprawdza, czy np. do `List<String>` nie próbujesz dodać liczby. Jednak po kompilacji, w trakcie działania programu (runtime), ta informacja jest "wymazywana".
+
+**Co to oznacza w praktyce?**
+Dla maszyny wirtualnej Javy (JVM), `List<String>`, `List<Integer>` i `List<User>` to po prostu `List`.
+
+Zobaczmy to na przykładzie:
+```java
+List<String> stringList = new ArrayList<>();
+List<Integer> integerList = new ArrayList<>();
+
+// To się nie skompiluje, bo .class nie przechowuje informacji generycznej
+// Class a = List<String>.class; // BŁĄD
+
+// W czasie działania programu, obie klasy są takie same!
+System.out.println(stringList.getClass() == integerList.getClass()); // Wypisze: true
+```
+JVM nie wie, jaki typ jest "w środku" listy.
+
+**Dlaczego to jest problem dla Springa?**
+Wyobraź sobie, że używasz `RestTemplate` lub `WebClient` do pobrania danych z zewnętrznego API. API zwraca JSON, który wygląda tak:
+```json
+[
+  { "name": "Anna", "age": 30 },
+  { "name": "Piotr", "age": 42 }
+]
+```
+Chcesz, aby Spring automatycznie przekonwertował ten JSON na `List<User>`.
+
+Gdybyś napisał tak:
+```java
+// TO JEST ZŁY SPOSÓB!
+List<User> users = restTemplate.getForObject(url, List.class);
+```
+Skąd Spring ma wiedzieć, że elementy tej listy to obiekty typu `User`? Przez wymazywanie typów, przekazujesz mu tylko `List.class`. W efekcie Spring stworzy `List<LinkedHashMap>`, a ty dostaniesz błąd `ClassCastException` przy próbie użycia tej listy jako `List<User>`.
+
+---
+
+### 2. Rozwiązanie: Jak działa `ParameterizedTypeReference`?
+
+`ParameterizedTypeReference` to sprytny sposób na obejście tego problemu. Używa się go poprzez stworzenie **anonimowej klasy wewnętrznej**.
+
+Zobacz, jak wygląda prawidłowe użycie:
+```java
+// Import
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+
+// ...
+
+RestTemplate restTemplate = new RestTemplate();
+String url = "http://api.example.com/users";
+
+// Tworzymy referencję do typu, który nas interesuje
+ParameterizedTypeReference<List<User>> responseType =
+    new ParameterizedTypeReference<List<User>>() {}; // Zwróć uwagę na puste klamry {}!
+
+// Używamy tej referencji w wywołaniu
+ResponseEntity<List<User>> response = restTemplate.exchange(
+    url,
+    HttpMethod.GET,
+    null,
+    responseType // Przekazujemy naszą referencję, a nie List.class
+);
+
+List<User> users = response.getBody(); // Teraz to zadziała!
+```
+
+**Co tu się dzieje "pod maską"?**
+
+1.  **`new ParameterizedTypeReference<List<User>>() {}`**: Te puste klamry `{}` są kluczowe. Nie tworzysz tu zwykłego obiektu, ale **anonimową podklasę**, która dziedziczy po `ParameterizedTypeReference<List<User>>`.
+2.  W Javie, informacja o generycznym typie klasy nadrzędnej **jest zachowywana** w czasie działania programu dla podklasy.
+3.  Klasa `ParameterizedTypeReference` wykorzystuje refleksję (`getGenericSuperclass()`), aby "zajrzeć" w swoją własną definicję i odczytać, jaki typ generyczny został zadeklarowany (`List<User>`).
+4.  Dzięki temu Spring otrzymuje pełną, niewymazaną informację o typie (`java.util.List<com.example.User>`) i wie, jak poprawnie zdeserializować dane JSON.
+
+Można to sobie wyobrazić jako stworzenie "etykiety" z typem, którą można bezpiecznie przekazywać w kodzie.
+
+---
+
+### 3. Gdzie się tego używa? (Praktyczne przykłady)
+
+Użyjesz `ParameterizedTypeReference` wszędzie tam, gdzie framework musi znać pełny typ generyczny, a nie może go wydedukować w inny sposób.
+
+*   **`RestTemplate` (starsze podejście)**
+```java
+// Pobieranie listy obiektów
+ParameterizedTypeReference<List<String>> typeRef = new ParameterizedTypeReference<>() {};
+ResponseEntity<List<String>> response = restTemplate.exchange(url, HttpMethod.GET, null, typeRef);
+    ```
+
+*   **`WebClient` (nowoczesne, reaktywne podejście)**
+```java
+// Pobieranie Mono lub Flux z generyczną listą
+Mono<List<User>> usersMono = webClient.get()
+    .uri("/users")
+    .retrieve()
+    .bodyToMono(new ParameterizedTypeReference<List<User>>() {});
+    ```
+
+*   **Systemy kolejkowe (JMS, RabbitMQ)**
+Podobnie, przy odbieraniu wiadomości, które mają być przekonwertowane na obiekt generyczny.
+```java
+// Przykład koncepcyjny
+Message<Product<Book>> msg = rabbitTemplate.receiveAndConvert(queueName, new ParameterizedTypeReference<Message<Product<Book>>>() {});
+    ```
+
+---
+
+### Podsumowanie
+
+| Cecha | Opis |
+| :--- | :--- |
+| **Co to jest?** | Klasa Springa do przechwytywania i przekazywania pełnej informacji o typie generycznym. |
+| **Jaki problem rozwiązuje?** | Wymazywanie typów (type erasure) w Javie, które uniemożliwia poznanie typu np. wewnątrz `List<T>` w czasie działania programu. |
+| **Jak działa?** | Poprzez stworzenie anonimowej podklasy, która zachowuje informację o typie generycznym swojej klasy nadrzędnej. |
+| **Kiedy używać?** | Zawsze, gdy wywołujesz metodę (np. w `RestTemplate`, `WebClient`), która potrzebuje deserializować odpowiedź do typu generycznego, takiego jak `List<T>`, `Map<K, V>` czy `CustomWrapper<T>`. |
+| **Jak używać?** | `new ParameterizedTypeReference<TwojTypZlozony<TypWewnetrzny>>() {}` **(pamiętaj o `{}` na końcu!)**. |
