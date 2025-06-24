@@ -1,0 +1,79 @@
+---
+sidebar_label: 'Event Per Topic or Envelope'
+sidebar_position: 1
+---
+
+# What should we prefer ? Single event type per topic (Kafka) or multiple event types per single topic.
+
+
+To jest jedno z tych pytań, na które odpowiedź brzmi: **"to zależy"**. Nie jest to jednoznaczny antywzorzec, ale jest to wzorzec projektowy, który ma swoje zalety i wady. Jego zastosowanie musi być świadomą decyzją architektoniczną.
+
+W społeczności Kafki toczy się na ten temat ciągła debata. Podsumujmy oba podejścia i sytuacje, w których każde z nich ma sens.
+
+---
+
+### Podejście 1: Jeden Typ Eventu na Jeden Temat (Single Event Type Per Topic)
+
+Jest to podejście często uważane za "domyślne" i najprostsze do zrozumienia. Każdy temat Kafki zawiera tylko jeden, konkretny typ zdarzeń.
+
+*   `user-created-events` (zawiera tylko `UserCreatedEvent`)
+*   `order-placed-events` (zawiera tylko `OrderPlacedEvent`)
+*   `payment-processed-events` (zawiera tylko `PaymentProcessedEvent`)
+
+**Zalety:**
+
+1.  **Prostota i Jawność**: Od razu wiadomo, co znajduje się na danym temacie. Nazwa tematu jest dokumentacją.
+2.  **Prostszy Kod Konsumenta**: Konsument subskrybuje się do tematu i wie dokładnie, jakiego typu wiadomości się spodziewać. Nie potrzebuje żadnej logiki do rozróżniania typów (żadnych `if/else` czy `switch`).
+3.  **Niezależna Ewolucja Schematów**: Schemat dla `UserCreatedEvent` może ewoluować niezależnie od `OrderPlacedEvent`. Nie ma ryzyka, że zmiana w jednym schemacie wpłynie na kompatybilność drugiego.
+4.  **Precyzyjne Zarządzanie Dostępem (ACL)**: Możesz nadawać uprawnienia do odczytu/zapisu na poziomie poszczególnych typów zdarzeń (np. serwis płatności ma dostęp tylko do `payment-events`).
+5.  **Elastyczne Ustawienia Tematów**: Możesz skonfigurować różne polityki retencji, partycjonowania czy kompresji dla różnych tematów, w zależności od charakteru zdarzeń. Np. zdarzenia audytowe mogą być przechowywane dłużej niż zdarzenia tymczasowe.
+
+**Wady:**
+
+1.  **Eksplozja Liczby Tematów (Topic Proliferation)**: W dużym systemie z setkami typów zdarzeń, zarządzanie setkami tematów Kafki staje się uciążliwe.
+2.  **Problemy z Gwarancją Kolejności**: Jeśli kolejność zdarzeń **pomiędzy różnymi typami** jest ważna, to podejście stwarza problem. Kafka gwarantuje kolejność tylko w obrębie jednej partycji jednego tematu. Jeśli `UserCreatedEvent` i `UserProfileUpdatedEvent` dotyczące tego samego użytkownika trafią na dwa różne tematy, nie masz gwarancji, które zdarzenie zostanie przetworzone jako pierwsze.
+
+---
+
+### Podejście 2: Wiele Typów Eventów na Jeden Temat (Multiple Event Types Per Topic)
+
+W tym podejściu grupujesz logicznie powiązane zdarzenia na jednym temacie. Najczęściej grupuje się zdarzenia dotyczące tej samej **encji biznesowej (agregatu)**.
+
+*   `users-stream` (zawiera `UserCreatedEvent`, `UserUpdatedEvent`, `UserDeletedEvent`)
+*   `orders-stream` (zawiera `OrderPlacedEvent`, `OrderShippedEvent`, `OrderCancelledEvent`)
+
+**Zalety:**
+
+1.  **Gwarancja Kolejności**: To jest **główny powód**, dla którego wybiera się ten wzorzec. Jeśli wszystkie zdarzenia dotyczące danego użytkownika (klucz partycjonowania = `userId`) trafiają na ten sam temat `users-stream`, masz gwarancję, że będą one przetwarzane w kolejności, w jakiej zostały wyprodukowane. Jest to kluczowe dla wzorców takich jak Event Sourcing czy budowanie widoków (materialized views).
+2.  **Mniejsza Liczba Tematów**: Upraszcza zarządzanie infrastrukturą Kafki, szczególnie w dużych systemach.
+3.  **Logiczne Grupowanie**: Temat reprezentuje "strumień zmian" dla konkretnej domeny biznesowej, co jest bardzo spójne z myśleniem w DDD (Domain-Driven Design).
+
+**Wady:**
+
+1.  **Złożoność Konsumenta**: Konsument musi implementować logikę do rozróżniania typów wiadomości (tak jak omawialiśmy, np. za pomocą unii Avro lub nagłówków).
+2.  **Problem "Hałaśliwego Sąsiada" (Noisy Neighbor)**: Jeśli jeden typ zdarzeń jest produkowany w ogromnych ilościach, może "zagłuszyć" inne, rzadsze typy zdarzeń na tym samym temacie. Konsument, który jest zainteresowany tylko tymi rzadkimi zdarzeniami, będzie musiał przetworzyć i odfiltrować całą resztę, co jest nieefektywne.
+3.  **Wspólna Polityka dla Tematu**: Wszystkie typy zdarzeń na jednym temacie muszą dzielić tę samą konfigurację (retencja, partycjonowanie itp.).
+4.  **Złożoność Zarządzania Schematami**: Używając unii Avro, schemat "koperty" staje się centralnym punktem, który trzeba aktualizować przy każdym dodaniu nowego typu zdarzenia.
+
+---
+
+### Kiedy co wybrać? Podsumowanie i Rekomendacja
+
+**NIE jest to antywzorzec**, ale potężne narzędzie, którego należy używać świadomie.
+
+**Wybierz WIELE typów na jeden temat, gdy:**
+
+*   **Gwarancja kolejności** między różnymi typami zdarzeń dla tej samej encji jest **krytycznie ważna**. To najważniejszy argument.
+*   Implementujesz wzorzec **Event Sourcing**, gdzie temat jest dziennikiem zmian (commit log) dla agregatu.
+*   Chcesz modelować tematy jako **strumienie zmian w domenach biznesowych** (np. `customers`, `products`, `orders`).
+*   Masz bardzo dużo typów zdarzeń i chcesz uniknąć eksplozji liczby tematów.
+
+**Wybierz JEDEN typ na jeden temat, gdy:**
+
+*   **Kolejność między różnymi typami zdarzeń nie ma znaczenia**.
+*   Chcesz, aby system był jak **najprostszy** do zrozumienia i utrzymania.
+*   Różne typy zdarzeń mają **drastycznie różne wymagania** (np. co do wolumenu, czasu przechowywania).
+*   Potrzebujesz bardzo **szczegółowej kontroli dostępu** (ACL) do poszczególnych typów zdarzeń.
+*   Twoi konsumenci są zainteresowani tylko wąskim podzbiorem zdarzeń i nie chcesz, aby musieli filtrować duży ruch.
+
+W praktyce często stosuje się **podejście hybrydowe**. Na przykład, zdarzenia dotyczące stanu agregatu (`OrderPlaced`, `OrderShipped`) trafiają na jeden temat, aby zachować kolejność. Ale zdarzenia "powiadomienia" lub integracyjne (`OrderReadyForAnalytics`), które nie wymagają ścisłej kolejności, mogą trafiać na swoje dedykowane tematy.
