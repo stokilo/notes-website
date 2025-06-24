@@ -1,0 +1,139 @@
+---
+sidebar_label: 'Record NonNull check'
+sidebar_position: 1
+---
+
+# Is this code optimal for checking amount is not null?
+
+```java
+public record Money(BigDecimal amount) {
+
+    public static final Money ZERO = new Money(BigDecimal.ZERO);
+
+    public Money(BigDecimal amount) {
+        if (amount == null) {
+            throw new IllegalArgumentException();
+        }
+        this.amount = setScale(amount);
+    }
+
+}
+```
+
+Cześć! To bardzo dobre pytanie, które dotyka sedna tego, czym są rekordy w Javie i jak zapewnić spójność danych.
+
+Krótka odpowiedź: **Tak, można i należy zdefiniować rekord tak, aby nie pozwalał na `null`. Sposób, który pokazałeś (walidacja w konstruktorze), jest jak najbardziej poprawnym i zalecanym mechanizmem w Javie.**
+
+Twój kod jest w 99% idealny. Rozumiem jednak, że "nie podoba Ci się" jego składnia. Na szczęście Java oferuje rozwiązanie, które sprawia, że jest to znacznie bardziej zwięzłe i eleganckie: **konstruktor kompaktowy (compact constructor)**.
+
+### Ulepszenie Twojego kodu: Konstruktor Kompaktowy
+
+Zamiast pisać pełny konstruktor kanoniczny, możesz użyć jego skróconej formy, która została stworzona właśnie do takich celów – walidacji i normalizacji danych.
+
+Zobaczmy, jak można ulepszyć Twój kod:
+
+**Twoja wersja (poprawna, ale rozwlekła):**
+```java
+import java.math.BigDecimal;
+
+public record Money(BigDecimal amount) {
+
+    public Money(BigDecimal amount) {
+        if (amount == null) {
+            throw new IllegalArgumentException("Amount cannot be null");
+        }
+        this.amount = setScale(amount); // Załóżmy, że setScale istnieje
+    }
+
+    // Prywatna metoda pomocnicza do normalizacji
+    private static BigDecimal setScale(BigDecimal input) {
+        return input.setScale(2, RoundingMode.HALF_UP);
+    }
+}
+```
+
+**Wersja z konstruktorem kompaktowym (zwięzła i idiomatyczna):**
+W konstruktorze kompaktowym nie musisz pisać `this.amount = amount;`. Java zrobi to za Ciebie. Skupiasz się tylko na logice walidacji i transformacji.
+
+```java
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Objects;
+
+public record Money(BigDecimal amount) {
+
+    // Konstruktor kompaktowy
+    public Money {
+        // Używamy Objects.requireNonNull dla zwięzłości i standardowego komunikatu
+        Objects.requireNonNull(amount, "amount cannot be null");
+
+        // Możemy też od razu przypisać znormalizowaną wartość do pola `amount`
+        // Mimo że nie piszemy "this.amount =", ta operacja nadpisze parametr `amount`,
+        // a Java użyje tej nowej wartości do zainicjowania finalnego pola.
+        amount = amount.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    // Możemy usunąć stałą ZERO, jeśli nie jest potrzebna publicznie
+    public static final Money ZERO = new Money(BigDecimal.ZERO);
+}
+```
+Jak widzisz, kod w konstruktorze kompaktowym jest znacznie krótszy i czytelniejszy. Robi dokładnie to samo, co Twój kod, ale jego intencja (walidacja i normalizacja) jest bardziej wyeksponowana.
+
+### Dlaczego walidacja w konstruktorze to najlepsze podejście?
+
+Rekordy w Javie są **niezmienne (immutable)**. Oznacza to, że po utworzeniu obiektu jego stan (wartości pól) nie może być już zmieniony. Konstruktor jest jedynym "strażnikiem", który decyduje, czy obiekt w ogóle może powstać.
+
+*   **Gwarancja spójności:** Umieszczając walidację w konstruktorze, masz **100% pewności**, że każdy istniejący obiekt typu `Money` jest w poprawnym stanie (np. jego pole `amount` nigdy nie jest `null`).
+*   **Zasada "Fail-Fast":** Program wyrzuci wyjątek natychmiast przy próbie stworzenia niepoprawnego obiektu, a nie w losowym momencie w przyszłości, gdy ktoś spróbuje użyć `null`-owej wartości, co znacznie ułatwia debugowanie.
+
+### A co z innymi podejściami? (np. adnotacje)
+
+Możesz się zastanawiać, czy nie da się tego zrobić za pomocą adnotacji, np. `@NonNull`.
+
+```java
+import org.jetbrains.annotations.NotNull; // lub z innej biblioteki
+import java.math.BigDecimal;
+
+public record Money(@NotNull BigDecimal amount) {
+    // ...
+}
+```
+
+To również jest **bardzo dobra praktyka**, ale pełni inną rolę:
+1.  **Statyczna analiza kodu:** Twoje IDE (np. IntelliJ, Eclipse) oraz narzędzia do budowania (np. SpotBugs, Sonar) wykorzystają tę adnotację, aby **ostrzec Cię w czasie pisania kodu**, jeśli spróbujesz przekazać `null`.
+2.  **Brak walidacji w czasie wykonania (runtime):** Sama adnotacja `@NotNull` **nie dodaje** logiki rzucającej wyjątek, gdy program jest uruchomiony. Jest to jedynie metadana dla narzędzi.
+
+Wyjątkiem jest biblioteka **Lombok**, która potrafi przetworzyć adnotację `@NonNull` i automatycznie wygenerować w kodzie bajtowym sprawdzenie `Objects.requireNonNull`. Jednak w przypadku standardowych rekordów Javy, musisz to zrobić sam.
+
+### Złoty Standard: Połączenie obu podejść
+
+Najlepszym i najbardziej kompletnym rozwiązaniem jest połączenie obu technik:
+
+1.  **Konstruktor kompaktowy** z `Objects.requireNonNull` dla **gwarancji w czasie wykonania**.
+2.  **Adnotacja `@NonNull`** dla **wsparcia od narzędzi i statycznej analizy**.
+
+```java
+import org.jetbrains.annotations.NotNull; // np. z zależności com.jetbrains:annotations
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Objects;
+
+public record Money(@NotNull BigDecimal amount) {
+
+    public static final Money ZERO = new Money(BigDecimal.ZERO);
+
+    // Konstruktor kompaktowy do walidacji i normalizacji
+    public Money {
+        Objects.requireNonNull(amount, "amount cannot be null");
+        amount = amount.setScale(2, RoundingMode.HALF_UP);
+    }
+}
+```
+Taka definicja rekordu jest "pancerna":
+*   Jest bezpieczna w czasie wykonania.
+*   Pomaga deweloperom unikać błędów już na etapie pisania kodu.
+*   Jest zwięzła i jasno komunikuje swoje intencje (niezmienniki).
+
+### Podsumowując
+
+Twój instynkt był bardzo dobry! Walidacja w konstruktorze to klucz do tworzenia solidnych i niezawodnych rekordów. Użycie **konstruktora kompaktowego** oraz metody **`Objects.requireNonNull()`** sprawi, że Twój kod będzie bardziej elegancki i zgodny z nowoczesnymi praktykami w Javie.
