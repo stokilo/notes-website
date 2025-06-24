@@ -5,43 +5,160 @@ sidebar_position: 1
 
 # Lesson for java.math.BigDecimal in Avro
 
-**Elaborating the Core Issue**
+Doskonale! Ten fragment kodu, który pokazałeś, jest **kluczowy** do zrozumienia drugiego, bardziej zaawansowanego sposobu pracy z Avro.
 
-I'm now focusing on the main challenge: clearly illustrating how to correctly manage `BigDecimal` values when working with Avro schemas in Java. This means outlining the necessary steps for encoding and decoding these values, paying close attention to potential precision and scale issues. My goal is to craft a comprehensive guide that addresses common pitfalls and provides robust solutions. I need to make sure the user finds this guide clear and useful.
+Mój poprzedni opis koncentrował się na **API Specyficznym (`SpecificRecord`)**, gdzie klasy Javy są generowane z pliku `.avsc`. Jest to najprostsze i najczęstsze podejście.
 
+Twój kod jest przykładem pracy z **API Generycznym (`GenericRecord`)**, które jest używane, gdy nie chcesz lub nie możesz generować klas Javy. Jest to typowe w systemach przetwarzania danych (np. Spark, Flink) lub w narzędziach, które muszą obsługiwać dowolne schematy Avro w locie.
 
-**Clarifying Data Mapping**
+Przeanalizujmy Twój kod i jego kontekst.
 
-I'm currently fleshing out the optimal data mapping strategy, focusing on using a `record` type in Avro to precisely represent `BigDecimal` values. This will encapsulate both the unscaled value (as `bytes`) and the scale (as `int`), ensuring complete accuracy and efficient processing when writing and reading data. I'm aiming for a balance of clarity, performance, and compatibility with the Avro ecosystem.
+### Dlaczego Twój kod jest potrzebny? Różnica między API Specyficznym a Generycznym
 
+1.  **API Specyficzne (`SpecificRecord`, np. wygenerowana klasa `Product`)**
+*   **Zapis:** Wywołujesz `product.setPrice(new BigDecimal("123.45"))`.
+*   **Co się dzieje w tle:** Wygenerowany setter `setPrice` **sam wykonuje konwersję** z `BigDecimal` na `ByteBuffer` (lub `byte[]`) za pomocą dokładnie tej samej logiki, którą masz w swojej metodzie `getByteBuffer`. Ta konwersja jest dla Ciebie ukryta.
 
-**Detailing Logical Implementation**
+2.  **API Generyczne (`GenericRecord`)**
+*   `GenericRecord` to w zasadzie mapa (`Map<String, Object>`). Nie ma metody `setPrice`. Używasz `record.put("price", value)`.
+*   Biblioteka Avro, pracując z `GenericRecord`, oczekuje, że dla pola zdefiniowanego w schemacie jako `bytes` podasz wartość typu `java.nio.ByteBuffer`.
+*   Nie możesz po prostu zrobić `record.put("price", new BigDecimal("123.45"))`, ponieważ `BigDecimal` to nie `ByteBuffer`.
+*   **I tu właśnie wkracza Twoja metoda `getByteBuffer`!** Jej zadaniem jest ręczne przeprowadzenie tej konwersji, którą API Specyficzne robi automatycznie. Tworzy ona `ByteBuffer` z obiektu `BigDecimal` zgodnie z metadanymi `precision` i `scale` ze schematu.
 
-I'm now focusing on detailing the logical implementation using Avro's `decimal` logical type. This includes outlining how to create Avro schemas that accurately represent `BigDecimal` values, emphasizing the need for precision and scale attributes. I'll describe how to handle the encoding and decoding process using Avro Java API and highlighting best practices for maintaining data integrity and avoid precision loss.
+**Wniosek:** Twój kod jest absolutnie poprawny i jest to **standardowy sposób ręcznej konwersji `BigDecimal` na `ByteBuffer`** przy pracy z `GenericRecord` i typami logicznymi.
 
+---
 
-**Outlining the Core Schema**
+### Poprawna obsługa `BigDecimal` przy użyciu API Generycznego (`GenericRecord`)
 
-I've just solidified the structure of the Polish response. I'm focusing on providing clear examples of Avro schemas using the `decimal` logical type, demonstrating both `bytes` and `fixed` representations. I'll highlight the critical role of the `precision` and `scale` attributes and their impact on data integrity. I'm keen on making the code generation step straightforward and explaining how to use Avro API correctly.
+Poniżej znajduje się kompletny przykład zapisu i odczytu z wykorzystaniem Twojego podejścia.
 
+#### Schemat (`product.avsc` - bez zmian)
+```json
+{
+  "type": "record",
+  "name": "Product",
+  "namespace": "pl.example.avro",
+  "fields": [
+    { "name": "name", "type": "string" },
+    {
+      "name": "price",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 9,
+        "scale": 2
+      }
+    }
+  ]
+}
+```
 
-**Structuring the Polish Response**
+#### Zapis (Serializacja) z `GenericRecord`
 
-I'm currently crafting the response structure to ensure clarity and coherence. It includes a concise introduction, detailed explanations of logical types (specifically `decimal`), examples of Avro schema definitions, and a step-by-step Java implementation guide. I plan to present both `bytes` and `fixed` representations for `decimal` and highlight their pros and cons. I will include clear code snippets and emphasize the automatic `BigDecimal` mapping for a practical hands-on guide.
+```java
+import org.apache.avro.Conversions;
+import org.apache.avro.LogicalType;
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumWriter;
 
+import java.io.File;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.ByteBuffer;
 
-**Refining Schema Examples**
+public class AvroGenericWriteExample {
 
-I'm now refining the schema examples to ensure they're practical and clear. I will start with a simple record using the `bytes` representation of `decimal`, and expand on it with a complex example using the `fixed` representation. The main point is to demonstrate how to write and read these schemas.
+    // Twoja metoda pomocnicza (może być statyczna)
+    private static ByteBuffer bigDecimalToByteBuffer(Schema fieldSchema, BigDecimal value) {
+        // Upewnijmy się, że skala jest poprawna! To jest best practice.
+        int scale = fieldSchema.getJsonProp("scale").asInt();
+        BigDecimal scaledValue = value.setScale(scale, RoundingMode.HALF_UP);
 
+        // Używamy wbudowanego w Avro konwertera
+        return new Conversions.DecimalConversion().toBytes(scaledValue, fieldSchema, fieldSchema.getLogicalType());
+    }
 
-**Structuring the Polish Guide**
+    public static void main(String[] args) throws IOException {
+        // 1. Wczytaj schemat
+        Schema schema = new Schema.Parser().parse(new File("src/main/resources/avro/product.avsc"));
 
-I'm now arranging the structure to ensure a logical flow: introduction, explanation of logical types with a focus on `decimal`, providing examples with `bytes` and `fixed` representations. Java implementations, and a concise summary, are planned. I'll include practical examples of schema definitions, showing writing and reading Avro data, highlighting the automatic mapping of `BigDecimal`.
+        // 2. Utwórz obiekt GenericRecord
+        GenericRecord productRecord = new GenericData.Record(schema);
+        productRecord.put("name", "Tablet Pro");
 
+        // 3. Przygotuj BigDecimal i skonwertuj go za pomocą Twojej metody
+        BigDecimal price = new BigDecimal("999.99");
+        Schema priceSchema = schema.getField("price").schema(); // Pobierz schemat dla pola 'price'
+        ByteBuffer priceBytes = bigDecimalToByteBuffer(priceSchema, price);
 
-**Outlining Initial Planning**
+        // 4. Umieść skonwertowany ByteBuffer w rekordzie
+        productRecord.put("price", priceBytes);
 
-I'm starting the Polish guide by breaking down the user's request, focusing on clear explanations and practical examples. I'll cover `BigDecimal` handling, emphasizing schema design and code implementation. My goal is to craft a comprehensive guide.
+        // 5. Zapisz do pliku
+        DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
+            dataFileWriter.create(schema, new File("products_generic.avro"));
+            dataFileWriter.append(productRecord);
+            System.out.println("Zapisano generyczny rekord do pliku.");
+            System.out.println("Rekord: " + productRecord);
+        }
+    }
+}
+```
 
+#### Odczyt (Deserializacja) do `GenericRecord`
 
+Tutaj dzieje się "magia" typów logicznych. Podczas odczytu biblioteka Avro **automatycznie** wykryje typ logiczny `decimal` i sama skonwertuje `ByteBuffer` z powrotem na `BigDecimal`. Nie potrzebujesz metody `byteBufferToBigDecimal`.
+
+```java
+import org.apache.avro.file.DataFileReader;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumReader;
+
+import java.io.File;
+import java.io.IOException;
+
+public class AvroGenericReadExample {
+
+    public static void main(String[] args) throws IOException {
+        // 1. Skonfiguruj odczyt generyczny
+        DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+        try (DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(new File("products_generic.avro"), datumReader)) {
+
+            // 2. Odczytaj rekord
+            GenericRecord productRecord = dataFileReader.next();
+            System.out.println("Odczytano generyczny rekord: " + productRecord);
+
+            // 3. Pobierz pole 'price'
+            // Avro automatycznie konwertuje ByteBuffer -> BigDecimal!
+            Object priceObject = productRecord.get("price");
+
+            System.out.println("Typ odczytanej ceny: " + priceObject.getClass().getName()); // Będzie to java.math.BigDecimal
+
+            java.math.BigDecimal price = (java.math.BigDecimal) priceObject;
+            System.out.println("Wartość ceny: " + price);
+        }
+    }
+}
+```
+
+### Podsumowanie i Best Practices dla Twojego przypadku
+
+1.  **Wybór API**: Świadomie zdecyduj, którego API używasz.
+*   **`SpecificRecord` (generowane klasy)**: Zalecane dla większości aplikacji, gdzie model danych jest stabilny. Prostsze i bezpieczniejsze typowanie.
+*   **`GenericRecord` (Twój przypadek)**: Idealne dla narzędzi do przetwarzania danych, dynamicznych schematów, gdzie elastyczność jest ważniejsza niż bezpieczeństwo typów na etapie kompilacji.
+
+2.  **Ręczna konwersja przy zapisie**: Jeśli używasz `GenericRecord`, musisz ręcznie konwertować `BigDecimal` na `ByteBuffer` przed umieszczeniem go w rekordzie. Twoja metoda jest do tego idealna.
+
+3.  **Automatyczna konwersja przy odczycie**: Dobra wiadomość jest taka, że przy odczycie `GenericRecord` biblioteka Avro sama zajmie się konwersją w drugą stronę (z `ByteBuffer` do `BigDecimal`), o ile typ logiczny jest obecny w schemacie.
+
+4.  **Ustawianie skali**: Zawsze przed konwersją upewnij się, że Twój `BigDecimal` ma skalę zgodną ze schematem (`yourDecimal.setScale(schemaScale, ...)`). To zapobiega błędom i gwarantuje spójność danych.
+
+Twój kod jest więc **kluczowym elementem układanki** przy pracy z `BigDecimal` w generycznym API Avro.
