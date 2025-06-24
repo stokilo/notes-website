@@ -1,0 +1,128 @@
+---
+sidebar_label: 'NonNull'
+sidebar_position: 1
+---
+
+# NotNull NonNull which to use and why?
+
+
+Doskonałe pytanie! To, że widzisz różne pakiety i czujesz, że to skomplikowane, jest całkowicie normalne. Niestety, w świecie Javy nie ma jednego, uniwersalnego standardu dla adnotacji `@NotNull`/`@NonNull`, co prowadzi do tego zamieszania.
+
+Spróbujmy to uporządkować.
+
+### Po co w ogóle używać tych adnotacji?
+
+Głównym celem jest **statyczna analiza kodu**. Oznacza to, że narzędzia (jak Twoje IDE - IntelliJ, Eclipse) lub systemy budowania (Maven/Gradle z pluginami) mogą **przed uruchomieniem programu** przeanalizować kod i ostrzec Cię o potencjalnych błędach `NullPointerException` (NPE).
+
+**Jak to działa w praktyce?**
+Kiedy oznaczysz parametr metody adnotacją `@NotNull`, mówisz narzędziu: "Hej, obiecuję, że nikt nigdy nie powinien przekazać tu wartości `null`".
+
+```java
+// Mówisz IDE, że 'name' nie może być nullem
+public void Greet(org.jetbrains.annotations.NotNull String name) {
+    System.out.println("Hello, " + name.toUpperCase()); // Bezpieczne, bo zakładamy, że nie jest null
+}
+
+// Gdzieś indziej w kodzie...
+public void someMethod(String possibleNullName) {
+    greet(possibleNullName); // <-- IntelliJ podkreśli to na żółto!
+                             // Ostrzeżenie: "Argument 'possibleNullName' might be null"
+}
+```
+
+Dzięki temu możesz naprawić błąd, zanim program w ogóle się uruchomi i rzuci wyjątkiem. Adnotacje te tworzą "kontrakt" dla Twojego kodu.
+
+---
+
+### Skąd wziąć adnotację? Najpopularniejsze opcje
+
+Masz rację, główne źródła to IntelliJ i Spring, ale jest ich więcej. Oto przegląd najważniejszych i moja rekomendacja, kiedy której używać.
+
+#### 1. IntelliJ IDEA (`org.jetbrains.annotations.NotNull`)
+
+*   **Kiedy używać?** Głównie wtedy, gdy cały Twój zespół pracuje w IntelliJ i nie używacie Springa ani Lomboka.
+*   **Zalety:**
+*   Perfekcyjna integracja z IntelliJ. IDE wie dokładnie, co ta adnotacja oznacza i daje najlepsze możliwe podpowiedzi i ostrzeżenia.
+*   **Wady:**
+*   Uzależnia Cię od konkretnego IDE. Jeśli ktoś w zespole używa Eclipse lub VS Code, nie będzie miał z tej adnotacji takiego pożytku bez dodatkowej konfiguracji.
+*   Jest to zależność "provided", czyli nie trafia do finalnego pliku `.jar`/`.war`, co jest dobre, ale nadal jest to zależność od narzędzia, a nie od standardu.
+
+#### 2. Spring Framework (`org.springframework.lang.NonNull`)
+
+*   **Kiedy używać?** **Jeśli Twój projekt już używa Springa lub Spring Boota.** To jest najprostszy wybór w takim ekosystemie.
+*   **Zalety:**
+*   Jest już w Twoim projekcie, nie musisz dodawać nowej zależności.
+*   Jest częścią spójnego ekosystemu Springa.
+*   IntelliJ i inne narzędzia doskonale ją rozumieją.
+*   **Wady:**
+*   Dodawanie zależności Springa tylko dla tej adnotacji to przerost formy nad treścią.
+
+#### 3. Lombok (`lombok.NonNull`)
+
+*   **Kiedy używać?** Jeśli już używasz biblioteki Lombok w swoim projekcie.
+*   **Zalety:**
+*   **Robi coś więcej!** Poza byciem wskazówką dla statycznej analizy, Lombok automatycznie **generuje w kodzie bajtowym sprawdzenie `if (param == null) throw new NullPointerException("param is marked non-null but is null");`**.
+*   Łączy więc statyczną analizę z zabezpieczeniem w czasie wykonania (runtime).
+*   **Wady:**
+*   Wymaga, aby w projekcie był skonfigurowany procesor adnotacji Lombok.
+
+#### 4. JSR-305 (`javax.annotation.Nonnull`)
+
+*   **Historia:** To miała być oficjalna, standardowa adnotacja w Javie (Java Specification Request 305). Niestety, JSR nigdy nie został sfinalizowany i jest w stanie "uśpienia".
+*   **Kiedy używać?** W bibliotekach lub projektach, które mają być niezależne od frameworków (Spring) i narzędzi (IntelliJ).
+*   **Zalety:**
+*   Jest powszechnie rozumiana przez wiele narzędzi do statycznej analizy (SpotBugs, SonarQube). Uważana za "neutralny standard".
+*   **Wady:**
+*   Jej status jest niejasny. W nowszych wersjach Javy (9+) z systemem modułów jej używanie bywa kłopotliwe.
+*   Zazwyczaj trzeba dodać zależność, np. `com.google.code.findbugs:jsr305`.
+
+---
+
+### Którą więc wybrać? Moja rekomendacja
+
+Trzymaj się prostej zasady: **użyj tego, co już masz w projekcie, i bądź konsekwentny**.
+
+1.  **Jesteś w projekcie Spring / Spring Boot?**
+*   Używaj `org.springframework.lang.NonNull`. Bez dwóch zdań.
+
+2.  **Używasz już Lomboka?**
+*   Używaj `lombok.NonNull`. Dostaniesz dodatkowo darmowe sprawdzenie w czasie wykonania.
+
+3.  **Twój zespół pracuje tylko na IntelliJ i nie pasują powyższe punkty?**
+*   Używaj `org.jetbrains.annotations.NotNull`. Jest to w pełni akceptowalne.
+
+4.  **Piszesz bibliotekę, która ma być niezależna od wszystkiego?**
+*   Rozważ `javax.annotation.Nonnull` (z JSR-305), ale bądź świadomy jej historycznych problemów. Jest to jednak nadal najbardziej "uniwersalny" wybór dla narzędzi do analizy.
+
+**Najważniejsza zasada:**
+**Wybierz JEDNĄ adnotację i trzymaj się jej w całym projekcie.** Mieszanie `org.springframework.lang.NonNull` z `org.jetbrains.annotations.NotNull` wprowadza niepotrzebny bałagan i może mylić narzędzia.
+
+### A co z `jakarta.validation.constraints.NotNull`?
+
+To jeszcze inna historia! Ta adnotacja pochodzi z Jakarta Bean Validation (dawniej JavaEE Bean Validation). Jej głównym celem **nie jest statyczna analiza kodu**, ale **walidacja obiektów w czasie wykonania**, najczęściej przychodzących danych (np. z formularza HTML lub żądania REST API).
+
+```java
+// Przykład w kontrolerze Spring
+@PostMapping("/users")
+public ResponseEntity<Void> createUser(@Valid @RequestBody UserDto user) {
+    // ...
+}
+
+public class UserDto {
+    @NotNull // To jest jakarta.validation.constraints.NotNull
+    private String username;
+    // ...
+}
+```
+
+Jeśli Spring zobaczy `@Valid`, uruchomi walidator, który sprawdzi, czy pole `username` nie jest nullem. Jeśli jest, rzuci wyjątek `MethodArgumentNotValidException`, zanim kod Twojej metody w ogóle się wykona.
+
+### Podsumowanie
+
+| Adnotacja                               | Główne zastosowanie                                                              | Kiedy używać?                                              |
+| --------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `org.jetbrains.annotations.NotNull`     | Statyczna analiza w IntelliJ.                                                      | W projektach mocno związanych z ekosystemem JetBrains.      |
+| `org.springframework.lang.NonNull`      | Statyczna analiza w ekosystemie Spring.                                            | W projektach opartych na Springu.                          |
+| `lombok.NonNull`                        | Statyczna analiza **oraz** generowanie sprawdzenia `null` w czasie wykonania.      | W projektach używających Lomboka.                          |
+| `javax.annotation.Nonnull` (JSR-305)    | Statyczna analiza, neutralna dla frameworków.                                      | W bibliotekach lub gdy potrzebna jest neutralność.         |
+| `jakarta.validation.constraints.NotNull` | **Walidacja** danych (np. DTO) w czasie wykonania. **Inny cel!**                   | Do walidacji obiektów, np. w warstwie kontrolerów REST.      |
