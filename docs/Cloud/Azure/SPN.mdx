@@ -1,0 +1,97 @@
+---
+sidebar_label: 'SPN'
+sidebar_position: 1
+---
+
+# Explain what is SPN in Azure.
+
+
+Oczywiście, wyjaśnijmy to dokładnie, krok po kroku, używając analogii, która pomoże wszystko zrozumieć.
+
+### TL;DR (W jednym zdaniu)
+
+**Azure Service Principal (SPN)** to tożsamość (jak konto użytkownika, ale dla aplikacji), której używają programy, skrypty i usługi, aby bezpiecznie logować się do Azure i zarządzać zasobami, bez potrzeby używania haseł prawdziwych ludzi.
+
+---
+
+### Analogia: Robot w Magazynie
+
+Wyobraź sobie, że zarządzasz ogromnym, zautomatyzowanym magazynem (to Twoja **subskrypcja Azure**). W tym magazynie masz półki z cennymi towarami (to Twoje **zasoby**, np. maszyny wirtualne, bazy danych).
+
+1.  **Potrzeba:** Chcesz, aby robot (to Twoja **aplikacja** lub **skrypt automatyzujący**) mógł samodzielnie jeździć po magazynie i przenosić towary z jednej półki na drugą (np. wdrażać nową wersję aplikacji na serwer).
+
+2.  **Zły pomysł:** Mógłbyś dać robotowi swoją własną kartę dostępu i hasło. Ale co, jeśli zmienisz hasło? Albo odejdziesz z pracy? Robot przestanie działać. To niebezpieczne i niepraktyczne.
+
+3.  **Dobre rozwiązanie (tutaj wchodzi SPN):** Zamiast tego, tworzysz specjalną tożsamość *tylko dla tego robota*. To jest właśnie **Service Principal (SPN)**.
+
+*   **Projekt robota (Application Object):** Najpierw w centrali firmy (w **Azure Active Directory / Microsoft Entra ID**) tworzysz "projekt" lub "szablon" dla tego typu robota. Mówi on, jak robot się nazywa i jakie ma ogólne cechy. To jest **Obiekt Aplikacji (Application Object)**.
+*   **Konkretny robot w Twoim magazynie (Service Principal):** Następnie na podstawie tego projektu tworzysz w *swoim* konkretnym magazynie (w Twoim **tenancie Azure**) fizyczną instancję robota. To jest **Jednostka Usługi (Service Principal)**. To ten konkretny robot będzie wykonywał pracę.
+*   **Identyfikator robota (Credentials):** Dajesz robotowi jego własny, unikalny identyfikator, aby mógł udowodnić, kim jest. Może to być:
+*   **Klucz/Hasło (Client Secret):** Prosty ciąg znaków, który robot podaje przy wejściu.
+*   **Certyfikat (Certificate):** Bardziej zaawansowany i bezpieczniejszy sposób uwierzytelniania, jak biometryczny skan.
+*   **Uprawnienia (Role Assignment - RBAC):** Teraz najważniejsze. Sam fakt, że robot jest w magazynie, nic mu nie daje. Musisz mu nadać konkretne uprawnienia. Używając systemu kontroli dostępu (**Azure RBAC**), mówisz: "Ten konkretny robot (SPN) ma prawo (np. **rola 'Contributor'**) tylko do półki A5 i B2 (np. **do konkretnej grupy zasobów**), i niczego więcej".
+
+**Wniosek z analogii:** Service Principal to robot z własnym identyfikatorem i precyzyjnie określonymi uprawnieniami, który wykonuje pracę w Twoim imieniu, ale bez dostępu do Twoich osobistych danych uwierzytelniających.
+
+---
+
+### Jak to działa technicznie? (Trzy kluczowe elementy)
+
+Kiedy mówimy o SPN, w rzeczywistości mamy na myśli trzy powiązane ze sobą obiekty w Azure Active Directory (teraz Microsoft Entra ID).
+
+#### 1. Obiekt Aplikacji (Application Object)
+*   **Co to jest?** To jest globalna, "matrycowa" definicja Twojej aplikacji. Jest tworzony **jeden raz** w "domowym" tenancie Azure AD.
+*   **Do czego służy?** Działa jak szablon. Zawiera globalne ustawienia aplikacji: jej nazwę, logo, adresy URL do logowania itp. Można go myśleć jako o klasie w programowaniu obiektowym.
+*   **Kiedy powstaje?** Gdy rejestrujesz nową aplikację w portalu Azure w sekcji "App registrations" (Rejestracje aplikacji).
+
+#### 2. Jednostka Usługi (Service Principal Object)
+*   **Co to jest?** To jest lokalna instancja (kopia) obiektu aplikacji w danym tenancie Azure AD. Można go myśleć jako o obiekcie stworzonym na podstawie klasy.
+*   **Do czego służy?** To właśnie ten obiekt reprezentuje aplikację w Twoim tenancie. To jemu nadajesz uprawnienia i to on jest uwierzytelniany podczas próby dostępu do zasobów. Jeśli aplikacja ma działać w wielu tenantach (np. aplikacja SaaS), w każdym z nich będzie miała swój własny, oddzielny Service Principal, ale wszystkie będą wskazywać na ten sam, jeden globalny Obiekt Aplikacji.
+*   **Kiedy powstaje?** Automatycznie, gdy rejestrujesz aplikację w swoim tenancie.
+
+#### 3. Przypisanie Roli (Role Assignment)
+*   **Co to jest?** To jest połączenie trzech rzeczy:
+1.  **Kto?** (Service Principal)
+2.  **Co może robić?** (Rola, np. `Reader`, `Contributor`, `Owner`)
+3.  **Gdzie?** (Zasięg/Scope, np. cała subskrypcja, grupa zasobów, konkretna maszyna wirtualna)
+*   **Do czego służy?** To jest mechanizm autoryzacji. **Sam SPN nie ma żadnych uprawnień!** Dopiero po przypisaniu mu roli do konkretnego zasobu może on cokolwiek zrobić. To kluczowa zasada bezpieczeństwa – **zasada najmniejszych uprawnień (Principle of Least Privilege)**.
+
+### Praktyczny przykład: CI/CD w GitHub Actions
+
+Chcesz, aby pipeline w GitHub Actions automatycznie wdrażał Twoją stronę internetową do Azure App Service.
+
+1.  **Krok 1: Tworzenie SPN**
+*   Wchodzisz do portalu Azure -> Microsoft Entra ID -> App registrations.
+*   Klikasz "New registration" i nadajesz nazwę, np. `github-deploy-spn`.
+*   W tym momencie Azure tworzy **Obiekt Aplikacji** oraz **Service Principal** w Twoim tenancie.
+*   W ustawieniach nowo utworzonej aplikacji przechodzisz do "Certificates & secrets" i tworzysz nowy **Client Secret**. **Zapisujesz go od razu, bo później nie będzie już widoczny!**
+
+2.  **Krok 2: Nadawanie uprawnień (Autoryzacja)**
+*   Idziesz do swojej **Grupy Zasobów**, w której znajduje się Twoja App Service.
+*   Wybierasz "Access control (IAM)".
+*   Klikasz "Add" -> "Add role assignment".
+*   Wybierasz rolę, np. **"Website Contributor"** (aby nie dawać zbyt szerokich uprawnień).
+*   Wyszukujesz i wybierasz swojego SPN (`github-deploy-spn`).
+*   Zapisujesz. Teraz ten SPN ma prawo do modyfikacji usług w tej konkretnej grupie zasobów.
+
+3.  **Krok 3: Użycie w GitHub Actions**
+*   W ustawieniach swojego repozytorium na GitHubie, w sekcji "Secrets", dodajesz trzy sekrety:
+*   `AZURE_CLIENT_ID`: ID aplikacji (znajdziesz w przeglądzie SPN).
+*   `AZURE_TENANT_ID`: ID Twojego tenanta (też w przeglądzie).
+*   `AZURE_CLIENT_SECRET`: Wartość klucza, którą zapisałeś w kroku 1.
+*   W swoim pliku workflow (`.yml`) używasz akcji `azure/login@v1` i podajesz jej te sekrety.
+
+```yaml
+- name: 'Az CLI login'
+  uses: azure/login@v1
+  with:
+    creds: ${{ secrets.AZURE_CREDENTIALS }} # AZURE_CREDENTIALS to spakowane dane logowania, ale można też użyć client-id, tenant-id i client-secret
+    ```
+*   GitHub Actions loguje się do Azure *jako ten Service Principal*, a następnie wykonuje komendy wdrożeniowe (np. `az webapp deploy`). Wszystko działa, ponieważ SPN ma odpowiednie uprawnienia.
+
+### Podsumowanie kluczowych korzyści
+
+*   **Bezpieczeństwo:** Nie udostępniasz haseł użytkowników. Aplikacja ma własną tożsamość.
+*   **Automatyzacja:** Idealne dla procesów CI/CD, skryptów PowerShell/CLI, aplikacji działających w tle.
+*   **Kontrola:** Możesz nadać bardzo precyzyjne i ograniczone uprawnienia (np. tylko do odczytu jednej bazy danych).
+*   **Zarządzanie cyklem życia:** Możesz łatwo wyłączyć dostęp dla aplikacji (usuwając SPN lub jego uprawnienia), bez wpływu na konta użytkowników. Możesz ustawić wygasanie kluczy, co wymusza ich regularną zmianę.
