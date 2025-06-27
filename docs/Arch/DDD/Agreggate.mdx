@@ -1,0 +1,492 @@
+---
+sidebar_label: 'Aggregate'
+sidebar_position: 1
+---
+
+# What is the difference between Agreggate and AgreggateRoot?
+
+W metodologii Domain-Driven Design (DDD), terminy **Aggregate** i **Aggregate Root** są kluczowe dla zarządzania spójnością danych i transakcjami w modelu domenowym. Chociaż są ze sobą ściśle powiązane, oznaczają co innego.
+
+Zacznijmy od podstaw:
+
+1.  **Entity (Encja):** Obiekt domenowy posiadający unikalną tożsamość (ID), która pozostaje niezmienna w czasie. Encje mogą mieć zmienny stan. Np. `User`, `Product`, `Order`.
+2.  **Value Object (Obiekt Wartości):** Obiekt domenowy, który opisuje cechę lub atrybut, ale nie ma unikalnej tożsamości. Jest niezmienny (immutable) i definiowany przez swoje atrybuty. Np. `Address`, `Money`, `Color`.
+
+---
+
+### Czym jest Aggregate (Agregat)?
+
+**Agregat to klaster (grupa) powiązanych ze sobą Encji i Obiektów Wartości, traktowany jako jedna spójna jednostka dla celów zmian danych i transakcji.**
+
+Jego głównym celem jest **enforcowanie niezmienników (invariants)**, czyli reguł biznesowych, które muszą być zawsze prawdziwe dla tej grupy obiektów. Cały agregat jest ładowany i zapisywany w transakcjach jako jedna atomowa jednostka.
+
+**Kluczowe cechy Agregatu:**
+
+*   **Granica spójności (Consistency Boundary):** Wszystkie reguły biznesowe dotyczące obiektów wewnątrz agregatu muszą być egzekwowane w ramach tego agregatu.
+*   **Granica transakcyjna:** Jeśli agregat jest modyfikowany, wszystkie jego wewnętrzne obiekty są zapisywane (lub usuwane) w ramach jednej transakcji.
+*   **Izolacja:** Agregaty są zaprojektowane tak, aby były stosunkowo niezależne od innych agregatów, minimalizując zależności między nimi.
+
+---
+
+### Czym jest Aggregate Root (Korzeń Agregatu)?
+
+**Aggregate Root to specyficzna Encja w ramach Agregatu, która jest jedynym punktem dostępu (wejścia) do Agregatu z zewnątrz.**
+
+Jest to "głowa" lub "strażnik" Agregatu. Wszystkie operacje, które mają wpływ na stan Agregatu, muszą przechodzić przez Korzeń Agregatu. Korzeń Agregatu posiada globalną tożsamość całego Agregatu.
+
+**Kluczowe cechy Aggregate Root:**
+
+*   **Globalna tożsamość:** Tożsamość Agregatu jest tożsamością jego Korzenia.
+*   **Brama dostępu:** Inne Agregaty, Repozytoria, czy warstwa aplikacji komunikują się tylko z Korzeniem Agregatu, a nigdy bezpośrednio z jego wewnętrznymi Encjami czy Obiektami Wartości.
+*   **Odpowiedzialność za spójność:** Korzeń Agregatu jest odpowiedzialny za egzekwowanie wszystkich niezmienników Agregatu. To on zawiera logikę biznesową, która manipuluje stanem wewnętrznych obiektów.
+*   **Jedyny obiekt do pobrania z Repozytorium:** Repozytoria DDD zawsze operują na Korzeniach Agregatów (tj. `OrderRepository` zwraca `Order`, nigdy `OrderItem` samodzielnie).
+
+---
+
+### Kluczowa Różnica
+
+*   **Agregat** to *cała grupa* powiązanych obiektów, traktowana jako jednostka spójności.
+*   **Aggregate Root** to *pojedyncza Encja* w tej grupie, która jest punktem dostępu i odpowiedzialności za spójność całej grupy.
+
+Można to porównać do drzewa:
+*   **Agregat** to całe drzewo (pień, gałęzie, liście).
+*   **Aggregate Root** to pień drzewa – to przez niego przepływają wszystkie substancje i on utrzymuje całą strukturę. Nie możesz po prostu "wziąć liścia" bez "wzięcia drzewa".
+
+---
+
+### Przykład w Java: Agregat `Order`
+
+Wyobraźmy sobie system sklepu internetowego. Agregat `Order` (Zamówienie) będzie obejmował:
+*   **`Order` (Encja)** – jako Korzeń Agregatu
+*   **`OrderItem` (Encja)** – element zamówienia (np. konkretny produkt z ilością), wewnętrzna encja agregatu `Order`
+*   **`Address` (Value Object)** – adres dostawy, adres rozliczeniowy
+*   **`Money` (Value Object)** – reprezentacja kwoty pieniędzy
+
+**Scenariusz:** Użytkownik składa zamówienie. Zamówienie ma pozycje, adres dostawy, status i całkowitą kwotę. Reguła biznesowa: Całkowita kwota zamówienia musi zawsze być sumą cen wszystkich pozycji w zamówieniu. Nie można dodać pozycji do zamówienia, które już zostało wysłane.
+
+#### 1. Klasy pomocnicze (Value Objects)
+
+```java
+import java.math.BigDecimal;
+import java.util.Objects;
+
+// Value Object: Money
+// Reprezentuje kwotę pieniędzy, niezmienna
+public class Money {
+    private final BigDecimal amount;
+    private final String currency; // np. "PLN", "USD"
+
+    public Money(BigDecimal amount, String currency) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Amount cannot be null or negative");
+        }
+        if (currency == null || currency.trim().isEmpty()) {
+            throw new IllegalArgumentException("Currency cannot be null or empty");
+        }
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public Money add(Money other) {
+        if (!this.currency.equals(other.currency)) {
+            throw new IllegalArgumentException("Cannot add amounts with different currencies");
+        }
+        return new Money(this.amount.add(other.amount), this.currency);
+    }
+
+    // Pozostałe metody (subtract, multiply, divide) oraz equals/hashCode
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Money money = (Money) o;
+        return amount.equals(money.amount) && currency.equals(money.currency);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(amount, currency);
+    }
+
+    @Override
+    public String toString() {
+        return amount + " " + currency;
+    }
+}
+
+// Value Object: Address
+// Reprezentuje adres, niezmienna
+public class Address {
+    private final String street;
+    private final String city;
+    private final String zipCode;
+    private final String country;
+
+    public Address(String street, String city, String zipCode, String country) {
+        if (street == null || street.isEmpty() || city == null || city.isEmpty() ||
+            zipCode == null || zipCode.isEmpty() || country == null || country.isEmpty()) {
+            throw new IllegalArgumentException("Address fields cannot be empty");
+        }
+        this.street = street;
+        this.city = city;
+        this.zipCode = zipCode;
+        this.country = country;
+    }
+
+    public String getStreet() { return street; }
+    public String getCity() { return city; }
+    public String getZipCode() { return zipCode; }
+    public String getCountry() { return country; }
+
+    // equals, hashCode, toString
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Address address = (Address) o;
+        return street.equals(address.street) &&
+               city.equals(address.city) &&
+               zipCode.equals(address.zipCode) &&
+               country.equals(address.country);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(street, city, zipCode, country);
+    }
+
+    @Override
+    public String toString() {
+        return street + ", " + city + " " + zipCode + ", " + country;
+    }
+}
+```
+
+#### 2. Klasa `OrderItem` (Encja wewnętrzna Agregatu)
+
+`OrderItem` jest Encją, bo ma swoje ID, ale jego tożsamość i cykl życia są silnie związane z `Order`. Nie można go pobrać z repozytorium bezpośrednio, ani nie powinno się go usuwać niezależnie od zamówienia.
+
+```java
+import java.util.UUID;
+
+// Entity: OrderItem
+// Część Agregatu Order. Ma swoje ID, ale jego cykl życia jest zarządzany przez Order.
+public class OrderItem {
+    private final String id; // Tożsamość OrderItem
+    private final String productId;
+    private int quantity;
+    private final Money unitPrice; // Cena jednostkowa produktu
+
+    public OrderItem(String productId, int quantity, Money unitPrice) {
+        if (productId == null || productId.isEmpty()) {
+            throw new IllegalArgumentException("Product ID cannot be empty");
+        }
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
+        }
+        if (unitPrice == null) {
+            throw new IllegalArgumentException("Unit price cannot be null");
+        }
+        this.id = UUID.randomUUID().toString(); // Generujemy unikalne ID dla OrderItem
+        this.productId = productId;
+        this.quantity = quantity;
+        this.unitPrice = unitPrice;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getProductId() {
+        return productId;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public Money getUnitPrice() {
+        return unitPrice;
+    }
+
+    public Money getTotalPrice() {
+        // Obliczamy całkowitą cenę dla tej pozycji zamówienia
+        return new Money(unitPrice.getAmount().multiply(new BigDecimal(quantity)), unitPrice.getCurrency());
+    }
+
+    // Metoda do zmiany ilości - tylko jeśli Order to zezwoli!
+    // Często metody na wewnętrznych encjach są package-private lub wywoływane przez Aggregate Root
+    void updateQuantity(int newQuantity) {
+        if (newQuantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
+        }
+        this.quantity = newQuantity;
+    }
+
+    // equals, hashCode, toString
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OrderItem orderItem = (OrderItem) o;
+        return id.equals(orderItem.id); // OrderItem jest Encją, więc porównujemy po ID
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+}
+```
+
+#### 3. Klasa `Order` (Aggregate Root)
+
+Klasa `Order` jest Aggregate Root. To ona zarządza listą `OrderItem` i całym stanem zamówienia, pilnując niezmienników.
+
+```java
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+// Enum for Order Status
+enum OrderStatus {
+    PENDING, // Oczekujące na płatność/potwierdzenie
+    CONFIRMED, // Potwierdzone, w trakcie realizacji
+    SHIPPED, // Wysłane
+    DELIVERED, // Dostarczone
+    CANCELED // Anulowane
+}
+
+// Aggregate Root: Order
+// To jest główna Encja i jedyny punkt dostępu do całego Agregatu Zamówienia.
+public class Order {
+    private final String id; // Globalna tożsamość Agregatu
+    private final String customerId;
+    private OrderStatus status;
+    private Address shippingAddress;
+    private List<OrderItem> items; // Lista wewnętrznych Encji (OrderItem)
+    private Money totalAmount; // Całkowita kwota zamówienia
+
+    // Konstruktor Agregatu (tylko przez Korzeń)
+    public Order(String customerId, Address shippingAddress, String currency) {
+        if (customerId == null || customerId.isEmpty()) {
+            throw new IllegalArgumentException("Customer ID cannot be empty");
+        }
+        if (shippingAddress == null) {
+            throw new IllegalArgumentException("Shipping address cannot be null");
+        }
+        this.id = UUID.randomUUID().toString(); // Unikalne ID dla całego zamówienia
+        this.customerId = customerId;
+        this.shippingAddress = shippingAddress;
+        this.status = OrderStatus.PENDING; // Początkowy status
+        this.items = new ArrayList<>();
+        this.totalAmount = new Money(BigDecimal.ZERO, currency); // Początkowa kwota
+    }
+
+    // Metody do modyfikacji Agregatu - tylko przez Korzeń Agregatu!
+    // Te metody egzekwują niezmienniki biznesowe.
+
+    public void addItem(String productId, int quantity, Money unitPrice) {
+        // Niezmiennik: Nie można dodawać pozycji do zamówienia, które już zostało wysłane.
+        if (this.status == OrderStatus.SHIPPED || this.status == OrderStatus.DELIVERED || this.status == OrderStatus.CANCELED) {
+            throw new IllegalStateException("Cannot add items to an order with status: " + this.status);
+        }
+
+        // Sprawdzamy, czy produkt już istnieje w zamówieniu, jeśli tak, aktualizujemy ilość
+        // W prawdziwym systemie, można by też sprawdzić dostępność produktu itp.
+        OrderItem existingItem = items.stream()
+                .filter(item -> item.getProductId().equals(productId))
+                .findFirst()
+                .orElse(null);
+
+        if (existingItem != null) {
+            existingItem.updateQuantity(existingItem.getQuantity() + quantity);
+        } else {
+            // Dodajemy nową pozycję do listy wewnętrznych Encji
+            this.items.add(new OrderItem(productId, quantity, unitPrice));
+        }
+
+        recalculateTotalAmount(); // Pilnujemy niezmiennika: łączna kwota musi być sumą pozycji
+    }
+
+    public void removeItem(String orderItemId) {
+        if (this.status == OrderStatus.SHIPPED || this.status == OrderStatus.DELIVERED || this.status == OrderStatus.CANCELED) {
+            throw new IllegalStateException("Cannot remove items from an order with status: " + this.status);
+        }
+
+        boolean removed = this.items.removeIf(item -> item.getId().equals(orderItemId));
+        if (removed) {
+            recalculateTotalAmount(); // Pilnujemy niezmiennika
+        }
+    }
+
+    public void updateItemQuantity(String orderItemId, int newQuantity) {
+        if (this.status == OrderStatus.SHIPPED || this.status == OrderStatus.DELIVERED || this.status == OrderStatus.CANCELED) {
+            throw new IllegalStateException("Cannot update items quantity for an order with status: " + this.status);
+        }
+
+        OrderItem itemToUpdate = this.items.stream()
+                .filter(item -> item.getId().equals(orderItemId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Order item not found: " + orderItemId));
+
+        itemToUpdate.updateQuantity(newQuantity);
+        recalculateTotalAmount(); // Pilnujemy niezmiennika
+    }
+
+
+    public void confirm() {
+        if (this.status != OrderStatus.PENDING) {
+            throw new IllegalStateException("Order can only be confirmed from PENDING status.");
+        }
+        if (this.items.isEmpty()) {
+            throw new IllegalStateException("Cannot confirm an empty order.");
+        }
+        this.status = OrderStatus.CONFIRMED;
+    }
+
+    public void ship() {
+        if (this.status != OrderStatus.CONFIRMED) {
+            throw new IllegalStateException("Order can only be shipped from CONFIRMED status.");
+        }
+        this.status = OrderStatus.SHIPPED;
+    }
+
+    public void cancel() {
+        // Niezmiennik: Nie można anulować zamówienia, które już zostało wysłane lub dostarczone.
+        if (this.status == OrderStatus.SHIPPED || this.status == OrderStatus.DELIVERED) {
+            throw new IllegalStateException("Cannot cancel an order that is already " + this.status);
+        }
+        this.status = OrderStatus.CANCELED;
+    }
+
+    // Metoda prywatna, wewnętrzna dla Agregatu, pilnująca niezmiennika totalAmount
+    private void recalculateTotalAmount() {
+        Money newTotal = new Money(BigDecimal.ZERO, totalAmount.getCurrency());
+        for (OrderItem item : items) {
+            newTotal = newTotal.add(item.getTotalPrice());
+        }
+        this.totalAmount = newTotal;
+    }
+
+    // Gettery (zwracamy niezmienne kolekcje, aby zapobiec modyfikacjom z zewnątrz)
+    public String getId() { return id; }
+    public String getCustomerId() { return customerId; }
+    public OrderStatus getStatus() { return status; }
+    public Address getShippingAddress() { return shippingAddress; }
+    public List<OrderItem> getItems() { return Collections.unmodifiableList(items); } // !!! WAŻNE !!!
+    public Money getTotalAmount() { return totalAmount; }
+
+    // equals, hashCode, toString
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Order order = (Order) o;
+        return id.equals(order.id); // Order jest Encją, więc porównujemy po ID
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+}
+```
+
+#### Przykład użycia
+
+```java
+import java.math.BigDecimal;
+
+public class OrderService { // Warstwa aplikacyjna lub serwis domenowy
+
+    // To byłoby wstrzyknięte przez framework (np. Spring)
+    // private OrderRepository orderRepository;
+
+    public static void main(String[] args) {
+        // 1. Tworzenie nowego zamówienia (poprzez Aggregate Root)
+        Address deliveryAddress = new Address("Main St 1", "Cityville", "12345", "Countryland");
+        Order newOrder = new Order("customer123", deliveryAddress, "PLN");
+        System.out.println("New order created with ID: " + newOrder.getId() + ", Status: " + newOrder.getStatus());
+        System.out.println("Total Amount: " + newOrder.getTotalAmount());
+
+        // 2. Dodawanie pozycji do zamówienia (poprzez Aggregate Root)
+        newOrder.addItem("prodA", 2, new Money(new BigDecimal("10.00"), "PLN"));
+        System.out.println("Added 2x prodA. Total Amount: " + newOrder.getTotalAmount());
+
+        newOrder.addItem("prodB", 1, new Money(new BigDecimal("25.50"), "PLN"));
+        System.out.println("Added 1x prodB. Total Amount: " + newOrder.getTotalAmount());
+
+        // 3. Sprawdzenie wewnętrznych obiektów (odczyt, nie modyfikacja!)
+        System.out.println("Order items:");
+        for (OrderItem item : newOrder.getItems()) {
+            System.out.println("  - " + item.getProductId() + ", Qty: " + item.getQuantity() + ", Unit Price: " + item.getUnitPrice() + ", Total Item Price: " + item.getTotalPrice());
+        }
+
+        // 4. Modyfikacja zamówienia (poprzez Aggregate Root)
+        try {
+             // To powinno zadziałać
+            newOrder.updateItemQuantity(newOrder.getItems().get(0).getId(), 5);
+            System.out.println("Updated prodA quantity to 5. Total Amount: " + newOrder.getTotalAmount());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error updating quantity: " + e.getMessage());
+        }
+
+
+        // 5. Zmiana statusu zamówienia (poprzez Aggregate Root)
+        newOrder.confirm();
+        System.out.println("Order status after confirmation: " + newOrder.getStatus());
+
+        try {
+            // Próba dodania elementu do już potwierdzonego zamówienia (powinno się udać, ale w zależności od reguł biznesowych, u nas nie ma takiej blokady)
+            newOrder.addItem("prodC", 1, new Money(new BigDecimal("5.00"), "PLN"));
+            System.out.println("Added prodC after confirmation. Total Amount: " + newOrder.getTotalAmount());
+        } catch (IllegalStateException e) {
+            System.out.println("Error adding item: " + e.getMessage());
+        }
+
+        newOrder.ship();
+        System.out.println("Order status after shipping: " + newOrder.getStatus());
+
+        try {
+            // Próba anulowania zamówienia, które już zostało wysłane (powinien być błąd)
+            newOrder.cancel();
+        } catch (IllegalStateException e) {
+            System.out.println("Error canceling order: " + e.getMessage());
+        }
+
+        try {
+            // Próba dodania elementu do wysłanego zamówienia (powinien być błąd)
+            newOrder.addItem("prodD", 1, new Money(new BigDecimal("1.00"), "PLN"));
+        } catch (IllegalStateException e) {
+            System.out.println("Error adding item to shipped order: " + e.getMessage());
+        }
+
+        // W rzeczywistości, po zakończeniu operacji, Repozytorium zapisałoby cały Agregat Order do bazy danych.
+        // orderRepository.save(newOrder);
+    }
+}
+```
+
+### Podsumowanie na przykładzie:
+
+1.  **Agregat `Order`:** To cały zestaw klas: `Order`, `OrderItem`, `Address`, `Money`. Wszystkie te obiekty są ładowane razem, modyfikowane razem i zapisywane razem, aby zachować spójność.
+2.  **Aggregate Root `Order`:**
+*   Posiada unikalne `id`, które identyfikuje całe zamówienie.
+*   Wszystkie operacje (np. `addItem`, `cancel`, `ship`) są wywoływane bezpośrednio na obiekcie `Order`.
+*   Metody te zawierają logikę biznesową (np. nie można dodać `OrderItem` do wysłanego zamówienia), która pilnuje niezmienników całego Agregatu.
+*   `Order` zarządza kolekcją `items` (czyli `OrderItem`s). Nigdy nie powinieneś mieć publicznych setterów dla `List<OrderItem>` ani zwracać modyfikowalnej listy (np. `getOrderItems().clear()`), ponieważ naruszyłoby to zasadę, że Korzeń Agregatu jest jedynym punktem kontroli.
+*   Jeśli potrzebujesz pobrać zamówienie z bazy danych, zawsze pobierasz obiekt `Order` (czyli cały agregat), a nie pojedyncze `OrderItem` niezależnie. Repozytorium zawsze operuje na Korzeniach Agregatów.
+
+Ta struktura zapewnia, że Twoje reguły biznesowe są zawsze egzekwowane, a model domenowy jest spójny, co jest fundamentem DDD.
