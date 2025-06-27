@@ -1,0 +1,95 @@
+---
+sidebar_label: 'Parent Version'
+sidebar_position: 1
+---
+
+# Why I have to hardcode maven <parent> version in child pom.xml?
+
+Tak, moduł dziecko w sekcji `<parent>` **musi hardcodować** wersję rodzica, niezależnie od tego, czy jest to wersja `SNAPSHOT` czy wersja stabilna.
+
+To jest fundamentalne ograniczenie Mavena i wynika z logiki, o której wspominaliśmy wcześniej:
+
+1.  **Potrzeba wczesnego rozpoznania rodzica:** Maven musi wiedzieć, dokładnie która wersja POM-u rodzica ma zostać załadowana, zanim rozpocznie jakąkolwiek interpolację zmiennych (properties) z bieżącego lub dziedziczonego POM-u. Bez tej konkretnej wersji Maven nie byłby w stanie znaleźć i przetworzyć POM-u rodzica, a co za tym idzie, nie mógłby zbudować "efektywnego POM-u" (effective POM) dla modułu potomnego.
+
+2.  **Brak zmiennych na tym etapie:** Wartości zdefiniowane w sekcji `<properties>` bieżącego POM-u nie są jeszcze dostępne do interpolacji, gdy Maven próbuje rozpoznać rodzica.
+
+### Co to oznacza w praktyce dla wersji SNAPSHOT:
+
+Tak, jeśli Twój rodzic ma wersję `0.0.1-SNAPSHOT`, to każdy moduł dziecko będzie musiał zawierać dokładnie tę wersję w swojej sekcji `<parent>`:
+
+```xml
+<!-- W pom.xml modułu dziecka -->
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>my-child-module</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <parent>
+        <groupId>com.example</groupId>
+        <artifactId>my-parent-module</artifactId>
+        <version>0.0.1-SNAPSHOT</version> <!-- MUSI być hardcodowana -->
+        <!-- Opcjonalnie, jeśli rodzic jest w tym samym repozytorium co dziecko -->
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- ... reszta POM-u ... -->
+</project>
+```
+
+### Dlaczego `relativePath` nie pomaga z wersją?
+
+Adnotacja `<relativePath>` służy do poinformowania Mavena, gdzie lokalnie na dysku znajduje się plik `pom.xml` rodzica, jeśli nie jest on jeszcze dostępny w lokalnym repozytorium Mavena (np. podczas początkowej budowy projektu wielomodułowego, gdzie rodzic i dzieci są w tym samym katalogu nadrzędnym w systemie kontroli wersji).
+
+`relativePath` pomaga Mavenowi *znaleźć* plik POM rodzica bez konieczności pobierania go z repozytorium zdalnego. **Nie oznacza to jednak, że Maven nie potrzebuje znać `groupId`, `artifactId` i `version` rodzica.** Te trzy elementy nadal są niezbędne, aby Maven mógł jednoznacznie zidentyfikować i załadować *konkretną wersję* rodzica, nawet jeśli znajduje się on lokalnie.
+
+### Jak sobie radzić ze zmieniającymi się wersjami SNAPSHOT?
+
+To, że musisz hardcodować wersję SNAPSHOT rodzica, jest powszechnym "problemem" (raczej cechą) w projektach Mavenowych, szczególnie w dużych projektach wielomodułowych, gdzie wersja SNAPSHOT często się zmienia.
+
+Istnieją jednak narzędzia i praktyki, które ułatwiają zarządzanie tymi zmianami:
+
+1.  **Maven Versions Plugin:** To jest standardowe narzędzie do zarządzania wersjami w Mavena.
+*   **`versions:set`**: Głównie używa się celu `versions:set` do aktualizacji wersji projektu i wszystkich jego modułów. Na przykład, jeśli chcesz zmienić wersję rodzica z `0.0.1-SNAPSHOT` na `0.0.2-SNAPSHOT`, możesz uruchomić to polecenie w głównym katalogu rodzica. Plugin automatycznie zaktualizuje wersję w POM-ie rodzica oraz w sekcjach `<parent>` wszystkich modułów potomnych.
+```bash
+mvn versions:set -DnewVersion=0.0.2-SNAPSHOT
+# Po zakończeniu, usuń stare backupy pom.xml.versionsBackup
+mvn versions:commit
+        ```
+*   **`versions:update-parent`**: Może być również użyte do aktualizacji wersji rodzica w POM-ie modułu potomnego do najnowszej dostępnej (lub określonej).
+
+2.  **Użycie `parent.version` w innych miejscach:**
+Chociaż nie możesz użyć zmiennej w definicji `<parent>`, to **możesz użyć zmiennej `${project.parent.version}`** (lub krócej `${parent.version}`) w innych sekcjach POM-u dziecka (np. w `<dependencies>`, `<pluginManagement>`, `<dependencyManagement>`), aby odwołać się do wersji rodzica, którą już zadeklarowałeś w sekcji `<parent>`.
+
+**Przykład:**
+```xml
+<!-- W pom.xml modułu dziecka -->
+<project>
+    <!-- ... sekcja parent jak wyżej ... -->
+    <parent>
+        <groupId>com.example</groupId>
+        <artifactId>my-parent-module</artifactId>
+        <version>0.0.1-SNAPSHOT</version> <!-- Hardkodowana tutaj -->
+    </parent>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>some-utility-from-parent-project</artifactId>
+            <version>${parent.version}</version> <!-- Możesz użyć zmiennej tutaj! -->
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version> <!-- A to inna zmienna, zdefiniowana w rodzicu -->
+            </plugin>
+        </plugins>
+    </build>
+</project>
+    ```
+
+**Podsumowując:** Tak, musisz hardcodować wersję rodzica w sekcji `<parent>` modułu dziecka. Jest to celowe zachowanie Mavena, zapewniające spójność i przewidywalność budowy. Narzędzia takie jak Maven Versions Plugin pomagają w zarządzaniu tymi wersjami w projektach wielomodułowych.
