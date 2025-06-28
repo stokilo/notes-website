@@ -1,0 +1,165 @@
+---
+sidebar_label: 'TransactionalEventListener'
+---
+
+# How Spring Events can be executed after transaction commit?
+
+Oczywiście, rozłóżmy `@TransactionalEventListener` na czynniki pierwsze. To jedna z tych adnotacji, która wydaje się prosta, ale kryje w sobie kluczową funkcjonalność rozwiązującą bardzo poważny problem spójności danych.
+
+### Problem do rozwiązania: Wyścig między publikacją zdarzenia a commitem transakcji
+
+Wyobraźmy sobie klasyczny scenariusz rejestracji użytkownika, który jest objęty transakcją:
+
+```java
+@Service
+public class UserService {
+
+    @Autowired private ApplicationEventPublisher eventPublisher;
+    // ... repozytorium i inne zależności
+
+    @Transactional // Ta metoda jest transakcyjna
+    public void registerUser(User data) {
+        // 1. Zapis do bazy (wciąż w ramach "brudnej" transakcji)
+        userRepository.save(data);
+
+        // 2. Publikacja zdarzenia
+        UserRegisteredEvent event = new UserRegisteredEvent(this, data);
+        eventPublisher.publishEvent(event);
+
+        // 3. Coś idzie nie tak TUTAJ!
+        if (data.isProblematic()) {
+            throw new RuntimeException("Coś poszło nie tak po publikacji zdarzenia!");
+        }
+
+        // 4. Dopiero na końcu metody następuje COMMIT transakcji
+    }
+}
+```
+
+A oto nasz standardowy listener:
+
+```java
+@Component
+public class EmailNotificationListener {
+
+    @EventListener // Zwykły, synchroniczny listener
+    // @Async @EventListener // Asynchroniczny listener (jeszcze gorzej!)
+    public void sendWelcomeEmail(UserRegisteredEvent event) {
+        System.out.println("Wysyłam e-mail powitalny do użytkownika: " + event.getUser().getEmail());
+        // ... logika wysyłki e-maila
+    }
+}
+```
+
+**Co się dzieje w tym kodzie?**
+
+1.  `registerUser` startuje transakcję.
+2.  `userRepository.save(data)` umieszcza dane w sesji transakcyjnej, ale **jeszcze nie są one zatwierdzone (commit) w bazie danych**.
+3.  `eventPublisher.publishEvent(event)` zostaje wywołane.
+4.  **Problem:** Ponieważ listener jest synchroniczny, jego kod (`sendWelcomeEmail`) wykonuje się **natychmiast**, wewnątrz transakcji `registerUser`. E-mail zostaje wysłany.
+5.  Zaraz po tym, w metodzie `registerUser` rzucany jest wyjątek.
+6.  Zgodnie z zasadami Springa, rzucenie `RuntimeException` z metody oznaczonej `@Transactional` powoduje **ROLLBACK** transakcji. Użytkownik **nigdy nie zostanie zapisany** w bazie danych.
+
+**Katastrofalny rezultat:** Wysłałeś e-mail powitalny do użytkownika, który nie istnieje! To jest poważny błąd niespójności biznesowej. Jeśli listener byłby `@Async`, problem byłby jeszcze gorszy, bo e-mail wyszedłby w innym wątku, a my nie mielibyśmy żadnej kontroli.
+
+---
+
+### Rozwiązanie: `@TransactionalEventListener`
+
+Ta adnotacja sprawia, że listener staje się "świadomy" kontekstu transakcyjnego, w którym zdarzenie zostało opublikowane. Pozwala nam precyzyjnie określić, **kiedy** ma się wykonać jego logika w odniesieniu do cyklu życia transakcji.
+
+**Jak to działa?**
+Spring nie wywołuje takiego listenera od razu. Zamiast tego **rejestruje go** i czeka na sygnał zakończenia transakcji. Dopiero gdy transakcja dobiegnie końca (zostanie zatwierdzona lub wycofana), Spring sprawdza zarejestrowane listenery i wywołuje te, które pasują do wyniku transakcji.
+
+Poprawiony listener:
+
+```java
+@Component
+public class EmailNotificationListener {
+
+    // Używamy @TransactionalEventListener zamiast @EventListener
+    @TransactionalEventListener
+    public void sendWelcomeEmail(UserRegisteredEvent event) {
+        System.out.println("Transakcja zakończona sukcesem (COMMIT)! Teraz bezpiecznie wysyłam e-mail do: " + event.getUser().getEmail());
+        // ... logika wysyłki e-maila
+    }
+}
+```
+
+Teraz, w naszym problematycznym scenariuszu:
+1.  Transakcja startuje.
+2.  Użytkownik "zapisany" w sesji.
+3.  `publishEvent` jest wywoływane. Spring widzi, że `EmailNotificationListener` jest transakcyjny i **NIE wykonuje go od razu**. Zamiast tego "zapamiętuje" go, czekając na COMMIT.
+4.  Rzucany jest wyjątek.
+5.  Transakcja jest wycofywana (ROLLBACK).
+6.  Ponieważ transakcja nie zakończyła się commitem, **listener `sendWelcomeEmail` nigdy nie zostanie wywołany**.
+
+**Rezultat:** Spójność została zachowana. Nie wysłano e-maila do nieistniejącego użytkownika.
+
+---
+
+### Kluczowy Parametr: `phase`
+
+`@TransactionalEventListener` jest najpotężniejszy dzięki parametrowi `phase`, który pozwala precyzyjnie dostroić moment wykonania.
+
+Dostępne wartości (z `TransactionPhase` enum):
+
+1.  **`AFTER_COMMIT` (domyślna)**
+*   **Kiedy:** Wykonuje się **po** pomyślnym zatwierdzeniu transakcji.
+*   **Zastosowanie:** Najczęstszy i najbezpieczniejszy przypadek. Używaj go do wszelkich akcji, które powinny nastąpić tylko wtedy, gdy główne dane są już trwale zapisane (wysyłanie powiadomień, integracja z zewnętrznymi systemami, aktualizacja indeksów wyszukiwania).
+
+```java
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+public void onCommit(MyEvent event) { /* ... */ }
+    ```
+
+2.  **`AFTER_ROLLBACK`**
+*   **Kiedy:** Wykonuje się **po** wycofaniu transakcji.
+*   **Zastosowanie:** Rzadziej używane. Idealne do logiki "sprzątającej". Np. jeśli w ramach transakcji stworzyłeś jakiś tymczasowy plik na dysku, to po rollbacku chcesz go usunąć.
+
+```java
+@TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+public void onRollback(MyEvent event) {
+    System.out.println("Transakcja się nie powiodła. Sprzątam po sobie...");
+}
+    ```
+
+3.  **`AFTER_COMPLETION`**
+*   **Kiedy:** Wykonuje się **po** zakończeniu transakcji, **niezależnie od jej wyniku** (commit czy rollback).
+*   **Zastosowanie:** Do akcji, które muszą się wydarzyć zawsze, np. zwolnienie jakiegoś zasobu, odblokowanie rekordu w zewnętrznym systemie, usunięcie flagi "w trakcie przetwarzania".
+
+```java
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMPLETION)
+public void onCompletion(MyEvent event) {
+    System.out.println("Transakcja zakończona (sukcesem lub porażką). Zwalniam zasoby.");
+}
+    ```
+
+4.  **`BEFORE_COMMIT`**
+*   **Kiedy:** Wykonuje się **tuż przed** zatwierdzeniem transakcji.
+*   **Zastosowanie:** Bardzo rzadko używane i potencjalnie niebezpieczne. Listener wciąż wykonuje się w ramach tej samej transakcji. Może być używany do ostatecznej walidacji lub do tzw. "flushowania" sesji Hibernate przed commitem. Rzucenie wyjątku z tego listenera spowoduje rollback całej transakcji.
+
+```java
+@TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+public void beforeCommit(MyEvent event) { /* ... */ }
+    ```
+
+### Co jeśli zdarzenie opublikowano poza transakcją?
+
+Domyślnie, jeśli `eventPublisher.publishEvent()` zostanie wywołane w metodzie, która **nie jest** oznaczona `@Transactional`, to `@TransactionalEventListener` **w ogóle się nie wykona**. Jest to zabezpieczenie, aby nie wykonywać logiki, która zakłada istnienie transakcji.
+
+Można to zmienić za pomocą atrybutu `fallbackExecution`:
+
+```java
+// Jeśli nie ma aktywnej transakcji, wykonaj ten listener natychmiast, tak jakby był zwykłym @EventListener.
+@TransactionalEventListener(fallbackExecution = true)
+public void handleEvent(MyEvent event) { /* ... */ }
+```
+
+### Podsumowanie: Kiedy i dlaczego używać `@TransactionalEventListener`?
+
+*   **Zawsze, gdy wydawca zdarzenia działa w transakcji, a listener wykonuje akcję, która ma skutki uboczne poza tą transakcją** (np. komunikacja sieciowa, operacje na plikach, wysyłka wiadomości do brokera).
+*   **Główny cel:** Zapewnienie **spójności biznesowej** między stanem bazy danych a zewnętrznymi efektami działania aplikacji.
+*   **Najważniejsza konfiguracja:** `phase = TransactionPhase.AFTER_COMMIT`, która gwarantuje, że akcja listenera nastąpi tylko wtedy, gdy zmiana danych jest już trwała i nieodwracalna.
+
+To jedno z tych narzędzi, które, gdy już się je pozna, staje się absolutnie niezbędne w budowaniu solidnych, odpornych na błędy aplikacji.
