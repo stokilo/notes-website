@@ -57,3 +57,191 @@ To tutaj konfigurujesz **CO** jest chronione i **JAK**.
 5.  Następnie używa **`PasswordEncoder`**, by sprawdzić, czy podane hasło zgadza się z hashem z `UserDetails`.
 6.  Jeśli wszystko się zgadza, tworzony jest w pełni uwierzytelniony obiekt **`Authentication`**, który trafia do **`SecurityContextHolder`**, skąd jest dostępny w całej aplikacji.
 
+
+Oczywiście. Oto jeden, zwarty fragment kodu – klasa konfiguracyjna Spring Security – który w praktyce prezentuje relacje między kluczowymi obiektami.
+
+Ten kod definiuje kompletne, minimalne zabezpieczenie aplikacji z dwoma użytkownikami przechowywanymi w pamięci.
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    /**
+     * Główny komponent konfiguracji. Definiuje, jak chronione są zasoby aplikacji.
+     * To tutaj łączą się wszystkie elementy.
+     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                // Reguły autoryzacji: dostęp do /admin/** wymaga roli "ADMIN"
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                // Dostęp do /profile/** wymaga roli "USER" (Admin też ją ma)
+                .requestMatchers("/profile/**").hasRole("USER")
+                // Strona główna jest dostępna dla wszystkich
+                .requestMatchers("/").permitAll()
+                // Wszystkie inne żądania wymagają uwierzytelnienia
+                .anyRequest().authenticated()
+            )
+            // Włącza domyślny formularz logowania, który użyje poniższych beanów
+            // do weryfikacji użytkownika.
+            .formLogin(Customizer.withDefaults());
+
+        return http.build();
+    }
+
+    /**
+     * Definiuje sposób pobierania danych użytkownika. Spring Security użyje tego serwisu,
+     * aby załadować dane (UserDetails) na podstawie nazwy użytkownika podanej w formularzu.
+     */
+    @Bean
+    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
+        // UserDetails: "teczka" z danymi użytkownika (login, hasło, role).
+        UserDetails user = User.withUsername("user")
+            .password(passwordEncoder.encode("password123")) // Hasło MUSI być zakodowane!
+            .roles("USER") // Rola "USER" zostanie przekonwertowana na uprawnienie "ROLE_USER"
+            .build();
+
+        UserDetails admin = User.withUsername("admin")
+            .password(passwordEncoder.encode("admin123"))
+            .roles("ADMIN", "USER") // Admin ma dwie role
+            .build();
+
+        // InMemoryUserDetailsManager to prosta implementacja UserDetailsService,
+        // która przechowuje użytkowników w pamięci.
+        return new InMemoryUserDetailsManager(user, admin);
+    }
+
+    /**
+     * Definiuje algorytm do hashowania haseł. Spring Security automatycznie
+     * użyje tego beana do porównywania haseł podczas logowania.
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+### Jak te obiekty współpracują w tym kodzie:
+
+1.  Użytkownik wchodzi na `/profile` i zostaje przekierowany na stronę logowania (`formLogin`).
+2.  Wpisuje "admin" i "admin123".
+3.  Spring Security bierze te dane i szuka komponentu, który potrafi je zweryfikować (`AuthenticationManager` robi to za kulisami).
+4.  `AuthenticationManager` używa skonfigurowanego przez nas **`UserDetailsService`**, aby pobrać dane o "adminie".
+5.  Metoda `userDetailsService()` tworzy i zwraca obiekt **`UserDetails`** dla "admina", zawierający zahashowane hasło i role (`ROLE_ADMIN`, `ROLE_USER`).
+6.  Następnie `AuthenticationManager` używa beana **`PasswordEncoder`** do porównania hasła `admin123` z formularza z hashem pobranym z `UserDetails`.
+7.  Ponieważ hasła się zgadzają, użytkownik zostaje pomyślnie uwierzytelniony.
+8.  Na koniec, **`SecurityFilterChain`** sprawdza, czy uwierzytelniony użytkownik z rolą `ROLE_ADMIN` może wejść na `/profile`. Reguła `.hasRole("USER")` na to pozwala. Dostęp zostaje przyznany.
+
+
+
+
+Doskonałe pytanie! Masz rację – te obiekty nie są definiowane jako `@Bean`, ponieważ **nie są one statycznymi komponentami konfiguracji, lecz dynamicznymi obiektami tworzonymi w czasie rzeczywistym dla każdego żądania**.
+
+Reprezentują one **stan uwierzytelnienia dla konkretnego użytkownika w danym momencie**.
+
+Oto jak te brakujące elementy układanki łączą się z kodem, który już poznałeś. Zamiast fragmentu kodu, pokażę Ci **scenariusz działania**, który najlepiej to zilustruje.
+
+---
+
+### Scenariusz: Co się dzieje "za kulisami" podczas logowania?
+
+Wyobraźmy sobie, że użytkownik wysyła formularz logowania z `username=user` i `password=password123`.
+
+**Krok 1: Powstaje tymczasowy obiekt `Authentication` (bilet wstępu)**
+
+*   Jeden z filtrów w `SecurityFilterChain` (konkretnie `UsernamePasswordAuthenticationFilter`) przechwytuje żądanie.
+*   Tworzy on **pierwszą, niezweryfikowaną wersję obiektu `Authentication`**.
+*   W tym momencie obiekt ten zawiera:
+*   `principal`: `String "user"` (nazwa użytkownika)
+*   `credentials`: `String "password123"` (hasło)
+*   `isAuthenticated()`: `false`
+
+**Krok 2: `AuthenticationManager` szuka wykonawcy**
+
+*   Filtr przekazuje ten tymczasowy obiekt `Authentication` do `AuthenticationManager`.
+*   `AuthenticationManager` (który jest konfigurowany automatycznie, gdy dostarczasz `UserDetailsService` i `PasswordEncoder`) deleguje zadanie do odpowiedniego `AuthenticationProvider`. W naszym przypadku będzie to `DaoAuthenticationProvider`.
+
+**Krok 3: Weryfikacja i stworzenie docelowego obiektu `Authentication`**
+
+*   `DaoAuthenticationProvider` używa Twojego `UserDetailsService`, aby pobrać obiekt `UserDetails` dla użytkownika "user".
+*   Następnie używa Twojego `PasswordEncoder` do porównania hasła `password123` z hashem z obiektu `UserDetails`.
+*   Jeśli wszystko się zgadza, Provider tworzy **nowy, w pełni uwierzytelniony obiekt `Authentication`**. To jest kluczowy moment! Ten obiekt zawiera już:
+*   **`Principal`**: **Obiekt `UserDetails`**, który został pobrany z Twojego serwisu. To jest właśnie "podmiot" – kompletna reprezentacja użytkownika, a nie tylko jego nazwa.
+*   `Credentials`: `null` (hasło jest natychmiast usuwane ze względów bezpieczeństwa).
+*   `Authorities`: Kolekcja uprawnień (`GrantedAuthority`) skopiowana z `UserDetails`.
+*   `isAuthenticated()`: `true`
+
+**Krok 4: Umieszczenie "paszportu" w globalnym kontekście**
+
+*   Ten nowy, uwierzytelniony obiekt `Authentication` jest zwracany do filtra.
+*   Filtr umieszcza go w **`SecurityContext`**, który z kolei jest przechowywany w **`SecurityContextHolder`**.
+*   `SecurityContextHolder` używa mechanizmu `ThreadLocal`, co oznacza, że obiekt `Authentication` jest dostępny w dowolnym miejscu aplikacji, ale **tylko w obrębie wątku obsługującego bieżące żądanie**.
+
+### Jak uzyskać dostęp do tych obiektów w kodzie?
+
+Teraz, gdy użytkownik jest zalogowany, możesz łatwo uzyskać dostęp do tych obiektów, na przykład w kontrolerze. To jest fragment kodu, który pokazuje, jak ich **używać**, a nie konfigurować.
+
+```java
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class ProfileController {
+
+    @GetMapping("/profile/me")
+    public String getCurrentUserProfile(@AuthenticationPrincipal UserDetails userDetails) {
+        // SPOSÓB 1: Najlepszy i najprostszy (magia Springa)
+        // Spring automatycznie wstrzykuje tu obiekt Principal, czyli nasze UserDetails.
+        String username = userDetails.getUsername();
+        String roles = userDetails.getAuthorities().toString();
+
+        return "Hello, " + username + "! Your roles are: " + roles;
+    }
+
+    @GetMapping("/profile/me/verbose")
+    public String getCurrentUserVerbose() {
+        // SPOSÓB 2: Klasyczny (ręczne pobranie z kontekstu)
+        // Pobieramy cały obiekt Authentication z SecurityContextHolder.
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.isAuthenticated()) {
+            // Principal to zazwyczaj obiekt UserDetails.
+            Object principal = authentication.getPrincipal();
+            String username;
+            if (principal instanceof UserDetails) {
+                username = ((UserDetails) principal).getUsername();
+            } else {
+                username = principal.toString();
+            }
+            return "Hello from verbose endpoint, " + username + "!";
+        }
+        return "No authenticated user found.";
+    }
+}
+```
+
+### Podsumowanie:
+*   **`Authentication`**, **`Principal`**, **`SecurityContext`** to **obiekty runtime'owe**, a nie konfiguracyjne.
+*   Są one tworzone dynamicznie **podczas procesu uwierzytelniania** dla każdego żądania.
+*   **`SecurityContextHolder`** działa jak globalny, ale bezpieczny wątkowo "schowek" na dane zalogowanego użytkownika.
+*   Dostęp do nich uzyskujesz w kodzie aplikacji (np. w kontrolerze), aby dowiedzieć się, **kto** wykonuje operację i **jakie ma uprawnienia**.
