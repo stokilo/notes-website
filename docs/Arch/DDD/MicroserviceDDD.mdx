@@ -1,0 +1,89 @@
+---
+sidebar_label: 'Microservice DDD'
+sidebar_position: 1
+---
+
+# You have migrated Clean Arch/DDD project to microservice, do you still use DDD approach?
+
+To jest doskonałe pytanie, które dotyka sedna problemu przy przejściu z monolitu na mikroserwisy.
+
+Oto krótka odpowiedź, a poniżej szczegółowe uzasadnienie.
+
+### Krótka odpowiedź
+
+**Zdecydowanie tak, powinieneś kontynuować stosowanie podejścia opartego na Clean Architecture/DDD wewnątrz każdego mikroserwisu.** Użycie prostej architektury warstwowej (np. Controller -> Service -> Repository) to krok wstecz, który może zniweczyć wiele korzyści płynących z mikroserwisów.
+
+---
+
+### Dłuższa odpowiedź i uzasadnienie
+
+Myśl o mikroserwisie nie jak o "małym projekcie", ale jak o **samodzielnym, w pełni autonomicznym produkcie**, który jest właścicielem konkretnego fragmentu domeny biznesowej (Bounded Context w terminologii DDD). Twoim celem jest, aby ten produkt był solidny, łatwy w utrzymaniu i rozwoju.
+
+Oto argumenty, dlaczego kontynuacja Clean Architecture/DDD w mikroserwisie jest najlepszym podejściem:
+
+#### 1. Ochrona Logiki Biznesowej (Serca Mikroserwisu)
+
+*   **Cel mikroserwisu:** Każdy mikroserwis ma za zadanie realizować określoną zdolność biznesową (business capability). Logika, która to realizuje, jest jego najcenniejszym zasobem.
+*   **Clean Architecture:** CA została stworzona właśnie po to, by chronić tę logikę przed "zanieczyszczeniem" przez szczegóły techniczne (frameworki, bazy danych, kolejki komunikatów). Ta potrzeba nie znika w mikroserwisie – wręcz przeciwnie, staje się jeszcze ważniejsza, bo serwis musi być niezależny.
+*   **Pułapka:** Upraszczając architekturę, ryzykujesz, że logika biznesowa "wycieknie" do warstwy kontrolerów lub zostanie ściśle powiązana z implementacją bazy danych (np. ORM). To sprawia, że serwis staje się trudny do testowania i modyfikacji.
+
+#### 2. Spójność i Skalowalność Zespołowa
+
+*   **Jeden wzorzec:** Twój zespół zna już Clean Architecture z monolitu. Utrzymanie tego samego wzorca w mikroserwisach zapewnia spójność kodu, ułatwia rotację deweloperów między zespołami i obniża próg wejścia do nowego serwisu.
+*   **Różne wzorce = chaos:** Jeśli część serwisów będzie miała architekturę warstwową, a część Clean Architecture, wprowadzi to niepotrzebny chaos poznawczy i techniczny.
+
+#### 3. Ewolucja i Niezależność Mikroserwisu
+
+*   **Mikroserwis nie jest statyczny:** Dziś serwis może być prosty, ale za pół roku jego logika może się znacznie rozwinąć. Zaczynając od prostej architektury warstwowej, ryzykujesz, że wraz ze wzrostem złożoności serwis zamieni się w "mały monolit" (mini-monolith) lub "wielką kulę błota" (big ball of mud).
+*   **Łatwość zmiany technologii:** Dzięki CA zmiana bazy danych z PostgreSQL na MongoDB, czy sposobu komunikacji z REST na gRPC, dotyczy tylko warstwy adapterów (`Infrastructure`). Rdzeń biznesowy (`Domain`, `Application`) pozostaje nietknięty. To jest esencja niezależności mikroserwisów. W prostej architekturze warstwowej taka zmiana jest znacznie trudniejsza.
+
+#### 4. Testowalność
+
+*   Clean Architecture promuje testowalność. Możesz w pełni przetestować logikę domenową i aplikacyjną (`Domain`, `Application`) bez uruchamiania bazy danych, serwera HTTP czy jakiejkolwiek innej infrastruktury.
+*   W mikroserwisach szybkie i niezawodne testy jednostkowe oraz integracyjne (wewnątrzserwisowe) są kluczowe, aby zapewnić jakość bez konieczności uruchamiania całego, skomplikowanego środowiska.
+
+### Kiedy prostsza architektura *może* mieć sens?
+
+Istnieją rzadkie wyjątki, w których pełna struktura CA może być nadmiarowa:
+
+1.  **Serwisy typu "CRUD Wrapper":** Jeśli mikroserwis jest *wyłącznie* fasadą na tabelę w bazie danych, bez żadnej logiki biznesowej (np. serwis zarządzający listą krajów). Wtedy prosta struktura `Controller -> Service -> Repository` może wystarczyć. Ale zadaj sobie pytanie: czy na pewno w przyszłości nie pojawi się tam żadna logika?
+2.  **Serwisy techniczne/adaptery:** Serwis, którego jedynym zadaniem jest translacja protokołów (np. SOAP na REST) lub integracja z zewnętrznym, starym systemem. Taki serwis może nie mieć własnej "domeny".
+
+### Pułapka: Anemiczny Mikroserwis
+
+Największym ryzykiem rezygnacji z DDD/CA w mikroserwisie jest stworzenie **anemicznego modelu domeny**. Czyli serwisu, który przechowuje tylko dane (np. encje JPA), a cała logika biznesowa znajduje się w klasach serwisowych (`Application Services`). To prowadzi do tego, że:
+
+*   **Logika biznesowa jest rozproszona i ukryta.**
+*   **Serwis staje się tylko glorifikowanym DAO/Repository.**
+*   Inne serwisy, które go konsumują, zaczynają implementować logikę, która powinna być wewnątrz tego serwisu. To całkowicie niszczy ideę autonomii i silnej spójności (high cohesion) mikroserwisu.
+
+### Podsumowanie i Rekomendacja
+
+**Traktuj strukturę Clean Architecture/DDD jako domyślny, startowy szablon dla każdego nowego mikroserwisu.**
+
+Struktura wewnątrz pojedynczego mikroserwisu powinna wyglądać znajomo:
+
+```
+microservice-x/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/example/
+│   │   │       ├── domain/          // Encje, agregaty, obiekty wartości, zdarzenia domenowe
+│   │   │       │   └── model/
+│   │   │       │   └── port/
+│   │   │       ├── application/     // Use cases (serwisy aplikacyjne), DTOs, porty
+│   │   │       │   └── port/
+│   │   │       │   └── usecase/
+│   │   │       └── infrastructure/  // Adaptery: Kontrolery REST, repozytoria JPA,
+│   │   │           │               // konsumenci/producenci Kafki, konfiguracja
+│   │   │           ├── adapters/
+│   │   │           │   ├── driving/ (in)
+│   │   │           │   │   └── web/
+│   │   │           │   └── driven/ (out)
+│   │   │           │       ├── jpa/
+│   │   │           │       └── messaging/
+│   │   │           └── config/
+```
+
+Dopiero jeśli masz absolutną pewność, że serwis jest i na zawsze pozostanie trywialnym CRUD-em, możesz świadomie podjąć decyzję o uproszczeniu architektury. W 95% przypadków kontynuowanie dobrego wzorca będzie najlepszą inwestycją w przyszłość Twojego systemu.
