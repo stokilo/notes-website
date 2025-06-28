@@ -1,0 +1,171 @@
+---
+sidebar_label: 'BeanFactoryPostProcessor'
+---
+
+# How to use BeanFactoryPostProcessor
+
+Doskonale! Przechodzimy o krok wcześniej w cyklu życia kontenera Springa. `BeanFactoryPostProcessor` to kolejny, niezwykle potężny mechanizm, ale działa na zupełnie innym poziomie niż `BeanPostProcessor`.
+
+Zapamiętaj kluczową różnicę od razu:
+
+*   **`BeanPostProcessor`** modyfikuje **instancje beanów** (gotowe obiekty) *po* ich utworzeniu.
+*   **`BeanFactoryPostProcessor`** modyfikuje **definicje beanów** (metadane, "przepisy" na beany) *zanim* jakikolwiek bean zostanie utworzony.
+
+### Analogia: Zmiana Projektu w Biurze Architektonicznym
+
+Wróćmy do naszej fabryki samochodów.
+`BeanPostProcessor` był kontrolerem jakości, który tuningował gotowe samochody.
+
+**`BeanFactoryPostProcessor` to główny inżynier, który wchodzi do biura projektowego *zanim* ruszy produkcja.**
+
+Ten inżynier nie dotyka gotowych samochodów. On przegląda **wszystkie projekty (rysunki techniczne)** i może w nich nanosić zmiany:
+*   "W projekcie modelu 'Sedan' zmień domyślny silnik z 1.6 na 2.0." (Modyfikacja właściwości w definicji beana).
+*   "Zgodnie z nowymi regulacjami, każdy model musi mieć teraz system ABS. Dodajmy go do wszystkich projektów." (Dodanie nowej właściwości do wielu definicji).
+*   "Anulujemy produkcję modelu 'Cabrio'. Proszę usunąć jego projekt." (Usunięcie definicji beana).
+*   "Na bazie projektu 'Hatchback' tworzymy nowy, usportowiony model 'Hot-Hatch'. Proszę zarejestrować ten nowy projekt." (Dynamiczne dodanie nowej definicji beana).
+
+`BeanFactoryPostProcessor` robi dokładnie to – operuje na **mapie definicji beanów**, a nie na samych beanach.
+
+---
+
+### Jak to działa? Interfejs `BeanFactoryPostProcessor`
+
+Aby stworzyć własny procesor fabryki beanów, implementujesz interfejs `BeanFactoryPostProcessor`. Tak jak poprzednio, sam procesor musi być zadeklarowany jako bean, aby Spring go wykrył.
+
+Interfejs ten ma tylko jedną metodę:
+
+```java
+void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException;
+```
+
+*   **Kiedy jest wywoływana?** Bardzo wcześnie. Po tym, jak Spring wczyta wszystkie definicje beanów (np. przeskanuje pakiety w poszukiwaniu `@Component`), ale **zanim stworzy jakąkolwiek instancję beana** (nawet singletona).
+*   **Co robi?** Daje Ci pełny, programistyczny dostęp do "mapy" wszystkich definicji beanów w aplikacji.
+*   **Parametr:**
+*   `ConfigurableListableBeanFactory beanFactory`: To jest serce kontenera. Można je traktować jak zaawansowaną mapę, gdzie kluczami są nazwy beanów, a wartościami obiekty `BeanDefinition`, które opisują, jak dany bean ma być stworzony (z jakiej klasy, jakie ma zależności, jaki ma scope, jakie właściwości itd.).
+
+### Cykl Życia Kontenera (Uproszczony)
+
+1.  Uruchomienie kontenera Springa.
+2.  Skanowanie i wczytywanie **definicji beanów** (np. z klas `@Component`, `@Configuration`, plików XML).
+3.  **Wywołanie `BeanFactoryPostProcessor`ów** (Twój kod działa tutaj, modyfikując definicje).
+4.  Rozpoczęcie tworzenia instancji beanów (singletonów).
+5.  Dla każdego beana przechodzi przez jego cykl życia (instancjacja, wstrzykiwanie, `BeanPostProcessor`y, inicjalizacja...).
+6.  Aplikacja jest gotowa.
+
+---
+
+### Praktyczny Przykład: Zastąpienie Wartości w Definicji
+
+Wyobraźmy sobie, że mamy komponent, którego właściwość chcemy dynamicznie zmienić na podstawie zewnętrznej konfiguracji, ale chcemy to zrobić na poziomie definicji, a nie w gotowym obiekcie.
+
+**Scenariusz:** Mamy komponent `DatabaseConnector`, który ma pole `url` z domyślną, deweloperską wartością. Chcemy, aby nasz `BeanFactoryPostProcessor` podmienił tę wartość na produkcyjną, odczytaną z pliku `application.properties`, jeszcze zanim obiekt `DatabaseConnector` powstanie.
+
+**Krok 1: Stwórz komponent docelowy**
+
+```java
+import org.springframework.stereotype.Component;
+
+@Component
+public class DatabaseConnector {
+
+    // Załóżmy, że to jest wartość domyślna, "placeholder"
+    private String url = "jdbc:h2:mem:devdb";
+
+    public void connect() {
+        System.out.println("Łączenie z bazą danych pod adresem: " + url);
+    }
+
+    // Getter i Setter są potrzebne, aby Spring mógł zarządzać tą właściwością
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+}
+```
+
+**Krok 2: Dodaj właściwość w `application.properties`**
+
+```properties
+# src/main/resources/application.properties
+production.db.url=jdbc:postgresql://prod.server:5432/maindb
+```
+
+**Krok 3: Stwórz `BeanFactoryPostProcessor`**
+
+```java
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ProductionUrlBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
+
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        System.out.println(">>> Uruchomiono BeanFactoryPostProcessor. Zmieniam definicję beana...");
+
+        // Pobieramy "przepis" na beana o nazwie "databaseConnector"
+        BeanDefinition beanDefinition = beanFactory.getBeanDefinition("databaseConnector");
+
+        // Pobieramy wartość z properties (w prosty sposób, dla przykładu)
+        // W prawdziwej aplikacji użylibyśmy Environment API
+        String productionUrl = beanFactory.resolveEmbeddedValue("${production.db.url}");
+
+        // Modyfikujemy definicję, podmieniając wartość właściwości "url"
+        beanDefinition.getPropertyValues().add("url", productionUrl);
+
+        System.out.println(">>> Definicja 'databaseConnector' zaktualizowana. URL to teraz: " + productionUrl);
+    }
+}
+```
+
+**Krok 4: Uruchomienie aplikacji**
+
+```java
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+
+@SpringBootApplication
+public class DemoApplication {
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(DemoApplication.class, args);
+        DatabaseConnector connector = context.getBean(DatabaseConnector.class);
+        connector.connect();
+    }
+}
+```
+
+**Wynik w konsoli:**
+
+```
+>>> Uruchomiono BeanFactoryPostProcessor. Zmieniam definicję beana...
+>>> Definicja 'databaseConnector' zaktualizowana. URL to teraz: jdbc:postgresql://prod.server:5432/maindb
+Łączenie z bazą danych pod adresem: jdbc:postgresql://prod.server:5432/maindb
+```
+
+Jak widzisz, obiekt `DatabaseConnector` został utworzony od razu z poprawnym, produkcyjnym adresem URL, ponieważ zmodyfikowaliśmy jego "projekt" (`BeanDefinition`) zanim linia produkcyjna (`instancjacja`) w ogóle ruszyła.
+
+### Jak Spring używa `BeanFactoryPostProcessor`?
+
+To jest absolutnie kluczowy mechanizm dla samego Springa:
+
+*   **`PropertySourcesPlaceholderConfigurer`:** To jest właśnie ten `BeanFactoryPostProcessor`, który odpowiada za obsługę placeholderów `${...}` w adnotacjach `@Value` i plikach XML. Przechodzi on przez wszystkie definicje beanów i zastępuje symbole `${...}` wartościami z `application.properties` i innych źródeł. Nasz przykład ręcznie symulował jego działanie.
+*   **`ConfigurationClassPostProcessor`:** To jest mózg nowoczesnej konfiguracji opartej o Javę. Ten `BeanFactoryPostProcessor` znajduje klasy z adnotacją `@Configuration`, przetwarza inne adnotacje takie jak `@ComponentScan`, `@Import`, `@Bean` i na ich podstawie **dynamicznie rejestruje nowe definicje beanów** w fabryce. Bez niego cała konfiguracja oparta o adnotacje by nie działała.
+
+### Podsumowanie
+
+| Cecha | `BeanFactoryPostProcessor` | `BeanPostProcessor` |
+| :--- | :--- | :--- |
+| **Kiedy działa?** | Bardzo wcześnie, po wczytaniu definicji. | Później, podczas tworzenia każdego beana. |
+| **Na czym operuje?** | Na **definicjach beanów** (`BeanDefinition`). | Na **instancjach beanów** (gotowych obiektach). |
+| **Cel** | Modyfikacja metadanych konfiguracyjnych, np. zmiana właściwości, dodawanie nowych beanów. | Modyfikacja gotowych obiektów, np. tworzenie proxy (AOP), wstrzykiwanie logiki. |
+| **Zakres** | Działa raz na **całej fabryce** beanów. | Działa wielokrotnie, raz **dla każdego beana**. |
+| **Analoga** | Inżynier w **biurze projektowym**. | Kontroler jakości na **linii produkcyjnej**. |
+
+Używaj `BeanFactoryPostProcessor`, gdy potrzebujesz dokonać globalnych, strukturalnych zmian w konfiguracji aplikacji, zanim jakikolwiek kod Twoich beanów zostanie wykonany.
