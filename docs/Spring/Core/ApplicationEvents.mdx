@@ -1,0 +1,428 @@
+---
+sidebar_label: 'Application Events'
+---
+
+# How to use Application Events
+
+Jasne, wyjaśnijmy dokładnie mechanizm zdarzeń w Springu. To jeden z potężniejszych, a jednocześnie często niedocenianych mechanizmów w tym frameworku.
+
+### Wprowadzenie: Po co nam w ogóle zdarzenia?
+
+Wyobraź sobie typową sytuację w aplikacji: użytkownik się rejestruje. Co musi się stać?
+
+1.  Jego dane muszą być zapisane w bazie danych (np. w `UserService`).
+2.  Należy wysłać mu e-mail powitalny (np. w `NotificationService`).
+3.  Trzeba zapisać loga o tym zdarzeniu (np. w `AuditService`).
+4.  Może trzeba zaktualizować jakieś statystyki (np. w `AnalyticsService`).
+
+**Podejście klasyczne (bez zdarzeń):**
+W metodzie `registerUser()` w `UserService` musiałbyś wstrzyknąć (`@Autowired`) wszystkie te serwisy (`NotificationService`, `AuditService`, `AnalyticsService`) i wywołać na nich odpowiednie metody.
+
+```java
+// ZŁY PRZYKŁAD - SILNE POWIĄZANIE (TIGHT COUPLING)
+@Service
+public class UserService {
+    @Autowired private NotificationService notificationService;
+    @Autowired private AuditService auditService;
+    @Autowired private AnalyticsService analyticsService;
+    // ... repozytorium użytkownika
+
+    public void registerUser(User data) {
+        // 1. Logika biznesowa - zapis do bazy
+        userRepository.save(data);
+
+        // 2. Bezpośrednie wywołania innych serwisów
+        notificationService.sendWelcomeEmail(data.getEmail());
+        auditService.log("New user registered: " + data.getUsername());
+        analyticsService.incrementUserCount();
+    }
+}
+```
+
+**Problemy tego podejścia:**
+*   **Silne powiązanie (Tight Coupling):** `UserService` wie za dużo o innych częściach systemu. Musi znać `NotificationService`, `AuditService` itd. Jeśli dojdzie nowy krok (np. przyznanie punktów lojalnościowych), musisz modyfikować kod `UserService`.
+*   **Łamanie zasady pojedynczej odpowiedzialności (Single Responsibility Principle):** `UserService` powinien być odpowiedzialny tylko za logikę związaną z użytkownikami, a nie za orkiestrację powiadomień, logowania i analityki.
+*   **Trudności w testowaniu:** Testując `UserService`, musisz mockować wszystkie te zależne serwisy.
+
+**Rozwiązanie: Mechanizm Zdarzeń!**
+Mechanizm zdarzeń odwraca tę logikę. `UserService` nie musi wiedzieć, kto i co robi po rejestracji użytkownika. Jego jedynym zadaniem jest **ogłoszenie faktu**: "Hej, właśnie zarejestrował się nowy użytkownik!".
+
+Reszta aplikacji (inne serwisy) może **słuchać** na tego typu ogłoszenia i reagować, jeśli są zainteresowane. To jest implementacja wzorca projektowego **Obserwator (Observer)**.
+
+---
+
+### Główni Aktorzy Mechanizmu Zdarzeń
+
+Są trzy kluczowe elementy:
+
+1.  **Zdarzenie (The Event): `ApplicationEvent`** - Obiekt, który reprezentuje to, co się wydarzyło. Niesie ze sobą informacje o zdarzeniu.
+2.  **Wydawca (The Publisher): `ApplicationEventPublisher`** - Komponent, który "wystrzeliwuje" (publikuje) zdarzenie.
+3.  **Słuchacz (The Listener): `ApplicationListener` / `@EventListener`** - Komponent, który reaguje na opublikowane zdarzenie.
+
+Przyjrzyjmy się każdemu z nich.
+
+---
+
+### 1. Zdarzenie (Event) - `ApplicationEvent`
+
+To prosta klasa (POJO), która powinna dziedziczyć po `ApplicationEvent`. Jej zadaniem jest przechowywanie danych związanych ze zdarzeniem.
+
+**Jak stworzyć własne zdarzenie?**
+Tworzysz klasę, która rozszerza `ApplicationEvent`. Dobrą praktyką jest, aby była niemutowalna (immutable).
+
+```java
+// Nasze własne, customowe zdarzenie
+public class UserRegisteredEvent extends ApplicationEvent {
+
+    private final String username;
+    private final String email;
+
+    /**
+     * @param source Obiekt, który opublikował zdarzenie. Zazwyczaj 'this'.
+     */
+    public UserRegisteredEvent(Object source, String username, String email) {
+        super(source);
+        this.username = username;
+        this.email = email;
+    }
+
+    // Gettery do odczytu danych
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+}
+```
+*Uwaga: Od Spring 4.2 nie trzeba już dziedziczyć po `ApplicationEvent`. Można opublikować dowolny obiekt jako zdarzenie, ale dziedziczenie jest nadal dobrą praktyką, bo jasno komunikuje intencję.*
+
+---
+
+### 2. Wydawca (Publisher) - `ApplicationEventPublisher`
+
+To interfejs Springa, który pozwala na publikowanie zdarzeń. Nie musisz go implementować! Wystarczy, że wstrzykniesz go do swojego beana (np. serwisu).
+
+**Jak publikować zdarzenie?**
+Wstrzyknij `ApplicationEventPublisher` i użyj jego metody `publishEvent()`.
+
+```java
+// POPRAWIONY PRZYKŁAD - LUŹNE POWIĄZANIE (LOOSE COUPLING)
+@Service
+public class UserService {
+
+    private final ApplicationEventPublisher eventPublisher;
+    // ... repozytorium
+
+    // Wstrzyknięcie przez konstruktor (zalecane)
+    public UserService(ApplicationEventPublisher eventPublisher, UserRepository userRepository) {
+        this.eventPublisher = eventPublisher;
+        this.userRepository = userRepository;
+    }
+
+    public void registerUser(String username, String email) {
+        // 1. Logika biznesowa - zapis do bazy
+        User newUser = userRepository.save(new User(username, email));
+
+        // 2. Publikacja zdarzenia - "Fire and Forget"
+        System.out.println("Publikuję zdarzenie UserRegisteredEvent...");
+        UserRegisteredEvent event = new UserRegisteredEvent(this, newUser.getUsername(), newUser.getEmail());
+        eventPublisher.publishEvent(event);
+
+        System.out.println("Metoda registerUser zakończyła pracę.");
+    }
+}
+```
+Teraz `UserService` jest "czysty". Nie wie i nie obchodzi go, co się dalej stanie. Jego odpowiedzialność się skończyła.
+
+---
+
+### 3. Słuchacz (Listener) - `ApplicationListener` i `@EventListener`
+
+To komponent, który czeka na konkretne zdarzenia i wykonuje logikę w odpowiedzi na nie. Istnieją dwa sposoby na jego implementację.
+
+#### A. Sposób Klasyczny: Interfejs `ApplicationListener`
+
+Implementujesz interfejs `ApplicationListener<T>`, gdzie `T` to typ zdarzenia, na które chcesz nasłuchiwać.
+
+```java
+@Component // Musi być beanem Springa!
+public class EmailNotificationListener implements ApplicationListener<UserRegisteredEvent> {
+
+    @Override
+    public void onApplicationEvent(UserRegisteredEvent event) {
+        System.out.println("EmailListener: Otrzymałem zdarzenie!");
+        System.out.println("Wysyłam e-mail powitalny do: " + event.getEmail());
+        // ... logika wysyłania e-maila
+    }
+}
+```
+**Wady:**
+*   Jeden listener jest sztywno powiązany z jednym typem zdarzenia.
+*   Wymaga implementacji interfejsu, co dodaje trochę "boilerplate code".
+
+#### B. Sposób Nowoczesny (Zalecany): Adnotacja `@EventListener`
+
+To znacznie prostszy i bardziej elastyczny sposób. Tworzysz dowolną metodę w dowolnym beani-e Springa i oznaczają ją adnotacją `@EventListener`. Spring sam wykryje, jakiego typu zdarzenia ma słuchać na podstawie typu argumentu metody.
+
+```java
+@Component // Klasa musi być beanem Springa
+public class AuditingService {
+
+    @EventListener
+    public void handleUserRegistration(UserRegisteredEvent event) {
+        System.out.println("AuditListener: Otrzymałem zdarzenie!");
+        System.out.println("Loguję rejestrację użytkownika: " + event.getUsername());
+        // ... logika zapisu do logów
+    }
+}
+
+@Component
+public class AnalyticsService {
+
+    @EventListener
+    public void updateUserStatistics(UserRegisteredEvent event) {
+        System.out.println("AnalyticsListener: Otrzymałem zdarzenie!");
+        System.out.println("Inkrementuję licznik użytkowników.");
+        // ... logika analityki
+    }
+}
+```
+**Zalety `@EventListener`:**
+*   **Brak interfejsu:** Czysty, prosty kod.
+*   **Elastyczność:** Jedna klasa może zawierać wiele metod nasłuchujących na różne zdarzenia.
+*   **Czytelność:** Intencja jest od razu widoczna.
+
+---
+
+### Jak to wszystko działa razem? (Przepływ synchroniczny)
+
+1.  Użytkownik wywołuje `userService.registerUser(...)`.
+2.  `UserService` zapisuje użytkownika do bazy.
+3.  `UserService` tworzy obiekt `new UserRegisteredEvent(...)`.
+4.  `UserService` wywołuje `eventPublisher.publishEvent(event)`.
+5.  **W tym momencie `UserService` zatrzymuje swoje wykonanie i czeka.**
+6.  Spring (konkretnie `ApplicationContext`, który jest `ApplicationEventPublisher`) znajduje wszystkie beany, które nasłuchują na `UserRegisteredEvent` (czyli `EmailNotificationListener`, `AuditingService`, `AnalyticsService`).
+7.  Spring **sekwencyjnie i w tym samym wątku** wywołuje metody `onApplicationEvent`/`@EventListener` na każdym ze znalezionych słuchaczy.
+8.  Dopiero gdy **wszyscy słuchacze zakończą swoją pracę**, wykonanie wraca do `UserService`.
+9.  Metoda `registerUser` kończy swoje działanie.
+
+**Ważne!** Domyślnie zdarzenia są **synchroniczne**. Oznacza to, że wydawca czeka na zakończenie pracy wszystkich słuchaczy. Ma to ogromne znaczenie dla transakcyjności!
+
+---
+
+### Zaawansowane Koncepcje
+
+#### 1. Zdarzenia Asynchroniczne (`@Async`)
+
+Jeśli nie chcesz, aby wydawca czekał (np. wysyłka e-maila może chwilę potrwać), możesz uczynić listenera asynchronicznym.
+
+1.  Dodaj `@EnableAsync` do swojej klasy konfiguracyjnej.
+2.  Dodaj adnotację `@Async` do metody listenera.
+
+```java
+@Component
+public class EmailNotificationListener {
+
+    @Async // Ta metoda wykona się w osobnym wątku!
+    @EventListener
+    public void handleUserRegistration(UserRegisteredEvent event) {
+        // Symulacja długiej operacji
+        try { Thread.sleep(3000); } catch (InterruptedException e) {}
+        System.out.println("Wysyłam e-mail powitalny do: " + event.getEmail());
+    }
+}
+```
+Teraz `UserService` opublikuje zdarzenie i natychmiast przejdzie dalej, nie czekając na wysłanie e-maila.
+
+#### 2. Zdarzenia Transakcyjne (`@TransactionalEventListener`)
+
+Co się stanie, jeśli transakcja w `UserService` się wycofa (rollback) już **po** opublikowaniu zdarzenia? W domyślnym, synchronicznym trybie słuchacz mógł już wysłać e-mail powitalny do użytkownika, który... nie istnieje w bazie!
+
+Rozwiązaniem jest `@TransactionalEventListener`. Pozwala on powiązać wykonanie listenera z wynikiem transakcji.
+
+```java
+@Component
+public class EmailNotificationListener {
+
+    // Wykonaj tę metodę TYLKO WTEDY, gdy transakcja,
+    // w której opublikowano zdarzenie, zakończy się sukcesem (COMMIT).
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleUserRegistration(UserRegisteredEvent event) {
+        System.out.println("Transakcja się powiodła! Wysyłam e-mail do: " + event.getEmail());
+    }
+}
+```
+**Fazy transakcji:**
+*   `AFTER_COMMIT` (domyślna i najczęstsza) - wykonaj po pomyślnym commitcie.
+*   `AFTER_ROLLBACK` - wykonaj po wycofaniu transakcji (np. do posprzątania czegoś).
+*   `AFTER_COMPLETION` - wykonaj zawsze po zakończeniu transakcji, niezależnie od wyniku.
+*   `BEFORE_COMMIT` - wykonaj tuż przed commitem.
+
+#### 3. Zdarzenia Warunkowe (`condition`)
+
+Możesz sprawić, by listener reagował tylko wtedy, gdy zdarzenie spełnia określony warunek, używając języka Spring Expression Language (SpEL).
+
+```java
+@EventListener(condition = "#event.user.isPremium() == true")
+public void handlePremiumUserEvent(UserRegisteredEvent event) {
+    // Ta logika wykona się tylko dla użytkowników premium
+}
+```
+
+### Podsumowanie: Kiedy używać mechanizmu zdarzeń?
+
+*   **Gdy chcesz oddzielić od siebie (zdecoupling) różne części systemu.** To główny powód.
+*   Gdy jedna akcja biznesowa ma wywołać **wiele niezwiązanych ze sobą skutków ubocznych** (powiadomienia, logi, statystyki, integracje z innymi systemami).
+*   Gdy chcesz, aby dodawanie nowej reakcji na zdarzenie nie wymagało modyfikacji istniejącego kodu (zgodnie z zasadą Open/Closed).
+*   Gdy chcesz wykonać jakąś logikę **asynchronicznie** lub w powiązaniu z **wynikiem transakcji**.
+
+Mechanizm zdarzeń to fundamentalne narzędzie do budowania czystych, skalowalnych i łatwych w utrzymaniu aplikacji w Springu.
+
+
+# Jakie sa wady tego podejscia?
+
+Oczywiście. Chociaż mechanizm zdarzeń jest niezwykle potężny, jak każde narzędzie ma swoje wady i potencjalne pułapki. Świadomość ich istnienia jest kluczowa, aby używać go mądrze i unikać problemów.
+
+Oto najważniejsze wady i wyzwania związane z podejściem opartym na zdarzeniach w Springu:
+
+---
+
+### 1. Zmniejszona czytelność i trudności w śledzeniu przepływu (Reduced Readability & Flow Tracking)
+
+To największa i najczęściej wymieniana wada.
+
+*   **Problem:** Kiedy patrzysz na kod wydawcy (np. `eventPublisher.publishEvent(event)`), **nie masz pojęcia, co się dalej stanie**. Nie wiesz, kto nasłuchuje na to zdarzenie, ilu jest słuchaczy, ani co oni robią. W przeciwieństwie do bezpośredniego wywołania `notificationService.sendEmail()`, przepływ sterowania jest ukryty.
+*   **Konsekwencje:**
+*   **Trudniej zrozumieć kod:** Nowy programista w zespole może mieć problem ze zrozumieniem pełnego obrazu logiki biznesowej. Musi aktywnie szukać wszystkich listenerów dla danego zdarzenia.
+*   **IDE nie zawsze pomaga:** Standardowa funkcja "Find Usages" (Znajdź użycia) na metodzie `publishEvent` nie pokaże ci listy listenerów. Musisz szukać użyć samej klasy zdarzenia. (Na szczęście nowoczesne IDE, jak IntelliJ IDEA Ultimate, mają specjalne ikonki przy `@EventListener` i `publishEvent`, które ułatwiają nawigację, ale nie jest to standardem w każdym narzędziu).
+
+### 2. Utrudnione debugowanie (Complicated Debugging)
+
+To bezpośrednia konsekwencja poprzedniego punktu.
+
+*   **Problem:** Kiedy debugujesz kod krok po kroku i dojdziesz do linii `publishEvent()`, naciśnięcie "Step Into" (Wejdź do środka) nie przeniesie Cię do kodu listenera. Zamiast tego wejdziesz w głąb mechanizmów Springa odpowiedzialnych za obsługę zdarzeń.
+*   **Konsekwencje:** Aby prześledzić cały proces, musisz ustawić breakpoint w kodzie wydawcy, a następnie osobne breakpointy we wszystkich potencjalnych listenerach. Jest to znacznie mniej wygodne niż śledzenie prostego stosu wywołań (call stack).
+
+### 3. Zarządzanie kolejnością wykonania listenerów (Managing Listener Order)
+
+*   **Problem:** Domyślnie Spring **nie gwarantuje kolejności**, w jakiej zostaną wywołane listenery nasłuchujące na to samo zdarzenie. Jeśli masz `ListenerA` i `ListenerB`, raz może wykonać się najpierw A, potem B, a innym razem odwrotnie.
+*   **Konsekwencje:** Jeśli kolejność ma znaczenie (np. najpierw musisz zapisać log audytowy, a dopiero potem wysłać e-mail), domyślne zachowanie może prowadzić do błędów.
+*   **Rozwiązanie (ale z zastrzeżeniem):** Można wymusić kolejność za pomocą adnotacji `@Order(n)`, gdzie `n` to liczba (niższa wartość = wyższy priorytet). Jednakże, **wprowadzając jawną kolejność, częściowo tracisz zaletę luźnego powiązania**, ponieważ tworzysz ukrytą zależność między listenerami.
+
+### 4. Ryzyko związane z transakcjami i obsługą błędów
+
+*   **Problem (tryb synchroniczny):** Domyślnie zdarzenia są synchroniczne. Jeśli `ListenerA` rzuci wyjątkiem, cała operacja zostanie przerwana. Co więcej, jeśli wydawca działał w ramach transakcji (`@Transactional`), **błąd w listenerze spowoduje rollback całej transakcji** wydawcy! Użytkownik mógł nie zostać zapisany w bazie, bo np. serwis do wysyłki e-maili miał awarię.
+*   **Problem (tryb asynchroniczny):** Jeśli użyjesz `@Async`, listener wykona się w osobnym wątku i poza transakcją wydawcy. To rozwiązuje problem blokowania, ale tworzy inny: e-mail powitalny może zostać wysłany, nawet jeśli oryginalna transakcja (np. rejestracja użytkownika) ostatecznie się nie powiedzie i zostanie wycofana.
+*   **Rozwiązanie:** Konieczność znajomości i świadomego używania `@TransactionalEventListener`, aby precyzyjnie kontrolować, kiedy listener ma się wykonać (np. `AFTER_COMMIT`). To dodatkowy element, o którym trzeba pamiętać.
+
+### 5. Nadmierne użycie (Over-engineering)
+
+*   **Problem:** Kiedy programiści odkryją potęgę zdarzeń, mogą zacząć ich używać wszędzie, nawet tam, gdzie nie jest to potrzebne. Prosta komunikacja między dwoma ściśle powiązanymi serwisami w ramach tej samej domeny biznesowej może być zrealizowana przez zwykłe wywołanie metody.
+*   **Konsekwencje:** Zamiast prostego i czytelnego kodu, tworzymy niepotrzebnie skomplikowaną architekturę, która cierpi na wszystkie wymienione wyżej wady, nie dając w zamian realnych korzyści. Zdarzenia najlepiej sprawdzają się do komunikacji **pomiędzy granicami kontekstów (Bounded Contexts)** lub w scenariuszach "jeden do wielu".
+
+### 6. Testowanie może być mniej intuicyjne
+
+*   **Problem:** Jak przetestować, czy `UserService` poprawnie opublikował zdarzenie? Nie można po prostu zamockować listenera i zweryfikować jego wywołania, ponieważ `UserService` nie ma o nim pojęcia.
+*   **Rozwiązanie:** Wymaga to użycia specjalnych technik. W testach integracyjnych można użyć narzędzia `ApplicationEvents` (w Spring Boot) lub stworzyć dedykowany, testowy listener, który łapie zdarzenia i pozwala na ich asercję. W testach jednostkowych można zamockować `ApplicationEventPublisher` i zweryfikować, czy metoda `publishEvent` została wywołana z odpowiednim obiektem zdarzenia. Jest to w pełni możliwe, ale wymaga nieco innego podejścia niż testowanie bezpośrednich wywołań.
+
+### Podsumowanie
+
+| Zaleta (co zyskujemy)                                       | Waga (jaki jest koszt)                                                                 |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Luźne powiązanie** (decoupling) komponentów.              | **Zmniejszona czytelność** i trudność w śledzeniu przepływu.                             |
+| **Zgodność z zasadą Open/Closed** (łatwe rozszerzanie).     | **Utrudnione debugowanie** i skomplikowany stos wywołań.                                |
+| **Możliwość obsługi asynchronicznej i transakcyjnej**.      | **Konieczność zarządzania kolejnością i transakcjami**, co dodaje złożoności.           |
+| **Czysta separacja odpowiedzialności** (SRP).               | **Ryzyko nadużycia** (over-engineeringu) i tworzenia niepotrzebnie skomplikowanego kodu. |
+
+Mechanizm zdarzeń to potężne narzędzie do budowania elastycznych i skalowalnych systemów. Jednak jego moc pochodzi z abstrakcji, a ta abstrakcja ma swoją cenę w postaci mniejszej przejrzystości. Kluczem jest **używanie go świadomie**, głównie w sytuacjach, gdzie korzyści z luźnego powiązania przeważają nad kosztami związanymi ze złożonością.
+
+# Jakie sa problemy z synchronicznym i asynchronicznym przetwarzaniem
+
+Doskonałe pytanie! Dotykasz tutaj absolutnie kluczowej kwestii, która oddziela prosty, wewnątrz-aplikacyjny mechanizm zdarzeń Springa od potężnych, rozproszonych systemów kolejkowych.
+
+Krótka odpowiedź brzmi: **Tak, te zdarzenia MOGĄ się zgubić, a gwarancja ich przetworzenia jest ograniczona.** Twoje obawy są w 100% uzasadnione.
+
+Rozbijmy to na czynniki pierwsze.
+
+### Fundamentalna Różnica: Zdarzenia w Pamięci vs. Trwałe Kolejki Wiadomości
+
+Musimy zrozumieć, czym jest springowy `ApplicationEvent`:
+
+*   **To mechanizm działający w pamięci RAM (in-memory).** Nie ma tu żadnej fizycznej, trwałej kolejki (jak plik na dysku czy dedykowana baza danych). Wydarzenie to po prostu obiekt Javy przekazywany z jednego beana (wydawcy) do drugiego (słuchacza) w ramach tego samego procesu JVM.
+*   **To nie jest RabbitMQ, Kafka czy AWS SQS.** Te systemy (zwane brokerami wiadomości) są zaprojektowane z myślą o trwałości (persistence) i niezawodności. Wiadomości są zapisywane na dysku i mogą przetrwać restart serwera. Springowy `ApplicationEvent` nie ma tej cechy.
+
+---
+
+### Czy eventy mogą się "zgubić"? TAK, i to bardzo łatwo.
+
+Zdarzenie zostanie bezpowrotnie utracone, jeśli proces aplikacji (JVM) zakończy działanie w "nieodpowiednim" momencie.
+
+**Scenariusz 1: Zdarzenie synchroniczne (domyślne)**
+1.  `UserService` wywołuje `eventPublisher.publishEvent(event)`.
+2.  Spring zaczyna wywoływać listenery.
+3.  W trakcie wykonywania kodu w listenerze `EmailNotificationListener` **następuje awaria prądu lub proces zostaje zabity (`kill -9`)**.
+
+**Rezultat:** Zdarzenie przepadło. Po restarcie aplikacji nikt już o nim nie pamięta. Transakcja w `UserService` (jeśli była) najprawdopodobniej nie została zatwierdzona (commit), więc dane są spójne, ale samo zdarzenie i jego skutki uboczne (wysyłka e-maila) nigdy nie nastąpią.
+
+**Scenariusz 2: Zdarzenie asynchroniczne (`@Async`)**
+1.  `UserService` wywołuje `publishEvent`.
+2.  Spring przekazuje zdarzenie do puli wątków (`ThreadPoolTaskExecutor`). Metoda w `UserService` natychmiast kończy działanie i transakcja zostaje zatwierdzona (commit). Użytkownik jest już w bazie.
+3.  Zanim wątek z puli zdążył przetworzyć zdarzenie (lub w trakcie jego przetwarzania), **aplikacja ulega awarii**.
+
+**Rezultat:** **NAJGORSZY SCENARIUSZ.** Dane są w bazie (commit się udał), ale zdarzenie przepadło na zawsze. Użytkownik istnieje, ale nigdy nie dostanie e-maila powitalnego. Mamy niespójność biznesową.
+
+---
+
+### Jaka jest więc pewność, że event zostanie przetworzony?
+
+Pewność jest **warunkowa** i zależy od konfiguracji.
+
+1.  **Tryb domyślny (synchroniczny):** Masz gwarancję, że jeśli metoda wydawcy zakończy się sukcesem, to **wszystkie listenery również zakończyły swoją pracę sukcesem** (w tym samym wątku). Jeśli którykolwiek listener rzuci wyjątkiem, cała operacja (włącznie z operacją wydawcy, jeśli jest w transakcji) zostanie wycofana. Jest to więc gwarancja typu "wszystko albo nic".
+
+2.  **Tryb asynchroniczny (`@Async`):** **Nie masz praktycznie żadnej gwarancji.** To mechanizm typu "wystrzel i zapomnij" (fire-and-forget). Polegasz na tym, że aplikacja będzie działać stabilnie.
+
+3.  **Tryb transakcyjny (`@TransactionalEventListener`):** To daje **najlepszą gwarancję dostępną w ramach tego mechanizmu**. Używając `@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)`, masz pewność, że listener zostanie wywołany dopiero, gdy dane zostaną trwale zapisane w bazie. To chroni przed scenariuszem wysłania e-maila do użytkownika, którego rejestracja się nie powiodła.
+*   **ALE!** Nadal nie chroni cię to przed awarią aplikacji, która nastąpi **po commicie, ale przed wykonaniem listenera**. W tym ułamku sekundy zdarzenie wciąż może przepaść.
+
+---
+
+### A co z "bottleneckiem" i "kolejką"?
+
+Twoje pytanie o bottleneck jest bardzo trafne.
+
+**W trybie synchronicznym:**
+*   **Nie ma kolejki.** Jest bezpośrednie wywołanie.
+*   **Bottleneck jest bardzo realny!** Jeśli masz 3 listenery i każdy z nich wykonuje się 1 sekundę, to wątek, który opublikował zdarzenie (np. wątek obsługujący żądanie HTTP użytkownika) będzie **zablokowany na 3 sekundy**. To bezpośrednio wpływa na czas odpowiedzi aplikacji i może szybko wyczerpać pulę wątków serwera aplikacyjnego (np. Tomcata).
+
+**W trybie asynchronicznym (`@Async`):**
+*   **Jest kolejka!** Ale jest to **wewnętrzna, nietrwała kolejka puli wątków** (`ThreadPoolTaskExecutor`).
+*   **Bottleneck przenosi się na tę pulę wątków.** Jeśli publikujesz zdarzenia szybciej, niż wątki robocze są w stanie je przetwarzać, ta wewnętrzna kolejka zacznie puchnąć.
+*   **Konsekwencje:**
+*   Jeśli kolejka jest nieograniczona (domyślne zachowanie w niektórych konfiguracjach), może to doprowadzić do błędu `OutOfMemoryError` i awarii całej aplikacji.
+*   Jeśli kolejka jest ograniczona, nowe zadania (zdarzenia) będą odrzucane, co znowu oznacza ich utratę.
+
+### Rozwiązanie: Kiedy potrzebujesz 100% gwarancji - Użyj Prawdziwego Systemu Kolejkowego
+
+Gdy niezawodność, trwałość i gwarancja dostarczenia są kluczowe, **musisz porzucić `ApplicationEvent` na rzecz zewnętrznego brokera wiadomości**, np.:
+*   **RabbitMQ** (klasyczna kolejka, świetna do zadań w tle, gwarantuje dostarczenie)
+*   **Apache Kafka** (rozproszony log zdarzeń, do systemów event-driven i streamingu danych na ogromną skalę)
+*   **AWS SQS / Google Pub/Sub** (usługi chmurowe)
+
+**Jak one rozwiązują problemy?**
+1.  **Trwałość:** Wiadomość jest zapisywana na dysku brokera, zanim ten potwierdzi jej przyjęcie. Przetrwa restarty i awarie.
+2.  **Niezawodność:** Broker implementuje mechanizmy ponowień (retry) i kolejek martwych listów (Dead Letter Queue - DLQ). Jeśli przetworzenie wiadomości się nie powiedzie, po kilku próbach trafi ona do DLQ w celu ręcznej analizy, ale **nie zostanie utracona**.
+3.  **Skalowalność:** Przetwarzanie wiadomości odbywa się w osobnych procesach (lub nawet na osobnych maszynach), co całkowicie eliminuje problem bottlenecku w aplikacji-wydawcy.
+
+### Podsumowanie i Złota Zasada
+
+| Cecha                  | Spring `ApplicationEvent`                                   | Broker Wiadomości (np. RabbitMQ)                             |
+| ---------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ |
+| **Gdzie działa?**      | W pamięci RAM, w ramach jednego procesu JVM (monolit)       | Jako osobna usługa, pomiędzy różnymi procesami/serwisami     |
+| **Trwałość**           | **Brak.** Zdarzenia giną przy awarii aplikacji.             | **Tak.** Wiadomości są zapisywane na dysku.                   |
+| **Gwarancja dostarczenia** | **Ograniczona.** Zależy od transakcji i braku awarii.       | **Wysoka.** Mechanizmy potwierdzeń, ponowień, DLQ.            |
+| **Główny cel użycia**  | **Decoupling wewnątrz aplikacji.** Upraszczanie logiki w monolicie. | **Niezawodna, asynchroniczna komunikacja** między serwisami. |
+| **Ryzyko bottlenecku** | **Wysokie** (w trybie synchronicznym) lub przeniesione na pulę wątków. | **Niskie** (w aplikacji-wydawcy). Przeniesione na konsumentów. |
+
+**Złota zasada:** Używaj springowego `ApplicationEvent` do **niekrytycznych, wewnątrz-aplikacyjnych powiadomień**, gdzie utrata pojedynczego zdarzenia nie powoduje katastrofy biznesowej (np. aktualizacja jakiegoś licznika w pamięci, zapisanie loga). Do wszystkiego, co jest **krytyczne dla biznesu** (przetwarzanie płatności, wysyłka faktur, komunikacja między mikroserwisami), użyj dedykowanego systemu kolejkowego.
