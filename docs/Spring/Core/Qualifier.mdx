@@ -1,0 +1,225 @@
+---
+sidebar_label: 'Qualifier'
+---
+
+# Spring Qualifier - why and how with type safety
+
+Jasne, opiszmy dokładnie i krok po kroku, jak używać adnotacji `@Qualifier` w Springu do precyzyjnego wyboru beana.
+
+---
+
+### Czym jest `@Qualifier` i dlaczego jest potrzebny?
+
+W ekosystemie Springa, mechanizm wstrzykiwania zależności (Dependency Injection) jest kluczowy. Używamy adnotacji `@Autowired`, aby Spring automatycznie znalazł i wstrzyknął odpowiedniego beana (obiekt zarządzany przez kontener Springa) do naszej klasy.
+
+**Problem pojawia się, gdy Spring znajduje więcej niż jednego beana tego samego typu.**
+
+Wyobraź sobie sytuację: masz interfejs `MessageService` i dwie jego implementacje: `SmsService` i `EmailService`. Obie klasy są oznaczone jako beany (np. za pomocą `@Component` lub `@Service`).
+
+```java
+public interface MessageService {
+    void sendMessage(String message);
+}
+
+@Service
+public class SmsService implements MessageService {
+    @Override
+    public void sendMessage(String message) {
+        System.out.println("Wysyłanie SMS: " + message);
+    }
+}
+
+@Service
+public class EmailService implements MessageService {
+    @Override
+    public void sendMessage(String message) {
+        System.out.println("Wysyłanie e-mail: " + message);
+    }
+}
+```
+
+Teraz, jeśli w innej klasie spróbujesz wstrzyknąć `MessageService`, Spring napotka problem:
+
+```java
+@Component
+public class NotificationManager {
+
+    private final MessageService messageService;
+
+    @Autowired // <-- PROBLEM!
+    public NotificationManager(MessageService messageService) {
+        this.messageService = messageService;
+    }
+
+    public void notify(String message) {
+        messageService.sendMessage(message);
+    }
+}
+```
+
+Podczas uruchamiania aplikacji, Spring rzuci wyjątkiem, najczęściej `NoUniqueBeanDefinitionException`. Komunikat błędu będzie jasno mówił: "Oczekiwałem jednego beana typu `MessageService`, ale znalazłem dwa: `smsService` i `emailService`. Nie wiem, którego wybrać!".
+
+I tutaj właśnie z pomocą przychodzi **`@Qualifier`**. Jest to adnotacja, która pozwala nam **rozwiązać tę niejednoznaczność**, precyzyjnie wskazując, który konkretny bean ma zostać wstrzyknięty.
+
+---
+
+### Jak używać `@Qualifier`? (Metoda z nazwami)
+
+Najprostszym sposobem użycia `@Qualifier` jest połączenie go z nazwami beanów.
+
+#### Krok 1: Nazwij swoje beany
+
+Domyślnie, Spring nadaje beanom nazwy oparte na nazwie klasy, zapisane w stylu camelCase (np. klasa `SmsService` staje się beanem o nazwie `smsService`). Możemy jednak (i często powinniśmy) nadać im jawne nazwy, aby kod był bardziej czytelny i niezależny od refaktoryzacji nazw klas.
+
+Robimy to, podając nazwę jako argument adnotacji `@Component`, `@Service`, `@Repository` itd.
+
+```java
+@Service("smsBean") // Nadajemy jawną nazwę "smsBean"
+public class SmsService implements MessageService {
+    // ...
+}
+
+@Service("emailBean") // Nadajemy jawną nazwę "emailBean"
+public class EmailService implements MessageService {
+    // ...
+}
+```
+
+#### Krok 2: Użyj `@Qualifier` w miejscu wstrzykiwania
+
+Teraz w klasie `NotificationManager` możemy użyć `@Qualifier` wraz z `@Autowired`, aby wskazać, który bean chcemy wstrzyknąć. Nazwa podana w `@Qualifier` musi pasować do nazwy beana zdefiniowanej w kroku 1.
+
+**Wstrzykiwanie przez pole (Field Injection - mniej zalecane):**
+
+```java
+@Component
+public class NotificationManager {
+
+    @Autowired
+    @Qualifier("emailBean") // Chcę wstrzyknąć beana o nazwie "emailBean"
+    private MessageService messageService;
+
+    // ...
+}
+```
+
+**Wstrzykiwanie przez konstruktor (Constructor Injection - zalecana praktyka):**
+
+To jest preferowane podejście, ponieważ promuje niezmienność (immutability) i ułatwia testowanie. Adnotację `@Qualifier` umieszczamy przy parametrze konstruktora.
+
+```java
+@Component
+public class NotificationManager {
+
+    private final MessageService messageService;
+
+    // Adnotacja @Autowired na konstruktorze z jednym argumentem jest opcjonalna w nowszych wersjach Springa
+    public NotificationManager(@Qualifier("smsBean") MessageService messageService) {
+        this.messageService = messageService;
+    }
+
+    public void notify(String message) {
+        messageService.sendMessage(message);
+    }
+}
+```
+
+W tym przypadku, `NotificationManager` zawsze będzie używał serwisu SMS.
+
+---
+
+### Zaawansowane użycie: Tworzenie własnych adnotacji kwalifikujących
+
+Używanie stringów (`"smsBean"`, `"emailBean"`) jest skuteczne, ale ma wady:
+*   **Brak bezpieczeństwa typów:** Literówka w nazwie zostanie wykryta dopiero podczas uruchamiania aplikacji, a nie w trakcie kompilacji.
+*   **Trudniejsza refaktoryzacja:** Jeśli zmienisz nazwę beana, musisz ręcznie znaleźć i poprawić wszystkie miejsca, gdzie jest ona używana w `@Qualifier`.
+
+Lepszym i bardziej eleganckim rozwiązaniem jest stworzenie własnych, dedykowanych adnotacji kwalifikujących.
+
+#### Krok 1: Stwórz własne adnotacje
+
+Tworzymy nowe adnotacje, które same będą "opakowaniem" dla `@Qualifier`.
+
+```java
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Qualifier // <-- Kluczowe! To mówi Springowi, że to jest adnotacja kwalifikująca.
+public @interface SmsQualifier {
+}
+```
+
+I analogicznie dla e-maila:
+
+```java
+// importy jak wyżej
+
+@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Qualifier
+public @interface EmailQualifier {
+}
+```
+
+*   `@Target`: Określa, gdzie można użyć adnotacji (na polach, metodach, parametrach, typach).
+*   `@Retention(RetentionPolicy.RUNTIME)`: Zapewnia, że adnotacja będzie dostępna dla JVM w czasie działania programu, co jest wymagane przez Springa.
+*   `@Qualifier`: Oznacza naszą adnotację jako specjalny typ kwalifikatora.
+
+#### Krok 2: Użyj własnych adnotacji na beanach
+
+Teraz oznaczamy nasze serwisy nowo stworzonymi adnotacjami.
+
+```java
+@Service
+@SmsQualifier // Zamiast @Qualifier("smsBean")
+public class SmsService implements MessageService {
+    // ...
+}
+
+@Service
+@EmailQualifier // Zamiast @Qualifier("emailBean")
+public class EmailService implements MessageService {
+    // ...
+}
+```
+
+#### Krok 3: Użyj własnych adnotacji w miejscu wstrzykiwania
+
+Na koniec, wstrzykujemy zależności, używając naszych bezpiecznych typowo adnotacji.
+
+```java
+@Component
+public class NotificationManager {
+
+    private final MessageService messageService;
+
+    public NotificationManager(@EmailQualifier MessageService messageService) { // <-- Elegancko i bezpiecznie!
+        this.messageService = messageService;
+    }
+
+    public void notify(String message) {
+        messageService.sendMessage(message);
+    }
+}
+```
+
+Teraz, jeśli chcielibyśmy zmienić serwis na SMS, wystarczy podmienić `@EmailQualifier` na `@SmsQualifier`. IDE natychmiast pomoże nam w autouzupełnianiu i wykryje ewentualne błędy, jeśli adnotacja nie istnieje.
+
+---
+
+### Podsumowanie
+
+| Aspekt | Opis |
+| :--- | :--- |
+| **Problem** | `NoUniqueBeanDefinitionException` - Spring znajduje wiele beanów tego samego typu i nie wie, który wybrać. |
+| **Rozwiązanie** | Adnotacja `@Qualifier` używana razem z `@Autowired`. |
+| **Jak działa** | `Qualifier` doprecyzowuje, który konkretny bean (identyfikowany po nazwie lub własnej adnotacji) ma zostać wstrzyknięty. |
+| **Proste użycie** | 1. Nadaj nazwy beanom: `@Service("mojaNazwa")`.<br>2. Użyj kwalifikatora z tą nazwą: `@Qualifier("mojaNazwa")`. |
+| **Zalecana praktyka** | 1. Stwórz własne adnotacje kwalifikujące (np. `@SmsQualifier`, `@EmailQualifier`).<br>2. Oznacz nimi odpowiednie beany.<br>3. Używaj tych adnotacji w miejscach wstrzykiwania. |
+| **Zalety własnych adnotacji** | Bezpieczeństwo typów (wykrywanie błędów w trakcie kompilacji), lepsza czytelność kodu, łatwiejsza refaktoryzacja. |
+| **Gdzie używać** | Na polach, parametrach konstruktorów lub parametrach metod `setter`. Najlepiej na parametrach konstruktorów. |

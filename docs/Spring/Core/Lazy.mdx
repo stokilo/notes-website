@@ -1,0 +1,226 @@
+---
+sidebar_label: 'Lazy'
+---
+
+# @Lazy summary
+
+
+Jasne, wytłumaczmy to dokładnie.
+
+**Leniwe wstrzykiwanie i inicjalizacja (`@Lazy`)** w Spring to mechanizm, który pozwala kontrolować, *kiedy* bean (obiekt zarządzany przez Springa) zostanie utworzony i wstrzyknięty.
+
+Aby to w pełni zrozumieć, musimy najpierw poznać domyślne zachowanie Springa.
+
+### Domyślne Zachowanie Springa: Inicjalizacja Chętna (Eager Initialization)
+
+Domyślnie Spring działa w trybie **"chętnym" (eager)**. Oznacza to, że:
+
+1.  Podczas uruchamiania aplikacji, kontener Springa skanuje konfigurację.
+2.  **Natychmiast tworzy instancje wszystkich beanów typu singleton**.
+3.  Konfiguruje je i wstrzykuje do nich wszystkie wymagane zależności.
+4.  Umieszcza gotowe beany w swoim kontekście (cache), gotowe do użycia.
+
+**Zalety tego podejścia:**
+*   **Wykrywanie błędów na starcie:** Jeśli brakuje jakiejś zależności, jest błąd w konfiguracji beana lub występuje problem z jego utworzeniem, aplikacja **nie uruchomi się**. Dowiesz się o problemie od razu, a nie dopiero wtedy, gdy użytkownik spróbuje użyć danej funkcji. To jest bardzo bezpieczne.
+*   **Szybkość działania po uruchomieniu:** Wszystkie beany są już gotowe. Pierwsze żądanie do aplikacji, które z nich korzysta, jest obsługiwane bez opóźnień związanych z tworzeniem obiektów.
+
+**Wady:**
+*   **Dłuższy czas uruchamiania aplikacji:** Jeśli masz wiele "ciężkich" beanów (np. łączących się z zewnętrznymi systemami, inicjujących duże pule połączeń), czas startu aplikacji może się wydłużyć.
+
+---
+
+### Czym jest Leniwa Inicjalizacja (`@Lazy`)?
+
+Leniwa inicjalizacja to odwrócenie domyślnego zachowania. Kiedy oznaczysz beana jako `@Lazy`, mówisz Springowi:
+
+> "Nie twórz instancji tego beana podczas uruchamiania aplikacji. Zrób to dopiero w momencie, gdy inny bean po raz pierwszy go potrzebuje (gdy nastąpi pierwsze żądanie wstrzyknięcia)."
+
+### Jak i Gdzie Używać `@Lazy`?
+
+Adnotację `@Lazy` można umieścić w trzech głównych miejscach, a jej zachowanie jest wtedy nieco inne.
+
+#### 1. `@Lazy` na definicji beana (`@Component`, `@Service`, `@Bean`)
+
+To najczęstszy i najbardziej intuicyjny sposób użycia.
+
+**Przykład:**
+
+```java
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import javax.annotation.PostConstruct;
+
+@Lazy // <-- KLUCZOWA ADNOTACJA
+@Service
+public class HeavyResourceService {
+
+    public HeavyResourceService() {
+        System.out.println(">>> HeavyResourceService: KONSTRUKTOR - tworzenie instancji...");
+        // Symulacja długiego procesu inicjalizacji
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @PostConstruct
+    public void init() {
+        System.out.println(">>> HeavyResourceService: Inicjalizacja zakończona!");
+    }
+
+    public String getData() {
+        return "Oto dane z ciężkiego zasobu.";
+    }
+}
+```
+
+```java
+@Service
+public class NormalService {
+
+    private final HeavyResourceService heavyService;
+
+    // Zależność jest wstrzykiwana przez konstruktor
+    public NormalService(HeavyResourceService heavyService) {
+        System.out.println(">>> NormalService: KONSTRUKTOR");
+        this.heavyService = heavyService;
+    }
+
+    public void useHeavyResource() {
+        System.out.println(">>> NormalService: Używam ciężkiego zasobu...");
+        System.out.println(heavyService.getData());
+    }
+}
+```
+
+**Co się stanie?**
+
+*   **Bez `@Lazy` na `HeavyResourceService`:**
+1.  Aplikacja startuje.
+2.  Na konsoli zobaczysz: `>>> HeavyResourceService: KONSTRUKTOR...` (aplikacja "zawiesza się" na 3 sekundy).
+3.  Następnie `>>> HeavyResourceService: Inicjalizacja zakończona!`.
+4.  Następnie `>>> NormalService: KONSTRUKTOR`.
+5.  Aplikacja jest gotowa. Czas startu jest dłuższy.
+
+*   **Z `@Lazy` na `HeavyResourceService`:**
+1.  Aplikacja startuje.
+2.  Na konsoli zobaczysz **tylko**: `>>> NormalService: KONSTRUKTOR`.
+3.  Aplikacja uruchomiła się **BARDZO SZYBKO**. Bean `HeavyResourceService` jeszcze **nie istnieje**!
+4.  Dopiero gdy wywołasz metodę `normalService.useHeavyResource()`, Spring zda sobie sprawę, że potrzebuje beana `HeavyResourceService`.
+5.  W tym momencie na konsoli zobaczysz:
+*   `>>> NormalService: Używam ciężkiego zasobu...`
+*   `>>> HeavyResourceService: KONSTRUKTOR...` (aplikacja "zawiesza się" na 3 sekundy - **pierwsze żądanie jest wolniejsze!**).
+*   `>>> HeavyResourceService: Inicjalizacja zakończona!`.
+*   `Oto dane z ciężkiego zasobu.`
+6.  Przy każdym kolejnym wywołaniu `useHeavyResource()` bean będzie już gotowy i używany bez opóźnień.
+
+**Podsumowując:** Przenosisz koszt inicjalizacji z czasu startu aplikacji na czas obsługi pierwszego żądania.
+
+---
+
+#### 2. `@Lazy` na punkcie wstrzykiwania (`@Autowired`, parametr konstruktora)
+
+To jest bardziej zaawansowany i subtelny przypadek użycia. Jest kluczowy do rozwiązywania **zależności cyklicznych (circular dependencies)**.
+
+Kiedy umieszczasz `@Lazy` na polu lub parametrze, mówisz Springowi:
+
+> "Nie wstrzykuj tutaj prawdziwego beana od razu. Zamiast tego, wstrzyknij specjalny obiekt zastępczy (proxy), który będzie wiedział, jak w przyszłości zlokalizować prawdziwego beana."
+
+**Przykład: Rozwiązywanie zależności cyklicznej**
+
+Załóżmy, że `ServiceA` zależy od `ServiceB`, a `ServiceB` zależy od `ServiceA`.
+
+```java
+// WERSJA POWODUJĄCA BŁĄD
+@Service
+public class ServiceA {
+    private final ServiceB serviceB;
+    public ServiceA(ServiceB serviceB) { this.serviceB = serviceB; }
+}
+
+@Service
+public class ServiceB {
+    private final ServiceA serviceA;
+    public ServiceB(ServiceA serviceA) { this.serviceA = serviceA; }
+}
+```
+Powyższy kod **nie uruchomi się**. Spring zgłosi błąd `BeanCurrentlyInCreationException`, ponieważ:
+1.  Chce stworzyć `ServiceA`.
+2.  Widzi, że potrzebuje `ServiceB`.
+3.  Zaczyna tworzyć `ServiceB`.
+4.  Widzi, że potrzebuje `ServiceA`, które wciąż jest w trakcie tworzenia. Pętla się zamyka.
+
+**Rozwiązanie z `@Lazy`:**
+
+```java
+// WERSJA DZIAŁAJĄCA
+@Service
+public class ServiceA {
+    private final ServiceB serviceB;
+
+    // Nie zmieniamy tego konstruktora
+    public ServiceA(ServiceB serviceB) {
+        this.serviceB = serviceB;
+    }
+    public void doSomethingInB() {
+        serviceB.someMethod();
+    }
+}
+
+@Service
+public class ServiceB {
+    private final ServiceA serviceA;
+
+    // Dodajemy @Lazy do parametru, który tworzy cykl
+    public ServiceB(@Lazy ServiceA serviceA) {
+        this.serviceA = serviceA;
+    }
+    public void someMethod() {
+        System.out.println("Metoda w ServiceB wywołana!");
+    }
+}
+```
+
+**Jak to teraz działa?**
+1.  Spring chce stworzyć `ServiceA`. Widzi, że potrzebuje `ServiceB`.
+2.  Zaczyna tworzyć `ServiceB`. Widzi, że potrzebuje `ServiceA`, ale adnotacja `@Lazy` zmienia zasady gry.
+3.  Spring **nie szuka gotowej instancji `ServiceA`**. Zamiast tego tworzy **proxy (obiekt zastępczy)** dla `ServiceA` i wstrzykuje je do `ServiceB`.
+4.  `ServiceB` jest teraz w pełni utworzony (z proxy do `ServiceA` w środku).
+5.  Spring wraca do tworzenia `ServiceA` i wstrzykuje do niego gotową instancję `ServiceB`.
+6.  `ServiceA` jest teraz w pełni utworzony. Cykl został przerwany.
+
+Dopiero gdy jakaś metoda w `ServiceB` faktycznie spróbuje wywołać metodę na wstrzykniętym `serviceA`, proxy "obudzi się" i pobierze prawdziwą, w pełni utworzoną instancję `ServiceA` z kontekstu Springa.
+
+---
+
+#### 3. Globalna Leniwa Inicjalizacja
+
+Możesz włączyć leniwą inicjalizację dla **wszystkich beanów** w aplikacji, dodając wpis w pliku `application.properties` (lub `.yml`):
+
+`application.properties`:
+```properties
+spring.main.lazy-initialization=true
+```
+
+W tym trybie wszystkie beany stają się domyślnie leniwe. Jeśli chcesz, aby jakiś konkretny bean był jednak tworzony "chętnie" (eager), możesz użyć adnotacji `@Lazy(false)`.
+
+```java
+@Lazy(false) // Mimo globalnego ustawienia, ten bean będzie tworzony na starcie
+@Service
+public class ImportantMonitoringService {
+    // ...
+}
+```
+To ustawienie jest przydatne w fazie deweloperskiej, aby drastycznie skrócić czas restartu aplikacji.
+
+### Podsumowanie: Kiedy używać `@Lazy`, a kiedy unikać?
+
+| Kiedy Używać? (Zalety)                                                                                                  | Kiedy Unikać? (Wady i Ryzyka)                                                                                             |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Przyspieszenie startu aplikacji:** Gdy masz "ciężkie" beany, które nie są potrzebne od razu (np. integracje z systemami zewnętrznymi). | **Ukrywanie błędów konfiguracyjnych:** Błąd w tworzeniu beana objawi się dopiero przy pierwszym użyciu, potencjalnie na produkcji. |
+| **Oszczędność zasobów:** Gdy bean jest używany bardzo rzadko (np. w zadaniach administracyjnych uruchamianych raz na tydzień). | **Wolniejsze pierwsze żądanie:** Użytkownik, który jako pierwszy trafi na funkcję używającą leniwego beana, odczuje opóźnienie. |
+| **Rozwiązywanie zależności cyklicznych:** To główny, techniczny powód użycia `@Lazy` na punktach wstrzykiwania.              | **Komplikuje przepływ:** Domyślne, "chętne" zachowanie jest prostsze do zrozumienia i debugowania.                      |
+| **Aplikacje deweloperskie:** Globalne włączenie leniwej inicjalizacji znacznie przyspiesza cykl kodowanie-restart-testowanie. | **Nie nadużywać:** Nie oznaczaj wszystkiego jako `@Lazy` bez powodu. To narzędzie do rozwiązywania konkretnych problemów. |
+
+**Złota zasada:** Trzymaj się domyślnej, "chętnej" inicjalizacji, dopóki nie masz dobrego powodu (wydajność startu, zależności cykliczne), aby jej unikać. Bezpieczeństwo wykrywania błędów na starcie jest zazwyczaj ważniejsze niż kilka sekund zaoszczędzonych podczas uruchamiania.
