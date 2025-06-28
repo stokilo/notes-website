@@ -3,9 +3,9 @@ sidebar_label: 'Parent Version'
 sidebar_position: 2
 ---
 
-# Why I have to hardcode maven <parent> version in child pom.xml?
+# Why I have to hardcode maven parent version in child pom.xml?
 
-Tak, moduł dziecko w sekcji `<parent>` **musi hardcodować** wersję rodzica, niezależnie od tego, czy jest to wersja `SNAPSHOT` czy wersja stabilna.
+Tak, moduł dziecko w sekcji `parent` **musi hardcodować** wersję rodzica, niezależnie od tego, czy jest to wersja `SNAPSHOT` czy wersja stabilna.
 
 To jest fundamentalne ograniczenie Mavena i wynika z logiki, o której wspominaliśmy wcześniej:
 
@@ -50,7 +50,7 @@ To, że musisz hardcodować wersję SNAPSHOT rodzica, jest powszechnym "probleme
 Istnieją jednak narzędzia i praktyki, które ułatwiają zarządzanie tymi zmianami:
 
 1.  **Maven Versions Plugin:** To jest standardowe narzędzie do zarządzania wersjami w Mavena.
-*   **`versions:set`**: Głównie używa się celu `versions:set` do aktualizacji wersji projektu i wszystkich jego modułów. Na przykład, jeśli chcesz zmienić wersję rodzica z `0.0.1-SNAPSHOT` na `0.0.2-SNAPSHOT`, możesz uruchomić to polecenie w głównym katalogu rodzica. Plugin automatycznie zaktualizuje wersję w POM-ie rodzica oraz w sekcjach `<parent>` wszystkich modułów potomnych.
+*   **`versions:set`**: Głównie używa się celu `versions:set` do aktualizacji wersji projektu i wszystkich jego modułów. Na przykład, jeśli chcesz zmienić wersję rodzica z `0.0.1-SNAPSHOT` na `0.0.2-SNAPSHOT`, możesz uruchomić to polecenie w głównym katalogu rodzica. Plugin automatycznie zaktualizuje wersję w POM-ie rodzica oraz w sekcjach `parent` wszystkich modułów potomnych.
 ```bash
 mvn versions:set -DnewVersion=0.0.2-SNAPSHOT
 # Po zakończeniu, usuń stare backupy pom.xml.versionsBackup
@@ -59,7 +59,7 @@ mvn versions:commit
 *   **`versions:update-parent`**: Może być również użyte do aktualizacji wersji rodzica w POM-ie modułu potomnego do najnowszej dostępnej (lub określonej).
 
 2.  **Użycie `parent.version` w innych miejscach:**
-Chociaż nie możesz użyć zmiennej w definicji `<parent>`, to **możesz użyć zmiennej `${project.parent.version}`** (lub krócej `${parent.version}`) w innych sekcjach POM-u dziecka (np. w `<dependencies>`, `<pluginManagement>`, `<dependencyManagement>`), aby odwołać się do wersji rodzica, którą już zadeklarowałeś w sekcji `<parent>`.
+Chociaż nie możesz użyć zmiennej w definicji `parent`, to **możesz użyć zmiennej `${project.parent.version}`** (lub krócej `${parent.version}`) w innych sekcjach POM-u dziecka (np. w `<dependencies>`, `<pluginManagement>`, `<dependencyManagement>`), aby odwołać się do wersji rodzica, którą już zadeklarowałeś w sekcji `parent`.
 
 **Przykład:**
 ```xml
@@ -92,4 +92,4 @@ Chociaż nie możesz użyć zmiennej w definicji `<parent>`, to **możesz użyć
 </project>
     ```
 
-**Podsumowując:** Tak, musisz hardcodować wersję rodzica w sekcji `<parent>` modułu dziecka. Jest to celowe zachowanie Mavena, zapewniające spójność i przewidywalność budowy. Narzędzia takie jak Maven Versions Plugin pomagają w zarządzaniu tymi wersjami w projektach wielomodułowych.
+**Podsumowując:** Tak, musisz hardcodować wersję rodzica w sekcji `parent` modułu dziecka. Jest to celowe zachowanie Mavena, zapewniające spójność i przewidywalność budowy. Narzędzia takie jak Maven Versions Plugin pomagają w zarządzaniu tymi wersjami w projektach wielomodułowych.
