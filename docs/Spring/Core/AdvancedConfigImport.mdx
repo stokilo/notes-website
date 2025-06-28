@@ -1,0 +1,284 @@
+---
+sidebar_label: 'Config Import'
+---
+
+# Advanced configuration import @Import @ImportSelector ImportBeanDefinitionRegistrar
+
+Jasne, wyjaśnijmy to dokładnie, krok po kroku. Dynamiczne importowanie konfiguracji w Springu to niezwykle potężny mechanizm, który pozwala na tworzenie elastycznych i modularnych bibliotek oraz frameworków (jest to serce auto-konfiguracji w Spring Boot).
+
+Zaczniemy od podstaw, czyli adnotacji `@Import`, a następnie przejdziemy do jej zaawansowanych form z użyciem `ImportSelector` i `ImportBeanDefinitionRegistrar`.
+
+---
+
+### 1. Podstawa: Proste użycie `@Import`
+
+W najprostszej formie `@Import` służy do zaimportowania jednej lub więcej klas konfiguracyjnych (`@Configuration`) do innej. Działa to podobnie do tego, jakbyśmy zagnieździli te klasy lub zdefiniowali je w `component-scan`.
+
+**Przykład:**
+
+Masz dwie oddzielne konfiguracje:
+
+```java
+// Konfiguracja dla usług bazodanowych
+@Configuration
+public class DatabaseConfig {
+    @Bean
+    public DataSource dataSource() {
+        // ... logika tworzenia źródła danych
+        return new SomeDataSource();
+    }
+}
+
+// Konfiguracja dla usług bezpieczeństwa
+@Configuration
+public class SecurityConfig {
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+Zamiast kazać Springowi skanować obie, możesz stworzyć główną klasę konfiguracyjną i je zaimportować:
+
+```java
+@Configuration
+@Import({DatabaseConfig.class, SecurityConfig.class})
+public class AppConfig {
+    // Główna konfiguracja aplikacji
+}
+```
+
+**Co się dzieje?** Spring podczas przetwarzania `AppConfig` zobaczy adnotację `@Import` i załaduje również beany zdefiniowane w `DatabaseConfig` i `SecurityConfig`.
+
+**Ograniczenie:** To jest **statyczne**. Lista klas do zaimportowania jest na stałe wpisana w kodzie. Nie możemy jej zmienić w zależności od warunków (np. obecności jakiejś biblioteki w classpath albo wartości w pliku `application.properties`). I tu właśnie wkraczają mechanizmy dynamiczne.
+
+---
+
+### 2. Mechanizm dynamiczny: `@Import` z `ImportSelector`
+
+`ImportSelector` to interfejs, który pozwala **programowo zdecydować, które klasy konfiguracyjne mają zostać zaimportowane**. Zamiast podawać klasy bezpośrednio w `@Import`, podajesz klasę, która implementuje `ImportSelector`.
+
+**Jak to działa?**
+1.  Tworzysz klasę implementującą interfejs `ImportSelector`.
+2.  Implementujesz jego jedyną metodę: `String[] selectImports(AnnotationMetadata importingClassMetadata)`.
+3.  Metoda ta musi zwrócić tablicę `String`ów, gdzie każdy string to **w pełni kwalifikowana nazwa klasy** (`com.example.MyConfig`) do zaimportowania.
+4.  Spring uruchomi tę metodę, a zwrócone przez nią klasy potraktuje tak, jakby były wpisane bezpośrednio w `@Import`.
+
+Najważniejszy jest argument `AnnotationMetadata importingClassMetadata`. Daje on dostęp do metadanych (w tym adnotacji) klasy, która użyła `@Import`. Dzięki temu możemy podejmować decyzje!
+
+#### Przykład: Warunkowe włączanie modułu
+
+Wyobraźmy sobie, że tworzymy bibliotekę, która może wysyłać powiadomienia przez e-mail lub SMS. Chcemy, aby użytkownik biblioteki mógł łatwo wybrać, który mechanizm ma być aktywny.
+
+**Krok 1: Stwórz adnotację aktywującą**
+
+```java
+import org.springframework.context.annotation.Import;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Import(MessagingSelector.class) // Kluczowy moment! Używamy naszego selektora.
+public @interface EnableMessaging {
+    Type type(); // Użytkownik wybierze EMAIL lub SMS
+
+    enum Type {
+        EMAIL, SMS
+    }
+}
+```
+
+**Krok 2: Stwórz konfiguracje dla obu typów**
+
+```java
+// Konfiguracja dla Email
+@Configuration
+public class EmailConfig {
+    @Bean
+    public MessageSender emailSender() {
+        return new EmailMessageSender();
+    }
+}
+
+// Konfiguracja dla SMS
+@Configuration
+public class SmsConfig {
+    @Bean
+    public MessageSender smsSender() {
+        return new SmsMessageSender();
+    }
+}
+
+// Wspólny interfejs i implementacje
+public interface MessageSender { void send(String message); }
+public class EmailMessageSender implements MessageSender { /* ... */ }
+public class SmsMessageSender implements MessageSender { /* ... */ }
+```
+
+**Krok 3: Stwórz `ImportSelector`**
+
+To jest serce mechanizmu. Nasz selektor odczyta wartość z adnotacji `@EnableMessaging` i na tej podstawie zdecyduje, którą konfigurację zaimportować.
+
+```java
+import org.springframework.context.annotation.ImportSelector;
+import org.springframework.core.type.AnnotationMetadata;
+import java.util.Map;
+
+public class MessagingSelector implements ImportSelector {
+
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        // 1. Pobierz atrybuty adnotacji @EnableMessaging z klasy, która jej używa
+        Map<String, Object> attributes = importingClassMetadata
+                .getAnnotationAttributes(EnableMessaging.class.getName());
+
+        // 2. Odczytaj wartość atrybutu "type"
+        EnableMessaging.Type type = (EnableMessaging.Type) attributes.get("type");
+
+        // 3. Zdecyduj, którą konfigurację zaimportować
+        switch (type) {
+            case EMAIL:
+                // Zwracamy pełną nazwę klasy jako String
+                return new String[] { EmailConfig.class.getName() };
+            case SMS:
+                return new String[] { SmsConfig.class.getName() };
+            default:
+                // Można rzucić wyjątek lub zwrócić pustą tablicę
+                return new String[0];
+        }
+    }
+}
+```
+
+**Krok 4: Użycie w aplikacji**
+
+Teraz użytkownik Twojej biblioteki może w bardzo prosty sposób aktywować wybrany moduł:
+
+```java
+@Configuration
+@EnableMessaging(type = EnableMessaging.Type.EMAIL) // Chcę używać e-maili!
+public class MainAppConfig {
+}
+
+// W aplikacji można teraz wstrzyknąć bean MessageSender
+@Component
+public class NotificationService {
+    private final MessageSender messageSender;
+
+    @Autowired
+    public NotificationService(MessageSender messageSender) {
+        this.messageSender = messageSender; // Zostanie wstrzyknięty EmailMessageSender
+    }
+}
+```
+
+Jeśli użytkownik zmieni `@EnableMessaging(type = EnableMessaging.Type.SMS)`, Spring automatycznie załaduje `SmsConfig` i wstrzyknie `SmsMessageSender`.
+
+---
+
+### 3. Najpotężniejszy mechanizm: `@Import` z `ImportBeanDefinitionRegistrar`
+
+`ImportSelector` decyduje, **jakie klasy `@Configuration`** zaimportować. Ale co, jeśli chcemy pójść o krok dalej i **dynamicznie rejestrować pojedyncze definicje beanów**? Do tego służy `ImportBeanDefinitionRegistrar`.
+
+Daje on pełną, programową kontrolę nad rejestrem beanów. Możesz tworzyć `BeanDefinition` od zera, ustawiać im właściwości (scope, lazy-init, zależności) i nadawać im nazwy.
+
+**Kiedy go używać?**
+*   Gdy klasy beanów nie są znane w czasie kompilacji.
+*   Gdy chcesz dynamicznie utworzyć wiele beanów na podstawie skanowania classpath (np. dla wszystkich interfejsów w danym pakiecie, jak robi to MyBatis z `@MapperScan` czy Spring Cloud z `@FeignClient`).
+*   Gdy konfiguracja beana jest zbyt skomplikowana, by umieścić ją w standardowej metodzie `@Bean`.
+
+**Jak to działa?**
+1.  Tworzysz klasę implementującą `ImportBeanDefinitionRegistrar`.
+2.  Implementujesz metodę `registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry)`.
+3.  Używasz obiektu `registry`, aby zarejestrować nowe definicje beanów.
+
+#### Przykład: Dynamiczne tworzenie repozytoriów
+
+Wyobraźmy sobie, że chcemy stworzyć mechanizm, który skanuje podany pakiet w poszukiwaniu interfejsów oznaczonych adnotacją `@MyRepository` i dla każdego z nich rejestruje bean będący dynamicznym proxy (fabryką).
+
+**Krok 1: Adnotacje**
+
+```java
+// Adnotacja do oznaczania interfejsów
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MyRepository {
+}
+
+// Adnotacja włączająca skanowanie
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Import(MyRepositoryRegistrar.class) // Używamy naszego registra-ra
+public @interface EnableMyRepositories {
+    String[] basePackages(); // Pakiety do przeskanowania
+}
+```
+
+**Krok 2: `ImportBeanDefinitionRegistrar`**
+
+```java
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.util.StringUtils;
+
+public class MyRepositoryRegistrar implements ImportBeanDefinitionRegistrar {
+
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
+        // 1. Pobierz atrybuty z @EnableMyRepositories
+        Map<String, Object> attributes = metadata.getAnnotationAttributes(EnableMyRepositories.class.getName());
+        String[] basePackages = (String[]) attributes.get("basePackages");
+
+        // 2. Stwórz skaner classpath, który znajdzie interfejsy z adnotacją @MyRepository
+        ClassPathScanningCandidateComponentProvider scanner =
+                new ClassPathScanningCandidateComponentProvider(false); // false = nie używaj domyślnych filtrów
+        scanner.addIncludeFilter(new AnnotationTypeFilter(MyRepository.class));
+
+        // 3. Przeskanuj pakiety i zarejestruj beany
+        for (String basePackage : basePackages) {
+            scanner.findCandidateComponents(basePackage).forEach(beanDefinition -> {
+                try {
+                    String interfaceName = beanDefinition.getBeanClassName();
+                    Class<?> interfaceClass = Class.forName(interfaceName);
+
+                    // Tworzymy definicję beana dla naszej fabryki, która stworzy proxy
+                    BeanDefinitionBuilder builder = BeanDefinitionBuilder
+                            .genericBeanDefinition(MyRepositoryFactoryBean.class); // Załóżmy, że mamy taką fabrykę
+
+                    // Przekazujemy do fabryki typ interfejsu, który ma zaimplementować
+                    builder.addConstructorArgValue(interfaceClass);
+
+                    // Rejestrujemy definicję beana w kontenerze Springa
+                    // Nazwa beana to np. "userRepository" dla interfejsu "UserRepository"
+                    String beanName = StringUtils.uncapitalize(interfaceClass.getSimpleName());
+                    registry.registerBeanDefinition(beanName, builder.getBeanDefinition());
+
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException("Nie udało się znaleźć klasy interfejsu", e);
+                }
+            });
+        }
+    }
+}
+```
+*Uwaga: `MyRepositoryFactoryBean` to hipotetyczna klasa implementująca `FactoryBean<T>`, która potrafi tworzyć dynamiczne proxy dla podanego interfejsu.*
+
+---
+
+### Podsumowanie i Kiedy Czego Używać?
+
+| Mechanizm | Cel | Poziom kontroli | Typowy przypadek użycia |
+| :--- | :--- | :--- | :--- |
+| **`@Import(MyConfig.class)`** | Statyczne dołączenie konfiguracji. | Niski (tylko włącz/wyłącz całość). | Prosta kompozycja konfiguracji. |
+| **`ImportSelector`** | Dynamiczne decydowanie, **które klasy konfiguracyjne** załadować. | Średni. Decydujesz na poziomie całych plików `@Configuration`. | Tworzenie adnotacji `@Enable...`, które warunkowo aktywują gotowe moduły (np. w zależności od właściwości, profilu, adnotacji). |
+| **`ImportBeanDefinitionRegistrar`**| Dynamiczne **rejestrowanie definicji pojedynczych beanów**. | Wysoki. Pełna kontrola nad tworzeniem `BeanDefinition`. | Skanowanie classpath i tworzenie beanów na podstawie znalezionych klas/interfejsów (np. skanery repozytoriów, klientów REST). |
+
+Te mechanizmy są fundamentem dla wielu "magicznych" funkcji Springa, a zwłaszcza Spring Boot. Zrozumienie ich pozwala nie tylko lepiej korzystać z gotowych rozwiązań, ale także tworzyć własne, potężne i reużywalne moduły konfiguracyjne.
