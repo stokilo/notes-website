@@ -1,0 +1,69 @@
+---
+sidebar_label: 'Daemon Vs User Thread'
+---
+
+# Compare Java Daemon and User Thread
+
+
+Jasne, wytłumaczmy, czym są wątki Daemon w Javie.
+
+W Javie, każdy wątek jest albo **wątkiem użytkownika (User Thread)**, albo **wątkiem typu daemon (Daemon Thread)**. Kluczowa różnica między nimi leży w sposobie, w jaki maszyna wirtualna Javy (JVM) traktuje je podczas procesu zamykania aplikacji.
+
+**Kluczowa Różnica i Zasada Zamykania JVM:**
+
+1.  **Wątki użytkownika (User Threads):** Są to "normalne", "główne" wątki wykonywane przez aplikację. **JVM nie zakończy działania, dopóki wszystkie wątki użytkownika nie zakończą swojej pracy.** Gdy ostatni wątek użytkownika przestaje działać, JVM rozpoczyna proces zamykania.
+2.  **Wątki Daemon (Daemon Threads):** Są to wątki działające w tle, pomocnicze, które nie są kluczowe dla poprawnego zakończenia działania aplikacji. **JVM ignoruje wątki daemon podczas procesu zamykania.** Gdy ostatni *wątek użytkownika* kończy działanie, JVM zamyka się automatycznie, przerywając przy tym *wszystkie* działające wątki daemon, niezależnie od tego, co aktualnie robiły.
+
+**Podsumowując zasadę zamykania:** JVM kończy działanie, gdy pozostały *tylko* wątki typu daemon. Jeśli choć jeden wątek użytkownika wciąż działa, JVM pozostaje uruchomiony.
+
+**Do czego służą wątki Daemon?**
+
+Są one używane do zadań w tle, które nie muszą gwarantować zakończenia przed zamknięciem aplikacji. Przykłady obejmują:
+
+*   **Garbage Collector:** To klasyczny przykład wątku daemon. Działa w tle, sprzątając pamięć, ale jego istnienie nie powinno blokować zamknięcia aplikacji.
+*   **Zadania pomocnicze/monitorujące:** Np. wątek, który monitoruje stan systemu, loguje coś okresowo, czyści tymczasowe pliki. Jeśli aplikacja się zamyka, nie ma potrzeby czekać na zakończenie tych zadań.
+*   **Nasłuchiwanie:** Czasami używane do nasłuchiwania na zdarzenia (np. połączenia sieciowe), gdy zamknięcie aplikacji oznacza po prostu przerwanie nasłuchiwania.
+
+**Jak ustawić wątek jako Daemon?**
+
+Aby ustawić wątek jako daemon, użyj metody `setDaemon(true)` na obiekcie `Thread`.
+
+```java
+Thread myDaemonThread = new Thread(() -> {
+    // Kod wykonywany w tle
+    while (true) {
+        System.out.println("Watek Daemon dziala...");
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            break; // Przerwij, jeśli wątek zostanie przerwany
+        }
+    }
+    System.out.println("Watek Daemon zakonczyl dzialanie (prawdopodobnie nigdy sie to nie wyswietli).");
+});
+
+// *** WAŻNE: setDaemon() musi być wywołane PRZED start()! ***
+myDaemonThread.setDaemon(true);
+
+myDaemonThread.start();
+
+// Główny wątek (który jest wątkiem użytkownika) robi coś innego
+System.out.println("Glowny watek (User Thread) wykonuje zadanie i zaraz sie skonczy.");
+try {
+    Thread.sleep(3000); // Poczekaj 3 sekundy
+} catch (InterruptedException e) {
+    e.printStackTrace();
+}
+
+System.out.println("Glowny watek (User Thread) zakonczyl dzialanie.");
+// W tym momencie JVM zauważy, że tylko wątek Daemon pozostał
+// i zamknie się, przerywając wątek Daemon.
+```
+
+**Ważne uwagi:**
+
+1.  **Timing `setDaemon()`:** Zawsze wywołuj `setDaemon(boolean)` *przed* wywołaniem `start()` dla danego wątku. Po uruchomieniu wątku zmiana jego statusu daemon jest niemożliwa.
+2.  **Dziedziczenie:** Nowo utworzony wątek domyślnie dziedziczy status daemon od wątku, który go stworzył (wątku rodzica). Jeśli wątek rodzic jest typu daemon, nowy wątek również będzie daemonem (chyba że jawnie ustawisz mu `setDaemon(false)`). Jeśli wątek rodzic jest wątkiem użytkownika, nowy wątek będzie wątkiem użytkownika (chyba że jawnie ustawisz mu `setDaemon(true)`).
+3.  **Zakończenie bez czyszczenia:** Ponieważ wątki daemon mogą być przerwane w dowolnym momencie bez ostrzeżenia (gdy JVM się zamyka), **nie powinny być używane do zadań, które muszą zagwarantować prawidłowe zakończenie lub posprzątanie** (np. zamykanie plików, zamykanie połączeń sieciowych, kończenie transakcji bazodanowych, krytyczne zapisywanie danych). Jeśli takie zadania są w trakcie, gdy JVM się zamyka z powodu zakończenia ostatniego wątku użytkownika, dane lub stan mogą zostać utracone lub uszkodzone.
+
+W skrócie: używaj wątków daemon do zadań w tle, które są jednorazowe lub mogą zostać bezpiecznie przerwane bez negatywnych konsekwencji dla stanu aplikacji przy jej zamykaniu. Do wszelkich zadań, które są kluczowe dla integralności danych lub poprawnego działania systemu, używaj wątków użytkownika.

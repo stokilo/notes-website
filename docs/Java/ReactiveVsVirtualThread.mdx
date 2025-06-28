@@ -1,0 +1,39 @@
+---
+sidebar_label: 'Reactive Vs Virtual Thread'
+---
+
+# Compare Java Reactive Programming with using Virtual Threads
+
+
+Jasne, oto podsumowanie kluczowych różnic między programowaniem reaktywnym w Javie (przy użyciu frameworków jak Reactor, RxJava) a wątkami wirtualnymi (Virtual Threads, Project Loom w Javie):
+
+1.  **Model Programowania / Styl Kodowania:**
+*   **Programowanie Reaktywne:** Opiera się na **funkcjonalnym, deklaratywnym** stylu. Piszesz kod w oparciu o strumienie danych (data streams) i operatory (map, filter, flatMap itp.). Myślisz w kategoriach przepływu danych i transformacji. Często używa się lambd i metod referencyjnych.
+*   **Wątki Wirtualne:** Umożliwiają pisanie kodu w **tradycyjnym, imperatywnym, sekwencyjnym** stylu, tak jak w przypadku tradycyjnych wątków OS. Używasz znanych konstrukcji blokujących (`read()`, `write()`, wywołania synchroniczne do baz danych czy innych serwisów).
+
+2.  **Zarządzanie Współbieżnością:**
+*   **Programowanie Reaktywne:** Skupia się na **non-blocking I/O** i wykorzystuje minimalną liczbę tradycyjnych wątków (np. wątków z puli `event loop`) do obsługi wielu jednoczesnych operacji I/O. Współbieżność jest zarządzana przez asynchroniczne zdarzenia i strumienie.
+*   **Wątki Wirtualne:** Tworzą **dużą liczbę bardzo lekkich wątków**, które są zarządzane przez JVM i mapowane na znacznie mniejszą liczbę tradycyjnych wątków OS (tzw. carrier threads). Gdy wątek wirtualny napotyka operację blokującą (np. wywołanie sieciowe), JVM "odwiesza" (parkuje) ten wątek wirtualny, zwalniając wątek OS do obsługi innego wątku wirtualnego.
+
+3.  **Sposób Obsługi Operacji Blokujących:**
+*   **Programowanie Reaktywne:** Aktywnie **unika blokowania**. Operacje I/O są asynchroniczne, a wyniki są dostarczane poprzez strumienie (Publisher/Subscriber).
+*   **Wątki Wirtualne:** Zostały zaprojektowane, aby **efektywnie obsługiwać operacje blokujące**. Możesz pisać kod w sposób blokujący, a JVM zajmie się skalowaniem, przełączając się między wątkami wirtualnymi, gdy jeden z nich czeka na I/O.
+
+4.  **Złożoność / Krzywa Uczenia:**
+*   **Programowanie Reaktywne:** Wymaga nauki nowego paradygmatu, zrozumienia strumieni, operatorów, `Publisher`/`Subscriber`, schedulers, co może stanowić wyższą barierę wejścia dla programistów przyzwyczajonych do tradycyjnego stylu.
+*   **Wątki Wirtualne:** Znacznie niższa krzywa uczenia dla programistów znających tradycyjne wielowątkowe programowanie. Kod wygląda znajomo, a korzyści ze skalowania są osiągane głównie przez zmianę sposobu tworzenia wątków/ExecutorService (np. `Executors.newVirtualThreadPerTaskExecutor()`).
+
+5.  **Debugowanie:**
+*   **Programowanie Reaktywne:** Debugowanie może być trudniejsze, ponieważ stosy wywołań (stack traces) są często "rozproszone" przez asynchroniczne wywołania i operatory.
+*   **Wątki Wirtualne:** Stosy wywołań są zazwyczaj proste i odzwierciedlają sekwencyjny kod, co ułatwia debugowanie w porównaniu do skomplikowanych scenariuszy reaktywnych.
+
+6.  **Optymalizacja Pod Kątem:**
+*   **Programowanie Reaktywne:** Optymalne dla aplikacji zorientowanych na przetwarzanie strumieni danych, gdzie kluczowy jest "backpressure" (zarządzanie tempem napływających danych) i skomplikowane transformacje danych w locie.
+*   **Wątki Wirtualne:** Optymalne dla aplikacji I/O-bound (ograniczonych przez operacje wejścia/wyjścia, np. serwisy webowe, API), które wykonują wiele blokujących wywołań (baza danych, inne serwisy), a głównym problemem jest tradycyjne zużycie wątków OS.
+
+**Podsumowując:**
+
+*   **Programowanie Reaktywne** zmienia **sposób pisania kodu**, promując asynchroniczny, nieblokujący, strumieniowy i deklaratywny styl, aby efektywnie zarządzać konkurencją przy użyciu minimalnej liczby wątków OS.
+*   **Wątki Wirtualne** zmieniają **sposób wykonywania kodu** (przez JVM), pozwalając pisać go w tradycyjny, blokujący, imperatywny sposób, ale skalując do ogromnej liczby współbieżnych "zadań" dzięki lekkim, zarządzanym przez JVM wątkom.
+
+Wybór między nimi zależy od charakteru problemu, istniejącej architektury systemu, preferencji zespołu i dotychczasowej bazy kodu. Często mogą być używane komplementarnie w różnych częściach systemu.
