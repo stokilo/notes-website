@@ -1,0 +1,234 @@
+---
+sidebar_label: 'Factory Bean'
+---
+
+# Why to use FactoryBean for bean instantiation?
+
+Jasne, wyjaśnijmy to dokładnie i krok po kroku.
+
+**Programowe tworzenie beanów za pomocą `FactoryBean` w Springu** to zaawansowana technika, która daje Ci pełną kontrolę nad procesem tworzenia obiektu (beana), który ma trafić do kontekstu aplikacji Springa.
+
+Zacznijmy od podstaw, aby dobrze zrozumieć, po co to w ogóle jest.
+
+---
+
+### 1. Standardowe tworzenie beanów
+
+Normalnie, w Springu, beany tworzone są na dwa główne sposoby:
+
+*   **Skanowanie komponentów:** Oznaczasz klasę adnotacją (`@Component`, `@Service`, `@Repository` itp.), a Spring sam znajduje tę klasę, tworzy jej instancję i dodaje do swojego kontekstu.
+```java
+@Service
+public class MySimpleService {
+    // ...
+}
+    ```
+*   **Metody `@Bean`:** W klasie konfiguracyjnej (`@Configuration`) tworzysz metodę, która zwraca obiekt. Spring wywołuje tę metodę i rejestruje zwrócony obiekt jako bean.
+```java
+@Configuration
+public class AppConfig {
+    @Bean
+    public MySimpleService mySimpleService() {
+        return new MySimpleService();
+    }
+}
+    ```
+
+W obu przypadkach Spring zarządza cyklem życia obiektu, ale sama logika jego tworzenia jest stosunkowo prosta.
+
+---
+
+### 2. Czym jest `FactoryBean`?
+
+`FactoryBean` to specjalny interfejs w Springu. **Bean, który implementuje ten interfejs, nie jest zwykłym beanem. Jest on fabryką, która produkuje inny obiekt.**
+
+Kiedy Spring napotyka w swojej konfiguracji bean, który jest `FactoryBean`, nie traktuje go jako finalny produkt. Zamiast tego, pyta tę fabrykę: **"Jaki obiekt dla mnie produkujesz?"**. Obiekt zwrócony przez tę fabrykę jest tym, co faktycznie zostaje zarejestrowane w kontekście Springa pod daną nazwą.
+
+**Kluczowa idea:** `FactoryBean` to fabryka beanów, a nie bean sam w sobie (z perspektywy końcowego programisty korzystającego z kontekstu).
+
+---
+
+### 3. Dlaczego i kiedy używać `FactoryBean`?
+
+`FactoryBean` przydaje się w sytuacjach, gdy proces tworzenia obiektu jest skomplikowany i nie da się go zamknąć w prostej metodzie `@Bean`. Główne przypadki użycia to:
+
+1.  **Bardzo złożona logika inicjalizacji:** Kiedy do stworzenia obiektu potrzebujesz wykonać wiele kroków, przetworzyć jakieś dane, połączyć się z zewnętrznym systemem tylko na czas konfiguracji itp. `FactoryBean` pozwala zamknąć tę skomplikowaną logikę w jednej, dedykowanej klasie.
+
+2.  **Integracja z bibliotekami firm trzecich:** Masz bibliotekę, która dostarcza własne klasy fabryk (np. `SomeLibraryManager.createInstance()`). Nie możesz dodać adnotacji `@Component` do klas z tej biblioteki. `FactoryBean` jest idealnym "adapterem", który opakowuje logikę tworzenia obiektów z tej biblioteki i udostępnia je jako standardowe beany Springa.
+
+3.  **Tworzenie różnych instancji w zależności od warunków:** Wewnątrz `FactoryBean` możesz umieścić logikę `if/else`, która na podstawie np. profilu aplikacji (`@Profile`) lub właściwości w `application.properties` zwróci inną implementację lub inaczej skonfigurowany obiekt.
+
+4.  **Tworzenie proxy i obiektów dynamicznych:** `FactoryBean` jest często używany "pod maską" przez samego Springa do tworzenia dynamicznych proxy, na przykład dla transakcji (`@Transactional`) czy integracji z AOP (Aspect-Oriented Programming).
+
+5.  **Ukrywanie skomplikowanej konstrukcji:** Chcesz udostępnić prosty w użyciu bean, ale jego stworzenie wymaga skomplikowanej konfiguracji wielu innych obiektów. `FactoryBean` enkapsuluje (ukrywa) całą tę złożoność.
+
+---
+
+### 4. Jak działa `FactoryBean` - kluczowe metody
+
+Aby stworzyć własną fabrykę, musisz zaimplementować interfejs `FactoryBean<T>`, gdzie `T` to typ obiektu, który chcesz produkować. Interfejs ten ma trzy kluczowe metody:
+
+1.  **`T getObject()`**
+*   **Najważniejsza metoda.** To tutaj umieszczasz całą logikę tworzenia i konfigurowania Twojego finalnego obiektu.
+*   Spring wywoła tę metodę, aby uzyskać instancję beana, która ma trafić do kontekstu.
+
+2.  **`Class<?> getObjectType()`**
+*   Ta metoda informuje Springa o typie obiektu, który zostanie zwrócony przez `getObject()`, **zanim** metoda `getObject()` zostanie faktycznie wywołana.
+*   Jest to bardzo ważne dla mechanizmu wstrzykiwania zależności (autowiring). Dzięki temu Spring wie, czy dany `FactoryBean` może dostarczyć bean pasujący do pola oznaczonego `@Autowired`.
+
+3.  **`boolean isSingleton()`**
+*   Określa, czy `FactoryBean` ma zarządzać pojedynczą instancją (singleton), czy też tworzyć nowy obiekt za każdym razem, gdy jest o niego proszony.
+*   Jeśli zwrócisz `true` (najczęstszy przypadek), Spring wywoła `getObject()` tylko raz, zbuforuje wynik i będzie zwracał tę samą instancję przy każdym kolejnym żądaniu.
+*   Jeśli zwrócisz `false`, `getObject()` będzie wywoływane za każdym razem, gdy ktoś poprosi o ten bean (scope "prototype").
+
+---
+
+### 5. Praktyczny przykład krok po kroku
+
+Wyobraźmy sobie, że mamy klasę `Tool`, której stworzenie jest "skomplikowane". Chcemy, aby typ narzędzia (`type`) był ustawiany na podstawie właściwości w `application.properties`.
+
+**Krok 1: Klasa, którą chcemy produkować (obiekt docelowy)**
+
+```java
+// To jest obiekt, który ostatecznie chcemy mieć w kontekście Springa
+public class Tool {
+    private String type;
+
+    public Tool(String type) {
+        this.type = type;
+        System.out.println("Stworzono narzędzie typu: " + type);
+    }
+
+    public void use() {
+        System.out.println("Używam narzędzia: " + type);
+    }
+}
+```
+
+**Krok 2: Implementacja `FactoryBean`**
+
+Tworzymy naszą fabrykę, która będzie produkować obiekty `Tool`.
+
+```java
+import org.springframework.beans.factory.FactoryBean;
+import org.springframework.beans.factory.annotation.Value;
+
+// Ta klasa sama w sobie będzie beanem, ale jej celem jest produkcja INNEGO beana (Tool)
+public class ToolFactory implements FactoryBean<Tool> {
+
+    // Wstrzykujemy konfigurację do samej fabryki
+    @Value("${tool.type:default_hammer}")
+    private String toolType;
+
+    @Override
+    public Tool getObject() throws Exception {
+        // TUTAJ jest cała logika tworzenia obiektu docelowego
+        System.out.println("ToolFactory: Tworzę nowy obiekt Tool...");
+        // Możemy tu mieć skomplikowane operacje, if-y, itp.
+        if ("screwdriver".equalsIgnoreCase(toolType)) {
+            return new Tool("Śrubokręt precyzyjny");
+        }
+        return new Tool("Młotek"); // Domyślna wartość
+    }
+
+    @Override
+    public Class<?> getObjectType() {
+        // Informujemy Springa, że będziemy produkować obiekty typu Tool
+        return Tool.class;
+    }
+
+    @Override
+    public boolean isSingleton() {
+        // Chcemy, aby w całej aplikacji było tylko jedno narzędzie (jedna instancja)
+        return true;
+    }
+}
+```
+
+**Krok 3: Rejestracja `FactoryBean` w konfiguracji Springa**
+
+Teraz najważniejsze: musimy zarejestrować naszą **fabrykę** (`ToolFactory`) jako bean. Robimy to tak, jak z każdym innym beanem.
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AppConfig {
+
+    @Bean(name = "myTool") // Nadajemy nazwę finalnemu beanowi, a nie fabryce!
+    public ToolFactory toolFactory() {
+        return new ToolFactory();
+    }
+}
+```
+
+**Krok 4: Użycie wyprodukowanego beana**
+
+Teraz w innej części aplikacji możemy wstrzyknąć nasz `Tool`. Zwróć uwagę, że wstrzykujemy `Tool`, a **nie** `ToolFactory`!
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
+@Service
+public class WorkshopService {
+
+    private final Tool tool;
+
+    // Spring widzi, że potrzebujemy beana typu Tool.
+    // Znajduje definicję beana "myTool", widzi, że jest to FactoryBean,
+    // więc wywołuje na nim getObject() i wstrzykuje wynik.
+    @Autowired
+    public WorkshopService(@Qualifier("myTool") Tool tool) {
+        this.tool = tool;
+    }
+
+    public void doWork() {
+        System.out.println("Zaczynam pracę w warsztacie.");
+        tool.use();
+    }
+}
+```
+Plik `application.properties`:
+```properties
+tool.type=screwdriver
+```
+
+**Co się stanie po uruchomieniu?**
+Logi w konsoli pokażą:
+```
+ToolFactory: Tworzę nowy obiekt Tool...
+Stworzono narzędzie typu: Śrubokręt precyzyjny
+Zaczynam pracę w warsztacie.
+Używam narzędzia: Śrubokręt precyzyjny
+```
+
+---
+
+### 6. Ważne rozróżnienie: `bean` vs `&bean`
+
+*   Gdy odwołujesz się do beana o nazwie `myTool` (np. przez `@Autowired` lub `context.getBean("myTool")`), Spring automatycznie daje Ci obiekt wyprodukowany przez `toolFactory.getObject()`, czyli instancję `Tool`.
+
+*   A co, jeśli naprawdę potrzebujesz dostępu do samej fabryki (`ToolFactory`), a nie do produktu? Możesz to zrobić, dodając prefiks `&` (ampersand) do nazwy beana:
+
+```java
+// To da nam obiekt Tool
+Tool producedObject = context.getBean("myTool", Tool.class);
+
+// To da nam obiekt samej fabryki - ToolFactory
+ToolFactory factoryObject = context.getBean("&myTool", ToolFactory.class);
+    ```
+
+### Podsumowanie
+
+| Cecha | Metoda `@Bean` | `FactoryBean` |
+| :--- | :--- | :--- |
+| **Złożoność** | Niska. Idealna do prostych inicjalizacji. | Wyższa. Dedykowana klasa, więcej kodu. |
+| **Cel** | Zadeklarowanie, że metoda tworzy bean. | Stworzenie hermetycznej, reużywalnej fabryki do produkcji beanów. |
+| **Logika** | Logika tworzenia jest w ciele metody w klasie `@Configuration`. | Logika jest zamknięta w osobnej klasie implementującej `FactoryBean`. |
+| **Kiedy używać** | 95% przypadków tworzenia beanów, których nie da się obsłużyć skanowaniem komponentów. | Gdy logika tworzenia jest bardzo złożona, warunkowa, wymaga stanu lub integracji z zewnętrznymi fabrykami. |
+| **Przykład** | Tworzenie beana `DataSource` z ustawieniem URL i hasła. | Tworzenie skomplikowanego klienta SOAP/REST, którego konfiguracja zależy od wielu czynników. |
+
+`FactoryBean` to potężne narzędzie w arsenale programisty Springa, ale ze względu na swoją złożoność powinno być używane świadomie, tam, gdzie prostsze rozwiązania, jak metody `@Bean`, są niewystarczające.
