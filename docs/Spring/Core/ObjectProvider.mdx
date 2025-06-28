@@ -2,7 +2,7 @@
 sidebar_label: 'Object Provider'
 ---
 
-# Do czego uzyc ObjectProvider<T>
+# Do czego uzyc ObjectProvider
 
 Jasne, wytłumaczę Ci to bardzo dokładnie, krok po kroku.
 
@@ -59,9 +59,9 @@ public class MojaKlasa {
 *   Prowadzi to do konieczności pisania bloków `if (zmienna != null)`, co jest niewygodne i łatwo o tym zapomnieć, prowadząc do `NullPointerException` w trakcie działania aplikacji.
 *   Jest to uważane za mniej "czysty" i nowoczesny styl programowania.
 
-### Rozwiązanie nr 2 (Lepsze): `Optional<T>`
+### Rozwiązanie nr 2 (Lepsze): {`Optional<T>`}
 
-Wraz z Javą 8 pojawił się `Optional<T>`, który jest idealnym sposobem na wyrażenie opcjonalności. Spring oczywiście wspiera wstrzykiwanie `Optional`.
+Wraz z Javą 8 pojawił się {`Optional<T>`}, który jest idealnym sposobem na wyrażenie opcjonalności. Spring oczywiście wspiera wstrzykiwanie `Optional`.
 
 ```java
 @Component
@@ -90,9 +90,9 @@ public class MojaKlasa {
 **Wady:**
 *   Rozwiązuje tylko problem opcjonalności **jednego** beana. Nie radzi sobie dobrze z sytuacją, gdy może istnieć *wiele* beanów tego samego typu.
 
-### Rozwiązanie nr 3 (Najbardziej Elastyczne): `ObjectProvider<T>`
+### Rozwiązanie nr 3 (Najbardziej Elastyczne): {`ObjectProvider<T>`}
 
-I tu dochodzimy do sedna. `ObjectProvider<T>` to specjalny interfejs Springa, który jest czymś więcej niż tylko opakowaniem na opcjonalny bean. To "dostawca" lub "fabryka" beanów, która daje nam znacznie większą kontrolę.
+I tu dochodzimy do sedna. {`ObjectProvider<T>`} to specjalny interfejs Springa, który jest czymś więcej niż tylko opakowaniem na opcjonalny bean. To "dostawca" lub "fabryka" beanów, która daje nam znacznie większą kontrolę.
 
 ```java
 @Component

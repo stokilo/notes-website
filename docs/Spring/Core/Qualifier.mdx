@@ -212,14 +212,3 @@ Teraz, jeśli chcielibyśmy zmienić serwis na SMS, wystarczy podmienić `@Email
 
 ---
 
-### Podsumowanie
-
-| Aspekt | Opis |
-| :--- | :--- |
-| **Problem** | `NoUniqueBeanDefinitionException` - Spring znajduje wiele beanów tego samego typu i nie wie, który wybrać. |
-| **Rozwiązanie** | Adnotacja `@Qualifier` używana razem z `@Autowired`. |
-| **Jak działa** | `Qualifier` doprecyzowuje, który konkretny bean (identyfikowany po nazwie lub własnej adnotacji) ma zostać wstrzyknięty. |
-| **Proste użycie** | 1. Nadaj nazwy beanom: `@Service("mojaNazwa")`.<br>2. Użyj kwalifikatora z tą nazwą: `@Qualifier("mojaNazwa")`. |
-| **Zalecana praktyka** | 1. Stwórz własne adnotacje kwalifikujące (np. `@SmsQualifier`, `@EmailQualifier`).<br>2. Oznacz nimi odpowiednie beany.<br>3. Używaj tych adnotacji w miejscach wstrzykiwania. |
-| **Zalety własnych adnotacji** | Bezpieczeństwo typów (wykrywanie błędów w trakcie kompilacji), lepsza czytelność kodu, łatwiejsza refaktoryzacja. |
-| **Gdzie używać** | Na polach, parametrach konstruktorów lub parametrach metod `setter`. Najlepiej na parametrach konstruktorów. |
