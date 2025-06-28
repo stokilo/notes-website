@@ -1,0 +1,220 @@
+---
+sidebar_label: 'Object Provider'
+---
+
+# Do czego uzyc ObjectProvider<T>
+
+Jasne, wytłumaczę Ci to bardzo dokładnie, krok po kroku.
+
+### Wprowadzenie: Problem z bezpośrednim wstrzykiwaniem
+
+Zacznijmy od podstaw. W Springu najczęściej wstrzykujemy zależności w ten sposób:
+
+```java
+@Component
+public class MojaKlasa {
+
+    @Autowired
+    private JakasUsluga jakasUsluga; // Bezpośrednie wstrzykiwanie
+
+    public void zrobCos() {
+        // ... użycie jakasUsluga
+        jakasUsluga.metoda();
+    }
+}
+```
+
+To działa świetnie, ale ma jedno kluczowe założenie: **bean typu `JakasUsluga` musi istnieć w kontekście aplikacji Springa.**
+
+Jeśli z jakiegoś powodu (np. błąd konfiguracji, inna wersja modułu, celowy brak) ten bean nie zostanie utworzony, aplikacja **nie uruchomi się**. Zostanie rzucony wyjątek `NoSuchBeanDefinitionException`.
+
+Jest to zachowanie typu "fail-fast" (szybkie wykrywanie błędu), co jest często pożądane. Ale co, jeśli zależność jest **opcjonalna**? Co, jeśli nasza klasa potrafi działać bez tej usługi, ale jeśli jest dostępna, to chętnie z niej skorzysta?
+
+### Rozwiązanie nr 1 (Starsze): `@Autowired(required = false)`
+
+Pierwszym, historycznym podejściem było użycie atrybutu `required = false`:
+
+```java
+@Component
+public class MojaKlasa {
+
+    @Autowired(required = false)
+    private JakasUsluga jakasUsluga;
+
+    public void zrobCos() {
+        if (jakasUsluga != null) { // MUSISZ sprawdzić, czy nie jest null!
+            jakasUsluga.metoda();
+        } else {
+            // zrób coś innego
+        }
+    }
+}
+```
+
+**Zalety:**
+*   Proste i rozwiązuje problem. Aplikacja się uruchomi, nawet jeśli beana `JakasUsluga` nie ma.
+
+**Wady:**
+*   Pole `jakasUsluga` będzie miało wartość `null`.
+*   Prowadzi to do konieczności pisania bloków `if (zmienna != null)`, co jest niewygodne i łatwo o tym zapomnieć, prowadząc do `NullPointerException` w trakcie działania aplikacji.
+*   Jest to uważane za mniej "czysty" i nowoczesny styl programowania.
+
+### Rozwiązanie nr 2 (Lepsze): `Optional<T>`
+
+Wraz z Javą 8 pojawił się `Optional<T>`, który jest idealnym sposobem na wyrażenie opcjonalności. Spring oczywiście wspiera wstrzykiwanie `Optional`.
+
+```java
+@Component
+public class MojaKlasa {
+
+    @Autowired
+    private Optional<JakasUsluga> opcjonalnaUsluga; // Wstrzykujemy Optional
+
+    public void zrobCos() {
+        opcjonalnaUsluga.ifPresent(usluga -> usluga.metoda());
+
+        // Alternatywnie:
+        // if (opcjonalnaUsluga.isPresent()) {
+        //     JakasUsluga usluga = opcjonalnaUsluga.get();
+        //     usluga.metoda();
+        // }
+    }
+}
+```
+
+**Zalety:**
+*   **Czytelna intencja:** Każdy, kto widzi `Optional<JakasUsluga>`, od razu wie, że ta zależność może nie istnieć.
+*   **Bezpieczeństwo:** API `Optional` zmusza programistę do świadomego obsłużenia przypadku braku wartości, co chroni przed `NullPointerException`.
+*   Jest to standardowy mechanizm Javy, a nie tylko Springa.
+
+**Wady:**
+*   Rozwiązuje tylko problem opcjonalności **jednego** beana. Nie radzi sobie dobrze z sytuacją, gdy może istnieć *wiele* beanów tego samego typu.
+
+### Rozwiązanie nr 3 (Najbardziej Elastyczne): `ObjectProvider<T>`
+
+I tu dochodzimy do sedna. `ObjectProvider<T>` to specjalny interfejs Springa, który jest czymś więcej niż tylko opakowaniem na opcjonalny bean. To "dostawca" lub "fabryka" beanów, która daje nam znacznie większą kontrolę.
+
+```java
+@Component
+public class MojaKlasa {
+
+    @Autowired
+    private ObjectProvider<JakasUsluga> uslugaProvider; // Wstrzykujemy Provider
+
+    public void zrobCos() {
+        // ...
+    }
+}
+```
+
+Na pierwszy rzut oka wygląda podobnie, ale diabeł tkwi w szczegółach. Zobacz, co `ObjectProvider` potrafi:
+
+#### 1. Leniwe Pobieranie (Lazy Resolution)
+
+Gdy wstrzykujesz `JakasUsluga` lub `Optional<JakasUsluga>`, Spring musi znaleźć ten bean w momencie tworzenia `MojaKlasa`.
+Gdy wstrzykujesz `ObjectProvider<JakasUsluga>`, Spring wstrzykuje tylko ten "uchwyt" (provider). **Faktyczne wyszukiwanie beana odbywa się dopiero wtedy, gdy wywołasz jedną z metod na providerze.** To jest kluczowa różnica.
+
+#### 2. Zaawansowana Obsługa Opcjonalności
+
+`ObjectProvider` oferuje kilka metod do pobierania beana:
+
+*   `getObject()`: Działa jak standardowe `@Autowired`. Jeśli bean nie istnieje lub jest więcej niż jeden, rzuci wyjątkiem. Używasz tego, gdy w tym konkretnym miejscu kodu *oczekujesz*, że bean już tam będzie.
+
+*   `getIfAvailable()`: **To jest odpowiednik `Optional`**. Zwraca instancję beana, jeśli jest dostępna i unikalna, w przeciwnym razie zwraca `null`.
+```java
+public void zrobCosOpcjonalnie() {
+    JakasUsluga usluga = uslugaProvider.getIfAvailable();
+    if (usluga != null) {
+        usluga.metoda();
+    }
+}
+    ```
+
+*   `ifAvailable(Consumer<T>)`: Czysta, funkcyjna wersja powyższego. Bardzo podobna do `Optional.ifPresent()`.
+```java
+public void zrobCosOpcjonalnieCzysciej() {
+    uslugaProvider.ifAvailable(usluga -> usluga.metoda());
+}
+    ```
+
+#### 3. Obsługa Wielu Beanów
+
+To jest największa przewaga `ObjectProvider` nad `Optional`. Co, jeśli w aplikacji masz zdefiniowanych kilka beanów implementujących ten sam interfejs (np. różne strategie płatności)?
+
+```java
+interface StrategiaPlatnosci { /* ... */ }
+
+@Component("blik")
+class BlikPlatnosc implements StrategiaPlatnosci { /* ... */ }
+
+@Component("karta")
+class KartaPlatnosc implements StrategiaPlatnosci { /* ... */ }
+```
+
+`ObjectProvider` naturalnie to obsługuje, ponieważ implementuje interfejsy `Iterable` i `Stream`:
+
+```java
+@Component
+public class ProcesorPlatnosci {
+
+    @Autowired
+    private ObjectProvider<StrategiaPlatnosci> strategieProvider;
+
+    public void pokazDostepneStrategie() {
+        // Możesz iterować bezpośrednio
+        for (StrategiaPlatnosci strategia : strategieProvider) {
+            System.out.println("Dostępna strategia: " + strategia.getClass().getSimpleName());
+        }
+
+        // Albo użyć Stream API
+        List<StrategiaPlatnosci> listaStrategii = strategieProvider.stream()
+                .collect(Collectors.toList());
+    }
+}
+```
+Próba zrobienia tego z `Optional<StrategiaPlatnosci>` spowodowałaby błąd `NoUniqueBeanDefinitionException` podczas uruchamiania aplikacji.
+
+#### 4. Obsługa Niejednoznaczności
+
+`ObjectProvider` ma jeszcze jedną genialną metodę: `getIfUnique()`.
+
+*   `getIfUnique()`: Zwraca bean **tylko wtedy, gdy jest dokładnie jeden**. Jeśli nie ma żadnego lub jest więcej niż jeden, zwraca `null`.
+
+**Przykład użycia:** Wyobraź sobie, że dostarczasz domyślną implementację jakiejś usługi, ale pozwalasz użytkownikowi twojej biblioteki na jej nadpisanie przez dostarczenie własnego beana.
+
+```java
+@Autowired
+private ObjectProvider<Customizer> customizerProvider;
+
+public void applyCustomization() {
+    Customizer customizer = customizerProvider.getIfUnique(); // Pobierz tylko jeśli użytkownik dostarczył JEDEN
+    if (customizer != null) {
+        customizer.apply();
+    } else {
+        // Użyj domyślnego zachowania
+    }
+}
+```
+
+---
+
+### Porównanie i Podsumowanie
+
+| Cecha / Scenariusz                       | `@Autowired MyBean bean`                                  | `Optional<MyBean> bean`                               | `ObjectProvider<MyBean> provider`                                                                    |
+| ---------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Brak beana**                           | Błąd `NoSuchBeanDefinitionException` przy starcie.        | `Optional.empty()` - bezpieczne.                      | `getIfAvailable()`/`getIfUnique()` zwraca `null`. `ifAvailable()` nic nie robi. Bezpieczne i elastyczne. |
+| **Wiele beanów tego samego typu**        | Błąd `NoUniqueBeanDefinitionException` przy starcie.      | Błąd `NoUniqueBeanDefinitionException` przy starcie.  | **Działa!** Można iterować po wszystkich lub używać `stream()`. `getIfUnique()` zwróci `null`.       |
+| **Leniwe pobieranie (Lazy resolution)**  | Nie (bean jest rozwiązywany przy tworzeniu komponentu). | Nie (bean jest rozwiązywany przy tworzeniu komponentu). | **Tak!** Bean jest wyszukiwany dopiero przy wywołaniu metody na providerze.                         |
+| **Czytelność intencji**                  | Zależność jest wymagana.                                  | Zależność jest opcjonalna.                            | Zależność jest opcjonalna, może być ich wiele, lub jest pobierana leniwie.                           |
+
+### Kiedy czego używać?
+
+*   **`@Autowired MojaUsluga usluga`**: Używaj, gdy zależność jest **absolutnie wymagana** do poprawnego działania twojej klasy. To najczęstszy przypadek. Aplikacja powinna się nie uruchomić, jeśli brakuje kluczowego elementu.
+
+*   **`Optional<MojaUsluga> usluga`**: Używaj, gdy masz do czynienia z **pojedynczą, opcjonalną** zależnością. To bardzo czysty i zgodny ze standardami Javy sposób na wyrażenie opcjonalności.
+
+*   **`ObjectProvider<MojaUsluga> provider`**: Używaj w bardziej zaawansowanych przypadkach:
+1.  Gdy potrzebujesz **leniwie** pobrać zależność.
+2.  Gdy chcesz w elegancki sposób obsłużyć sytuację, w której może istnieć **wiele beanów** tego samego typu (np. wzorzec Strategia, pluginy).
+3.  Gdy chcesz obsłużyć przypadek, w którym zależność jest opcjonalna, a jednocześnie może być nieunikalna (metoda `getIfUnique()`).
+4.  Gdy tworzysz kod biblioteczny/frameworkowy, który musi być odporny na różne konfiguracje dostarczane przez użytkownika.
