@@ -1,0 +1,59 @@
+---
+sidebar_label: 'Overview'
+sidebar_position: 1
+---
+
+# Overview of core concepts in Spring Security
+
+Jasne, oto wyjaśnienie kluczowych, wewnętrznych koncepcji Spring Security, skupione na najważniejszych klasach i interfejsach oraz ich roli.
+
+---
+
+### Rdzenne Koncepcje Spring Security: Klasy i Ich Role
+
+Wyobraź sobie, że każde żądanie do Twojej aplikacji to osoba próbująca wejść do strzeżonego budynku. Spring Security zarządza tym procesem przy użyciu następujących komponentów:
+
+#### 1. `SecurityFilterChain` (Łańcuch Filtrów Bezpieczeństwa)
+**Czym jest?** To kręgosłup całego mechanizmu. Każde żądanie HTTP musi przejść przez ten łańcuch specjalistycznych filtrów, zanim dotrze do Twojego kontrolera.
+**Do czego służy?** W tym łańcuchu definiujesz **reguły gry**:
+*   Które adresy URL są publiczne, a które wymagają logowania?
+*   Jakie role są potrzebne do dostępu do konkretnych zasobów?
+*   Jak obsługiwać logowanie, wylogowywanie, ataki CSRF czy sesje.
+To tutaj konfigurujesz **CO** jest chronione i **JAK**.
+
+#### 2. `Authentication` (Obiekt Uwierzytelnienia)
+**Czym jest?** To "paszport" użytkownika wewnątrz systemu po pomyślnym uwierzytelnieniu. Reprezentuje tożsamość i uprawnienia aktualnego podmiotu.
+**Do czego służy?** Przechowuje trzy kluczowe informacje:
+*   **`Principal`**: Kim jest użytkownik (zazwyczaj obiekt `UserDetails`).
+*   **`Credentials`**: Poświadczenia (np. hasło), które są zwykle czyszczone po udanym logowaniu.
+*   **`Authorities` (`GrantedAuthority`)**: Lista uprawnień (np. `ROLE_ADMIN`, `READ_PRIVILEGE`), które decydują o tym, co użytkownik może zrobić.
+
+#### 3. `SecurityContextHolder` i `SecurityContext`
+**Czym są?** `SecurityContextHolder` to globalnie dostępny "pojemnik" (wykorzystujący `ThreadLocal`), który przechowuje `SecurityContext`. Z kolei `SecurityContext` zawiera obiekt `Authentication` aktualnie zalogowanego użytkownika.
+**Do czego służą?** Dzięki nim możesz w dowolnym miejscu aplikacji (w serwisie, kontrolerze) uzyskać dostęp do informacji o zalogowanym użytkowniku, np. `SecurityContextHolder.getContext().getAuthentication();`. To standardowy sposób na sprawdzenie, kto wykonuje daną operację.
+
+#### 4. `AuthenticationManager` i `AuthenticationProvider`
+**Czym są?** To silnik uwierzytelniania.
+*   **`AuthenticationManager`**: Główny menedżer, który otrzymuje prośbę o uwierzytelnienie. Nie wykonuje pracy sam, lecz deleguje ją do specjalistów.
+*   **`AuthenticationProvider`**: Specjalista od konkretnego typu uwierzytelniania (np. na podstawie bazy danych, LDAP, tokena JWT). Manager pyta po kolei każdego zarejestrowanego Providera, czy jest w stanie zweryfikować dane poświadczenia.
+**Do czego służą?** Oddzielają logikę "zarządzania" procesem logowania od "wykonania" weryfikacji, co czyni system bardzo modularnym.
+
+#### 5. `UserDetailsService` i `UserDetails`
+**Czym są?** To standardowy sposób na pobieranie danych użytkownika ze źródła (np. bazy danych).
+*   **`UserDetailsService`**: Serwis z jedną metodą: `loadUserByUsername(String username)`. Jego jedynym zadaniem jest znalezienie użytkownika po nazwie.
+*   **`UserDetails`**: "Teczka z aktami" użytkownika. Interfejs opisujący podstawowe dane potrzebne Spring Security: nazwa użytkownika, hasło (zaszyfrowane!), uprawnienia oraz status konta (czy jest aktywne, zablokowane itp.). Twoja klasa encji `User` zazwyczaj implementuje ten interfejs.
+
+#### 6. `PasswordEncoder`
+**Czym jest?** To prosty, ale absolutnie kluczowy interfejs do szyfrowania (a właściwie hashowania) haseł.
+**Do czego służy?** Zapewnia bezpieczne przechowywanie haseł. Jego dwie główne metody to:
+*   `encode(password)`: Tworzy bezpieczny hash z surowego hasła.
+*   `matches(rawPassword, encodedPassword)`: Porównuje surowe hasło (np. z formularza) z hashem zapisanym w bazie.
+
+### Podsumowanie Przepływu
+1.  Żądanie trafia do **`SecurityFilterChain`**.
+2.  Odpowiedni filtr (np. do logowania) tworzy obiekt **`Authentication`** (z loginem/hasłem) i przekazuje go do **`AuthenticationManager`**.
+3.  `AuthenticationManager` prosi **`AuthenticationProvider`** o weryfikację.
+4.  `AuthenticationProvider` używa **`UserDetailsService`**, by pobrać dane użytkownika jako **`UserDetails`**.
+5.  Następnie używa **`PasswordEncoder`**, by sprawdzić, czy podane hasło zgadza się z hashem z `UserDetails`.
+6.  Jeśli wszystko się zgadza, tworzony jest w pełni uwierzytelniony obiekt **`Authentication`**, który trafia do **`SecurityContextHolder`**, skąd jest dostępny w całej aplikacji.
+

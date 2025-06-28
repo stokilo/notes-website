@@ -1,0 +1,144 @@
+---
+sidebar_label: 'Internal AOP'
+sidebar_position: 1
+---
+
+# How Spring uses AOP internally
+
+
+Oczywiście, z przyjemnością opiszę ten temat. Wewnętrzne użycie AOP (Programowania Aspektowego) to jeden z fundamentalnych mechanizmów, który sprawia, że Spring Framework jest tak potężny i wygodny w użyciu. Wiele "magicznych" adnotacji, z których korzystamy na co dzień, działa właśnie dzięki AOP.
+
+Zacznijmy od podstaw.
+
+### Czym jest Programowanie Aspektowe (AOP)?
+
+W skrócie, AOP to paradygmat programowania, który pozwala na oddzielenie tzw. **interesów przekrojowych** (ang. *cross-cutting concerns*) od głównej logiki biznesowej aplikacji.
+
+*   **Logika biznesowa**: To jest rdzeń Twojej aplikacji, np. obsługa zamówienia, transfer pieniędzy, rejestracja użytkownika.
+*   **Interesy przekrojowe**: To funkcjonalności, które są potrzebne w wielu miejscach aplikacji, ale nie są bezpośrednio częścią logiki biznesowej. Przykłady to:
+*   Logowanie
+*   Zarządzanie transakcjami
+*   Bezpieczeństwo (autoryzacja)
+*   Buforowanie (caching)
+*   Obsługa błędów i ponawianie operacji (retrying)
+
+Bez AOP, kod do obsługi tych interesów musiałby być "rozsiany" po całej aplikacji, co prowadzi do powielania kodu i utrudnia jego utrzymanie. AOP pozwala zamknąć tę logikę w jednym miejscu (w tzw. **aspekcie**) i deklaratywnie zastosować ją tam, gdzie jest potrzebna.
+
+### Jak Spring to robi? Magia Obiektów Proxy
+
+Spring domyślnie implementuje AOP nie przez modyfikację kodu bajtowego (jak to robi np. AspectJ w trybie *compile-time weaving*), ale przez tworzenie w locie **dynamicznych proxy**.
+
+Wygląda to tak:
+1.  Definiujesz swój komponent (np. serwis z adnotacją `@Service`).
+2.  Gdy kontener Springa tworzy instancję tego komponentu (beana), sprawdza, czy trzeba na nim zastosować jakieś aspekty (np. bo ma metodę z adnotacją `@Transactional`).
+3.  Jeśli tak, Spring **nie zwraca Ci bezpośrednio instancji Twojej klasy**. Zamiast tego tworzy **obiekt proxy**, który "opakowuje" Twój prawdziwy obiekt.
+4.  Ten proxy implementuje ten sam interfejs co Twój obiekt (lub dziedziczy po Twojej klasie, jeśli używany jest CGLIB).
+5.  Kiedy wywołujesz metodę na tym obiekcie, w rzeczywistości wywołujesz ją na proxy.
+6.  Proxy przechwytuje to wywołanie, wykonuje logikę aspektu (np. rozpoczyna transakcję), a **następnie deleguje wywołanie do oryginalnej, opakowanej metody**. Po jej zakończeniu, proxy znowu przejmuje kontrolę, aby wykonać logikę "po" (np. zatwierdzić lub wycofać transakcję).
+
+Dla programisty jest to przezroczyste. Myślisz, że pracujesz ze swoim obiektem, a tak naprawdę pracujesz z jego "ulepszoną" wersją proxy.
+
+---
+
+### Wewnętrzne Użycie AOP w Spring - Kluczowe Przykłady
+
+Oto najważniejsze funkcjonalności Springa, które działają "pod spodem" w oparciu o AOP:
+
+#### 1. Zarządzanie Transakcjami (`@Transactional`)
+
+To najbardziej klasyczny i najważniejszy przykład.
+
+*   **Co widzisz:** Dodajesz adnotację `@Transactional` nad metodą lub całą klasą.
+```java
+@Service
+public class OrderService {
+    @Transactional
+    public void placeOrder(OrderData data) {
+        // ... logika biznesowa ...
+        // zapis do bazy danych
+    }
+}
+```
+*   **Co robi Spring (AOP w akcji):**
+1.  Tworzy proxy dla `OrderService`.
+2.  Gdy metoda `placeOrder` jest wywoływana, proxy przechwytuje to wywołanie.
+3.  Uruchamiana jest porada (advice) typu `around` (wokół metody).
+4.  Porada ta prosi `PlatformTransactionManager` o **rozpoczęcie nowej transakcji**.
+5.  Następnie wywoływana jest **oryginalna metoda** `placeOrder()`.
+6.  Jeśli metoda zakończy się sukcesem (nie rzuci wyjątku), porada prosi menedżera transakcji o **zatwierdzenie (commit)**.
+7.  Jeśli metoda rzuci wyjątek (domyślnie `RuntimeException`), porada prosi o **wycofanie (rollback)** transakcji.
+
+Dzięki temu Twoja logika biznesowa jest czysta – nie musisz ręcznie pisać `try-catch-finally` do zarządzania transakcją.
+
+#### 2. Bezpieczeństwo (Spring Security)
+
+Spring Security używa AOP do zabezpieczania wywołań metod.
+
+*   **Co widzisz:** Używasz adnotacji takich jak `@PreAuthorize`, `@PostAuthorize` czy `@Secured`.
+```java
+@Service
+public class AdminService {
+    @PreAuthorize("hasRole('ADMIN')")
+    public void performAdminAction() {
+        // ... logika dostępna tylko dla admina ...
+    }
+}
+```
+*   **Co robi Spring (AOP w akcji):**
+1.  Tworzy proxy dla `AdminService`.
+2.  Przed wywołaniem metody `performAdminAction`, uruchamiana jest porada typu `before`.
+3.  Porada ta sprawdza kontekst bezpieczeństwa (`SecurityContextHolder`) i weryfikuje, czy zalogowany użytkownik ma wymaganą rolę ('ADMIN').
+4.  Jeśli warunek jest spełniony, wywołanie jest przepuszczane do oryginalnej metody.
+5.  Jeśli nie, porada rzuca wyjątek `AccessDeniedException`, a oryginalna metoda **nigdy nie zostanie wykonana**.
+
+#### 3. Buforowanie (Caching)
+
+Mechanizm cache'owania w Springu to kolejny idealny przykład AOP.
+
+*   **Co widzisz:** Używasz adnotacji `@Cacheable`, `@CacheEvict`, `@CachePut`.
+```java
+@Service
+public class ProductService {
+    @Cacheable("products")
+    public Product findProductById(String id) {
+        // ... kosztowne zapytanie do bazy danych lub zewnętrznego API ...
+        return new Product(id, "Some Product");
+    }
+}
+```
+*   **Co robi Spring (AOP w akcji):**
+1.  Tworzy proxy dla `ProductService`.
+2.  Gdy `findProductById` jest wywoływane, porada typu `around` sprawdza:
+3.  Czy w cache'u o nazwie "products" istnieje już wpis dla klucza wygenerowanego na podstawie argumentów metody (tutaj: `id`)?
+4.  **Jeśli tak:** Zwraca wartość z cache'a. **Oryginalna metoda nie jest w ogóle wywoływana!**
+5.  **Jeśli nie:** Wywołuje oryginalną metodę, pobiera jej wynik, umieszcza go w cache'u pod odpowiednim kluczem, a następnie zwraca ten wynik.
+
+#### 4. Wykonywanie Asynchroniczne (`@Async`)
+
+Chcesz, żeby metoda wykonała się w osobnym wątku, nie blokując wątku wywołującego? AOP przychodzi z pomocą.
+
+*   **Co widzisz:** Dodajesz adnotację `@Async` i włączasz obsługę (`@EnableAsync`).
+```java
+@Service
+public class NotificationService {
+    @Async
+    public void sendEmail(String to, String content) {
+        // ... czasochłonne wysyłanie maila ...
+    }
+}
+```
+*   **Co robi Spring (AOP w akcji):**
+1.  Tworzy proxy dla `NotificationService`.
+2.  Gdy metoda `sendEmail` jest wywoływana, porada AOP przechwytuje ją.
+3.  Zamiast wykonać ją synchronicznie, przekazuje wywołanie metody do puli wątków (`TaskExecutor`).
+4.  Wywołanie natychmiast wraca do klienta (zazwyczaj zwracając `null` lub obiekt `Future`, jeśli metoda ma wartość zwrotną). Sama logika wysyłki maila wykonuje się w tle, w innym wątku.
+
+### Podsumowanie
+
+Wewnętrzne użycie AOP jest sercem wielu zaawansowanych, a jednocześnie łatwych w użyciu, funkcji Springa. Zrozumienie, że za adnotacjami takimi jak `@Transactional` czy `@Cacheable` stoi mechanizm proxy i aspekty, pozwala:
+
+1.  **Pisać czystszy kod**: Logika biznesowa nie jest zaśmiecona kodem technicznym.
+2.  **Lepiej debugować**: Jeśli `@Transactional` nie działa, wiesz, że problemem może być to, że wywołujesz metodę wewnątrz tego samego obiektu (omijając proxy) lub że bean z jakiegoś powodu nie został opakowany w proxy.
+3.  **Docenić potęgę frameworka**: Widzisz, jak skomplikowane problemy zostały rozwiązane w elegancki, deklaratywny sposób.
+
+Kiedykolwiek widzisz w Springu adnotację, która w "magiczny" sposób zmienia zachowanie metody, jest duża szansa, że patrzysz właśnie na efekt działania Programowania Aspektowego.
