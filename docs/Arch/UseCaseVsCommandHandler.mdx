@@ -1,0 +1,104 @@
+---
+sidebar_label: 'UseCase vs CommandHandler'
+sidebar_position: 101
+---
+
+# What is the difference between usecase and command handler in clean/onion/hexahonal arch?
+
+Jasne, wyjaśnijmy to krok po kroku. To świetne pytanie, ponieważ dotyka sedna implementacji tych architektur.
+
+Kluczowa informacja na początek: **Wszystkie trzy architektury (Ports & Adapters, Onion, Clean) są w 95% tym samym.** Różnią się głównie terminologią i naciskiem na pewne aspekty, ale ich cel i podstawowe zasady (separacja logiki biznesowej od technologii, reguła zależności do wewnątrz) są identyczne.
+
+Różnice, o które pytasz, leżą właśnie w tej subtelnej warstwie nazewnictwa i stopnia formalizacji.
+
+---
+
+### 1. Czym jest "Use Case" w tych architekturach?
+
+**Use Case (Przypadek Użycia)** to formalne określenie pojedynczej, spójnej operacji, którą system może wykonać. Reprezentuje on konkretną intencję użytkownika lub innego systemu.
+
+*   **Przykłady:** "Zarejestruj nowego użytkownika", "Dodaj produkt do koszyka", "Złóż zamówienie", "Wygeneruj raport miesięczny".
+
+W każdej z tych architektur Use Case:
+*   Należy do **rdzenia aplikacji** (jest niezależny od UI, bazy danych, frameworków).
+*   Orkiestruje obiekty domenowe (Encje, Agregaty), aby wykonać zadanie.
+*   Zawiera logikę **specyficzną dla aplikacji**, a nie logikę **domenową** (ta jest w encjach/agregatach). Np. sprawdzenie, czy email jest już zajęty, to logika aplikacji. Obliczenie sumy zamówienia to logika domenowa.
+
+### 2. Różnice w podejściu do Use Case
+
+Tutaj pojawiają się różnice w nazewnictwie i strukturze.
+
+#### **a) Ports & Adapters (Architektura Heksagonalna)**
+
+*   **Terminologia:** Mówi o **"Porcie Wejściowym" (Inbound Port)**. Use Case to logika, która jest wystawiona na świat zewnętrzny właśnie przez ten port.
+*   **Implementacja:** Architektura ta jest najmniej restrykcyjna co do sposobu implementacji.
+*   **Port** to po prostu interfejs (np. `IUserService`).
+*   **Implementacją** tego interfejsu jest klasa wewnątrz heksagonu (np. `UserService`), a jej metody to poszczególne przypadki użycia (np. `registerUser(data)`).
+*   **Sedno:** Nacisk kładziony jest na **granicę (port)**, a nie na to, jak zorganizujesz klasy wewnątrz. Ważne jest, aby świat zewnętrzny (np. kontroler API) komunikował się z aplikacją przez zdefiniowany kontrakt (interfejs), a nie bezpośrednio z klasą implementującą.
+
+#### **b) Onion Architecture (Architektura Cebulowa)**
+
+*   **Terminologia:** Wprowadza jawną warstwę o nazwie **"Application Services"**.
+*   **Implementacja:** Use Cases to właśnie klasy w tej warstwie.
+*   Masz klasę `OrderApplicationService`, a w niej metody takie jak `placeOrder(...)` czy `cancelOrder(...)`.
+*   Ta warstwa jest odpowiedzialna za orkiestrację i koordynację. Używa ona niższych warstw (Domain Services, Domain Model) do wykonania swojej pracy.
+*   **Sedno:** Nacisk kładziony jest na **warstwową organizację i przepływ zależności**. Warstwa `Application Services` jest wyraźnie zdefiniowana jako miejsce dla logiki przypadków użycia.
+
+#### **c) Clean Architecture (Czysta Architektura)**
+
+*   **Terminologia:** Jest najbardziej formalna i precyzyjna. Warstwa nazywa się **"Use Cases"**, a klasy implementujące pojedynczy przypadek użycia nazywane są **"Interactors"**.
+*   **Implementacja:** Uncle Bob Martin proponuje bardzo konkretną strukturę:
+*   Jeden **Interactor** odpowiada za **jeden Use Case**. Masz więc klasę `RegisterUserInteractor`, a nie ogólny `UserService`.
+*   Interactor ma zazwyczaj jedną publiczną metodę, np. `execute()`.
+*   Formalizuje przepływ danych:
+*   **Request Model:** Obiekt z danymi wejściowymi dla Use Case (niezależny od np. `HttpRequest`).
+*   **Response Model:** Obiekt z danymi wyjściowymi.
+*   **Output Port (interfejs):** Interfejs, przez który Interactor komunikuje wynik. Implementacją jest **Presenter** w warstwie zewnętrznej, który formatuje dane dla UI.
+*   **Sedno:** Nacisk kładziony jest na **szczegółową, sformalizowaną strukturę i przepływ danych**, promując zasadę pojedynczej odpowiedzialności (SRP) na poziomie klasy.
+
+---
+
+### 3. Gdzie w tym wszystkim jest "Command Handler"?
+
+**Command Handler** nie jest architekturą, lecz **wzorcem projektowym**, często kojarzonym z **CQRS (Command Query Responsibility Segregation)**. Okazuje się, że jest to **idealny sposób na implementację Use Case'a** w każdej z tych architektur.
+
+**Czym jest wzorzec Command/Handler?**
+1.  **Command:** Prosty obiekt (DTO), który reprezentuje intencję zmiany stanu systemu. Jest nośnikiem danych. Np. `CreateUserCommand { string email; string password; }`.
+2.  **Handler:** Klasa, która potrafi obsłużyć dany Command. Ma jedną metodę, np. `handle(CreateUserCommand command)`. Zawiera całą logikę potrzebną do wykonania tej operacji.
+3.  **Command Bus (opcjonalnie):** Mechanizm (np. Mediator), który przyjmuje Command i przekazuje go do odpowiedniego Handlera.
+
+**Jak Command Handler pasuje do tych architektur?**
+
+*   **To jest "nowoczesna" implementacja Use Case'a.** Zamiast tworzyć duże klasy serwisowe (`UserService`) z wieloma metodami, tworzymy małe, skupione klasy (Handlery), z których każda robi jedną rzecz.
+*   **W Ports & Adapters:** `CommandHandler` staje się implementacją logiki wewnątrz heksagonu. Portem wejściowym może być interfejs `ICommandHandler<TCommand>`.
+*   **W Onion Architecture:** `CommandHandler` to po prostu klasa w warstwie `Application Services`.
+*   **W Clean Architecture:** `CommandHandler` to **dokładnie to, czym jest Interactor!**
+*   `CreateUserCommand` to `Request Model`.
+*   `CreateUserCommandHandler` to `Interactor`.
+*   Metoda `handle()` to metoda `execute()`.
+
+**Zalety użycia wzorca Command/Handler:**
+*   **SRP na poziomie pliku/klasy:** Jeden plik = jeden use case. Łatwiej to znaleźć i zrozumieć.
+*   **Jawna intencja:** `Handle(PlaceOrderCommand)` mówi o wiele więcej niż generyczna metoda `orderService.process()`.
+*   **Lepsza rozszerzalność:** Dodanie nowego use case'a to dodanie nowej pary Command/Handler, bez modyfikacji istniejących klas.
+*   **Naturalne dopasowanie do CQRS.**
+
+---
+
+### Tabela porównawcza
+
+| Cecha | Ports & Adapters | Onion Architecture | Clean Architecture |
+| :--- | :--- | :--- | :--- |
+| **Główna koncepcja** | Granice (Porty) oddzielające aplikację od technologii. | Warstwy z regułą zależności do wewnątrz. | Koncentryczne kręgi z regułą zależności do wewnątrz. |
+| **Nazwa warstwy logiki** | Brak formalnej nazwy, "Wnętrze Heksagonu". | **Application Services** | **Use Cases** |
+| **Nazwa implementacji** | Dowolna (np. Service), wystawiona przez **Inbound Port** (interfejs). | **Application Service** (klasa z wieloma metodami). | **Interactor** (klasa dla jednego use case'u). |
+| **Struktura danych** | Niesformalizowana. | Niesformalizowana. | Sformalizowana: **Request/Response Model**, **Output Port**. |
+| **Rola Command Handler** | **Wzorzec implementacyjny** dla logiki wewnątrz heksagonu. | **Wzorzec implementacyjny** dla klas w warstwie Application Services. | **De facto tożsamy z Interactor'em.** To idealna realizacja tej koncepcji. |
+
+### Podsumowanie
+
+Różnica nie leży w tym, **co** robi Use Case, ale w tym, **jak go nazywamy i jak formalnie podchodzimy do jego implementacji**.
+
+*   **Ports & Adapters** i **Onion** dają więcej swobody. Możesz użyć wzorca Command Handler, ale równie dobrze możesz stworzyć dużą klasę serwisową.
+*   **Clean Architecture** jest najbardziej precyzyjna i "opiniotwórcza". Mówi wprost: "Zrób to tak – jedna klasa na jeden use case (Interactor)".
+*   **Command Handler** to wzorzec projektowy, który stał się de facto standardem implementacji warstwy Use Case/Application Service we wszystkich tych architekturach, ponieważ idealnie wpisuje się w ich filozofię i promuje dobre praktyki (jak SRP).
