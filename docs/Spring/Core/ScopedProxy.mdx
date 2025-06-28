@@ -1,0 +1,210 @@
+---
+sidebar_label: 'Scoped Proxy'
+---
+
+# Why to use ScopedProxy?
+
+Oczywiście, wyjaśnijmy to dokładnie krok po kroku. **Proxy dla beanów o węższym zakresie (scoped proxy)** to jeden z kluczowych i niezwykle użytecznych mechanizmów w Spring Framework. Służy do rozwiązania fundamentalnego problemu: **wstrzykiwania beana o krótszym cyklu życia do beana o dłuższym cyklu życia**.
+
+---
+
+### 1. Problem: Niezgodność Zakresów (Scope Mismatch)
+
+Zacznijmy od zrozumienia problemu. W Springu każdy bean ma określony *zakres* (scope), który definiuje jego cykl życia. Najpopularniejsze zakresy to:
+
+*   **`singleton` (domyślny):** Spring tworzy tylko jedną instancję tego beana w całym kontenerze aplikacji. Ta instancja jest tworzona przy starcie aplikacji i niszczona przy jej zamknięciu.
+*   **`prototype`:** Nowa instancja jest tworzona za każdym razem, gdy bean jest wstrzykiwany lub pobierany z kontenera.
+*   **`request`:** Nowa instancja jest tworzona dla każdego pojedynczego żądania HTTP. Istnieje tylko w trakcie tego żądania.
+*   **`session`:** Nowa instancja jest tworzona dla każdej sesji HTTP użytkownika. Istnieje tak długo, jak trwa sesja.
+*   **`application`:** Jedna instancja na cały cykl życia `ServletContext` (podobne do singletona, ale w kontekście aplikacji webowej).
+
+**Problem pojawia się, gdy próbujesz wstrzyknąć bean o węższym zakresie do beana o szerszym zakresie.**
+
+**Przykład:** Chcesz wstrzyknąć bean o zakresie `request` (np. `DaneUzytkownika`) do beana o zakresie `singleton` (np. `KontrolerZamowien`).
+
+```java
+// Bean o zakresie 'request' - powinien być unikalny dla każdego żądania HTTP
+@Component
+@Scope("request")
+public class DaneUzytkownika {
+    private String ipAddress;
+    // ... gettery, settery
+}
+
+// Bean o zakresie 'singleton' (domyślnie)
+@RestController
+public class KontrolerZamowien {
+
+    private final DaneUzytkownika daneUzytkownika;
+
+    @Autowired
+    public KontrolerZamowien(DaneUzytkownika daneUzytkownika) {
+        this.daneUzytkownika = daneUzytkownika;
+    }
+
+    // ... metody kontrolera
+}
+```
+
+**Dlaczego to nie zadziała (bez proxy)?**
+
+1.  `KontrolerZamowien` jest singletonem, więc Spring tworzy jego instancję **tylko raz**, podczas uruchamiania aplikacji.
+2.  W momencie tworzenia `KontrolerZamowien`, Spring musi wstrzyknąć zależność - `DaneUzytkownika`.
+3.  Ale `DaneUzytkownika` ma zakres `request`. W momencie startu aplikacji **nie istnieje żadne żądanie HTTP**, więc Spring nie wie, którą instancję `DaneUzytkownika` ma stworzyć i wstrzyknąć.
+
+W efekcie Spring rzuci wyjątkiem, np. `BeanCreationException`, informując o niemożności zaspokojenia zależności z powodu niezgodności zakresów. Singleton nie może przechowywać bezpośredniej referencji do beana, który jeszcze nie istnieje i będzie tworzony wielokrotnie w przyszłości.
+
+---
+
+### 2. Rozwiązanie: Scoped Proxy
+
+Scoped proxy to "pośrednik" lub "pełnomocnik", który rozwiązuje ten problem w elegancki sposób. Zamiast wstrzykiwać *prawdziwy* bean o węższym zakresie, Spring wstrzykuje specjalny obiekt proxy.
+
+**Jak to działa?**
+
+1.  Do singletona (`KontrolerZamowien`) nie jest wstrzykiwana prawdziwa instancja `DaneUzytkownika`.
+2.  Zamiast tego, Spring tworzy i wstrzykuje **obiekt proxy**, który wygląda i zachowuje się jak `DaneUzytkownika` (implementuje ten sam interfejs lub dziedziczy po tej klasie).
+3.  Ten obiekt proxy jest lekki i może bezpiecznie istnieć w singletonie przez cały cykl życia aplikacji.
+4.  Gdy metoda na obiekcie proxy jest wywoływana (np. `daneUzytkownika.getIpAddress()`), proxy **nie wykonuje logiki samo w sobie**.
+5.  Zamiast tego, **deleguje wywołanie**:
+*   Sprawdza aktualny kontekst (np. bieżące żądanie HTTP).
+*   Pobiera z kontenera Springa **prawdziwą instancję** beana (`DaneUzytkownika`) przypisaną do tego kontekstu (do tego żądania).
+*   Wywołuje żądaną metodę na tej prawdziwej instancji i zwraca wynik.
+
+Dzięki temu singleton (`KontrolerZamowien`) może przez cały czas trzymać referencję do jednego, niezmiennego obiektu (proxy), a proxy za każdym razem "załatwia" dostęp do właściwego, aktualnego beana z węższego zakresu.
+
+
+
+---
+
+### 3. Jak skonfigurować Scoped Proxy?
+
+Konfiguracja jest bardzo prosta i sprowadza się do dodania jednego atrybutu w adnotacji `@Scope`.
+
+#### Metoda z adnotacjami (zalecana)
+
+Używamy atrybutu `proxyMode` w adnotacji `@Scope`.
+
+```java
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.annotation.ScopedProxyMode;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.WebApplicationContext;
+
+@Component
+// 1. Definiujemy zakres jako 'request'
+// 2. Włączamy tworzenie proxy
+@Scope(value = WebApplicationContext.SCOPE_REQUEST, proxyMode = ScopedProxyMode.TARGET_CLASS)
+public class DaneUzytkownika {
+    // ...
+}
+```
+
+Teraz bean `KontrolerZamowien` (z pierwszego przykładu) zadziała poprawnie.
+
+#### Dostępne tryby `proxyMode`:
+
+*   `ScopedProxyMode.DEFAULT`: Domyślny tryb. Spring sam próbuje wybrać najlepszą strategię (zazwyczaj `TARGET_CLASS`).
+*   `ScopedProxyMode.NO`: (Wartość domyślna, jeśli `proxyMode` nie jest podany) - proxy nie jest tworzone.
+*   `ScopedProxyMode.INTERFACES`: Spring tworzy proxy dynamiczne oparte na interfejsach Javy (JDK dynamic proxy). **Wymaga to, aby bean implementował co najmniej jeden interfejs.** Proxy będzie implementowało te same interfejsy co bean, ale nie będzie jego podklasą.
+*   `ScopedProxyMode.TARGET_CLASS`: Spring tworzy proxy za pomocą biblioteki **CGLIB**. Proxy jest tworzone przez **rozszerzenie klasy beana** (tworzenie podklasy w locie). **Nie wymaga to implementacji interfejsów.** Jest to najczęściej używana i najbardziej elastyczna opcja.
+
+**Kiedy używać `INTERFACES`, a kiedy `TARGET_CLASS`?**
+*   Jeśli Twój bean implementuje interfejs i chcesz, aby zależności opierały się tylko na tym interfejsie, możesz użyć `INTERFACES`.
+*   W praktyce, **`TARGET_CLASS` jest niemal zawsze lepszym i bezpieczniejszym wyborem**, ponieważ działa niezależnie od tego, czy bean implementuje interfejsy, czy nie.
+
+#### Metoda z XML (w starszych projektach)
+
+W konfiguracji opartej na XML, używa się tagu `<aop:scoped-proxy/>`.
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <bean id="daneUzytkownika" class="com.example.DaneUzytkownika" scope="request">
+        <!-- Ta linia tworzy proxy. Domyślnie użyje CGLIB (TARGET_CLASS) jeśli to możliwe -->
+        <aop:scoped-proxy/>
+    </bean>
+
+    <bean id="kontrolerZamowien" class="com.example.KontrolerZamowien">
+        <constructor-arg ref="daneUzytkownika"/>
+    </bean>
+
+</beans>
+```
+Można też jawnie określić tryb: `<aop:scoped-proxy proxy-target-class="false"/>` dla interfejsów.
+
+---
+
+### 4. Praktyczny Przykład: Koszyk Zakupowy
+
+Klasyczny przykład to koszyk zakupowy (`ShoppingCart`), który powinien być unikalny dla każdej sesji użytkownika (`session scope`). Chcemy wstrzyknąć go do kontrolera produktów, który jest singletonem.
+
+```java
+// Koszyk - unikalny dla każdej sesji użytkownika
+@Component
+@Scope(value = WebApplicationContext.SCOPE_SESSION, proxyMode = ScopedProxyMode.TARGET_CLASS)
+public class ShoppingCart {
+    private final List<String> items = new ArrayList<>();
+
+    public void addItem(String item) {
+        items.add(item);
+    }
+
+    public List<String> getItems() {
+        return items;
+    }
+}
+
+// Kontroler - singleton, żyje przez cały czas działania aplikacji
+@RestController
+@RequestMapping("/products")
+public class ProductController {
+
+    private final ShoppingCart shoppingCart;
+
+    @Autowired
+    public ProductController(ShoppingCart shoppingCart) {
+        // Wstrzykiwane jest tutaj proxy do ShoppingCart, a nie prawdziwy obiekt!
+        this.shoppingCart = shoppingCart;
+        System.out.println("Typ wstrzykniętego obiektu: " + shoppingCart.getClass().getName());
+        // Wydrukuje coś w stylu: com.example.ShoppingCart$$EnhancerBySpringCGLIB$$...
+    }
+
+    @GetMapping("/add")
+    public String addProduct(@RequestParam String item) {
+        // Wywołanie metody na proxy
+        shoppingCart.addItem(item);
+        // Proxy znajdzie prawdziwy koszyk dla bieżącej sesji i na nim wykona metodę
+        return "Dodano: " + item;
+    }
+
+    @GetMapping("/cart")
+    public List<String> viewCart() {
+        // Ponownie, proxy deleguje wywołanie do koszyka z aktualnej sesji
+        return shoppingCart.getItems();
+    }
+}
+```
+
+**Jak to zadziała dla dwóch różnych użytkowników?**
+
+1.  **Użytkownik A** wchodzi na stronę. Spring tworzy dla niego nową sesję i nową instancję `ShoppingCart` (Koszyk A).
+2.  **Użytkownik B** wchodzi na stronę. Spring tworzy dla niego nową sesję i nową instancję `ShoppingCart` (Koszyk B).
+3.  Obaj użytkownicy wysyłają żądania do tego samego, jednego singletona `ProductController`.
+4.  Gdy Użytkownik A dodaje produkt, jego kontroler wywołuje metodę na proxy. Proxy lokalizuje **Koszyk A** w sesji A i dodaje produkt.
+5.  Gdy Użytkownik B dodaje produkt, jego kontroler wywołuje metodę na tym samym proxy. Proxy lokalizuje **Koszyk B** w sesji B i dodaje produkt.
+
+Koszyki obu użytkowników są od siebie w pełni odizolowane, mimo że oba są zarządzane przez ten sam singletonowy kontroler.
+
+### Podsumowanie Kluczowych Punktów
+
+*   **Cel:** Umożliwienie wstrzykiwania beanów o krótszym cyklu życia (np. `request`, `session`) do beanów o dłuższym cyklu życia (np. `singleton`).
+*   **Jak:** Spring wstrzykuje specjalny **obiekt proxy** zamiast prawdziwego beana.
+*   **Działanie proxy:** Przechwytuje wywołania metod i **deleguje** je do właściwej, aktualnej instancji beana, którą wyszukuje w odpowiednim zakresie (np. w bieżącym żądaniu lub sesji).
+*   **Konfiguracja:** `proxyMode = ScopedProxyMode.TARGET_CLASS` (lub `INTERFACES`) w adnotacji `@Scope`.
+*   **Najczęstszy wybór:** `ScopedProxyMode.TARGET_CLASS` (używa CGLIB) jest najbardziej uniwersalny, ponieważ nie wymaga, aby bean implementował interfejsy.
