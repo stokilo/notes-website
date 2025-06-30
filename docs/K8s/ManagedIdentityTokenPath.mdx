@@ -1,0 +1,81 @@
+---
+sidebar_label: 'Managed Identity K8s token path'
+---
+
+# Explain token path in building Azure
+
+```java
+return new WorkloadIdentityCredentialBuilder().tokenFilePath(tokenFilePath)
+                    .clientId(clientId).tenantId(tenantId).build();
+```
+
+Jasne, wyjaśnijmy to krok po kroku.
+
+W kodzie, który podałeś:
+
+```java
+new WorkloadIdentityCredentialBuilder()
+    .tokenFilePath(tokenFilePath) // <--- Ten element
+    .clientId(clientId)
+    .tenantId(tenantId)
+    .build();
+```
+
+`tokenFilePath` to **ścieżka do pliku z tokenem konta usługi Kubernetes** (Kubernetes Service Account Token).
+
+### Co to jest i po co to jest?
+
+Ten kod jest używany do implementacji mechanizmu **Azure Workload Identity** w klastrze Kubernetes (np. Azure Kubernetes Service - AKS). Workload Identity to nowoczesny i bezpieczny sposób na uwierzytelnianie aplikacji działających wewnątrz klastra Kubernetes do usług Azure (takich jak Key Vault, Storage Account, baza danych itp.) **bez potrzeby przechowywania jakichkolwiek sekretów** (np. kluczy dostępu, haseł czy certyfikatów) w kodzie aplikacji lub w konfiguracji poda.
+
+Oto jak to działa w uproszczeniu:
+
+1.  **Konfiguracja w Kubernetes i Azure:**
+*   Tworzysz tożsamość zarządzaną (Managed Identity) w Azure AD dla swojej aplikacji.
+*   W klastrze Kubernetes tworzysz konto usługi (Service Account).
+*   Ustanawiasz relację zaufania (federację) między tożsamością w Azure AD a kontem usługi w Kubernetes.
+
+2.  **Działanie wewnątrz poda:**
+*   Gdy Twój pod (z aplikacją) jest uruchamiany w Kubernetes, specjalny komponent (mutating admission webhook) automatycznie:
+*   Montuje w podzie wolumen z plikiem zawierającym specjalny **token konta usługi** (Service Account Token).
+*   Ustawia w podzie zmienną środowiskową o nazwie `AZURE_FEDERATED_TOKEN_FILE`, która wskazuje na dokładną ścieżkę do tego pliku.
+
+3.  **Rola `tokenFilePath` w Twoim kodzie:**
+*   Twoja aplikacja (poprzez bibliotekę Azure SDK) musi odczytać ten token z pliku.
+*   Parametr `.tokenFilePath(tokenFilePath)` mówi bibliotece Azure: "Hej, plik z tokenem, którego potrzebujesz do pierwszego kontaktu z Azure AD, znajduje się pod tą ścieżką".
+*   Biblioteka odczytuje ten token (który jest dowodem tożsamości wewnątrz klastra Kubernetes) i wysyła go do Azure Active Directory razem z `clientId` i `tenantId`.
+*   Azure AD weryfikuje ten token u wystawcy OIDC klastra Kubernetes. Jeśli wszystko się zgadza, Azure AD wie, że żądanie pochodzi z zaufanego poda i w odpowiedzi wydaje **standardowy token dostępu Azure AD**.
+*   Dopiero ten token Azure AD jest używany do uwierzytelniania przy wywołaniach do innych usług Azure.
+
+### Jaką wartość należy podać?
+
+**Nie powinieneś hardkodować tej ścieżki.** Zgodnie z oficjalną specyfikacją Azure Workload Identity, ścieżkę do pliku z tokenem należy odczytać ze zmiennej środowiskowej `AZURE_FEDERATED_TOKEN_FILE`.
+
+Poprawna implementacja w Javie wyglądałaby tak:
+
+```java
+// Odczytaj ścieżkę do pliku tokena ze zmiennej środowiskowej
+// Ta zmienna jest automatycznie wstrzykiwana do Twojego poda przez webhook Workload Identity
+String tokenFilePath = System.getenv("AZURE_FEDERATED_TOKEN_FILE");
+
+// Pobierz pozostałe wymagane informacje (często również ze zmiennych środowiskowych)
+String clientId = System.getenv("AZURE_CLIENT_ID");
+String tenantId = System.getenv("AZURE_TENANT_ID");
+
+// Zbuduj obiekt poświadczeń
+TokenCredential credential = new WorkloadIdentityCredentialBuilder()
+    .tokenFilePath(tokenFilePath)
+    .clientId(clientId)
+    .tenantId(tenantId)
+    .build();
+
+// Teraz możesz użyć obiektu `credential` do uwierzytelniania klientów usług Azure
+// np. SecretClient, BlobServiceClient etc.
+SecretClient secretClient = new SecretClientBuilder()
+    .vaultUrl("https://<your-key-vault-name>.vault.azure.net/")
+    .credential(credential)
+    .build();
+```
+
+### Podsumowując
+
+`tokenFilePath` to kluczowy element mechanizmu Workload Identity. Jest to **wskaźnik na plik z "listem polecającym" od Kubernetes**, który Twoja aplikacja przedstawia w Azure AD, aby w zamian otrzymać właściwy "bilet wstępu" (token dostępu Azure AD) do usług chmurowych. Wartość tej ścieżki jest dostarczana automatycznie poprzez zmienną środowiskową `AZURE_FEDERATED_TOKEN_FILE`.
