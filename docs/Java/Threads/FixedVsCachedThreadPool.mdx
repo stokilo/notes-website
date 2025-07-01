@@ -1,0 +1,113 @@
+---
+sidebar_label: 'Fixed vs Cached Thread Pool'
+---
+
+# What is the difference between these two? What is really cached ?
+
+
+Jasne, wyjaśnijmy to dokładnie. To jedno z kluczowych pytań dotyczących pul wątków w Javie.
+
+### Odpowiedź w skrócie
+
+*   **`CachedThreadPool`**: Elastyczna pula wątków, która **dynamicznie rośnie i maleje** w zależności od potrzeb. Jest idealna do dużej liczby krótkich, asynchronicznych zadań.
+*   **`FixedThreadPool`**: Pula wątków o **stałej, z góry określonej liczbie wątków**. Jest idealna do zadań, które mocno obciążają procesor (CPU-bound) i gdzie chcemy mieć ścisłą kontrolę nad liczbą jednocześnie wykonywanych operacji.
+
+---
+
+### Co jest "cache'owane" w `CachedThreadPool`?
+
+To jest najważniejsze pytanie, które zadajesz. Nazwa bywa myląca.
+
+**Cache'owane są WĄTKI, a nie zadania czy ich wyniki.**
+
+Oznacza to, że:
+1.  Gdy do puli trafia nowe zadanie, pula sprawdza, czy ma jakiś **bezczynny, "schowany" (scache'owany) wątek**, który niedawno zakończył pracę.
+2.  **Jeśli tak**, to ten istniejący wątek jest natychmiast ponownie wykorzystywany do obsłużenia nowego zadania. To jest właśnie "trafienie w cache".
+3.  **Jeśli nie ma żadnego wolnego wątku**, pula tworzy **całkowicie nowy wątek** i dodaje go do puli.
+4.  Jeśli wątek w puli pozostaje bezczynny przez określony czas (domyślnie 60 sekund), jest on **usuwany z puli (z "cache") i kończy swoje działanie**, aby nie zużywać zasobów.
+
+Dlatego `CachedThreadPool` jest "elastyczna" – rośnie, gdy jest dużo pracy, i kurczy się, gdy pracy brakuje.
+
+---
+
+### Szczegółowe porównanie: `CachedThreadPool` vs `FixedThreadPool`
+
+| Cecha / Aspekt | `CachedThreadPool` | `FixedThreadPool` |
+| :--- | :--- | :--- |
+| **Liczba wątków** | **Dynamiczna i nieograniczona** (w teorii do `Integer.MAX_VALUE`). Rośnie w miarę potrzeb. | **Stała i ograniczona**. Określona w momencie tworzenia puli i niezmienna. |
+| **Kolejka zadań** | Używa `SynchronousQueue`. To specjalna kolejka, która **nie przechowuje elementów**. Zadanie jest przyjmowane tylko wtedy, gdy jakiś wątek jest gotowy je natychmiast podjąć. | Używa `LinkedBlockingQueue`. To kolejka, która **może przechowywać zadania**, jeśli wszystkie wątki są zajęte. Zadania czekają w niej na swoją kolej. |
+| **Zachowanie przy braku wolnych wątków** | **Tworzy nowy wątek**, aby obsłużyć zadanie. | **Umieszcza zadanie w kolejce**, gdzie będzie czekać, aż któryś z wątków się zwolni. |
+| **Zarządzanie cyklem życia wątków** | Wątki, które są bezczynne przez 60 sekund, są **automatycznie usuwane**. | Wątki **żyją tak długo, jak pula istnieje** (chyba że zostaną zatrzymane z powodu błędu). |
+| **Główne zastosowanie** | Duża liczba **krótkotrwałych, asynchronicznych zadań**, np. obsługa wielu zapytań sieciowych (operacje I/O-bound). | Zadania **długotrwałe, obciążające procesor** (CPU-bound), gdzie chcemy ograniczyć liczbę wątków do liczby rdzeni CPU. |
+| **Ryzyko** | **Nieograniczony wzrost liczby wątków**. Jeśli zadania napływają szybciej, niż są przetwarzane, może to doprowadzić do `OutOfMemoryError` z powodu zbyt dużej liczby utworzonych wątków. | **Nieograniczony wzrost kolejki**. Jeśli zadania napływają szybciej, niż są przetwarzane, kolejka może rosnąć w nieskończoność, co również może doprowadzić do `OutOfMemoryError`. |
+
+---
+
+### Przykłady kodu
+
+Załóżmy, że mamy proste zadanie, które symuluje pracę przez 1 sekundę:
+
+```java
+Runnable task = () -> {
+    try {
+        System.out.println("Zaczynam zadanie w wątku: " + Thread.currentThread().getName());
+        Thread.sleep(1000);
+        System.out.println("Kończę zadanie w wątku: " + Thread.currentThread().getName());
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+    }
+};
+```
+
+#### Użycie `CachedThreadPool`
+
+```java
+// Tworzymy pulę, która będzie dynamicznie tworzyć wątki
+ExecutorService cachedPool = Executors.newCachedThreadPool();
+
+System.out.println("--- Uruchamiam CachedThreadPool ---");
+for (int i = 0; i < 5; i++) {
+    cachedPool.submit(task);
+}
+
+// Poczekaj chwilę, żeby zobaczyć, że wątki są ponownie używane
+Thread.sleep(2000);
+
+System.out.println("\n--- Ponowne użycie wątków ---");
+for (int i = 0; i < 3; i++) {
+    cachedPool.submit(task); // Teraz pula powinna użyć istniejących, wolnych wątków
+}
+
+cachedPool.shutdown();
+```
+
+**Co się stanie?**
+*   Przy pierwszej pętli pula prawdopodobnie utworzy 5 nowych wątków, aby obsłużyć 5 zadań jednocześnie.
+*   Przy drugiej pętli, po 2 sekundach, te 5 wątków będzie już wolnych. Pula użyje 3 z nich do wykonania nowych zadań, zamiast tworzyć kolejne.
+
+#### Użycie `FixedThreadPool`
+
+```java
+// Tworzymy pulę z tylko 2 wątkami
+ExecutorService fixedPool = Executors.newFixedThreadPool(2);
+
+System.out.println("--- Uruchamiam FixedThreadPool ---");
+for (int i = 0; i < 5; i++) {
+    fixedPool.submit(task);
+}
+
+fixedPool.shutdown();
+```
+
+**Co się stanie?**
+*   Pula ma tylko 2 wątki.
+*   Dwa pierwsze zadania zostaną podjęte natychmiast.
+*   Pozostałe 3 zadania trafią do kolejki.
+*   Gdy któryś z pierwszych dwóch wątków skończy pracę, pobierze kolejne zadanie z kolejki. W danym momencie **nigdy nie będą działać więcej niż 2 wątki naraz**.
+
+---
+
+### Kiedy którego używać? Prosta analogia
+
+*   **`FixedThreadPool` to jak restauracja z 10 stolikami.** Może obsłużyć jednocześnie 10 grup gości. Jeśli przyjdzie 11. grupa, musi poczekać w kolejce na zewnątrz, aż zwolni się stolik. Liczba "kucharzy i kelnerów" jest stała.
+*   **`CachedThreadPool` to jak usługa ride-sharing (np. Uber).** Gdy zamawiasz przejazd, system znajduje najbliższego wolnego kierowcę. Jeśli wszyscy są zajęci, a zapotrzebowanie jest ogromne, system zachęca nowych kierowców, by dołączyli do sieci. Jeśli kierowca długo nie ma zleceń, wraca do domu (jest usuwany z puli).
