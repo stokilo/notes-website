@@ -1,0 +1,203 @@
+---
+sidebar_label: 'Query Projection'
+---
+
+# Explain Query Projections
+
+
+Jasne, wyjaśnijmy sobie projekcje w Spring Data JPA. To bardzo ważna i przydatna koncepcja.
+
+### Czym są projekcje? (Idea)
+
+Wyobraź sobie, że masz w bazie danych tabelę `Uzytkownik` z wieloma kolumnami: `id`, `imie`, `nazwisko`, `email`, `haslo`, `data_rejestracji`, `adres`, `telefon` itd.
+
+W 90% przypadków, gdy chcesz wyświetlić listę użytkowników, nie potrzebujesz wszystkich tych danych. Interesuje Cię na przykład tylko `imie` i `nazwisko`.
+
+**Projekcja to mechanizm, który pozwala na pobranie z bazy danych tylko wybranych kolumn (pól), a nie całego obiektu (encji).**
+
+Zamiast pobierać całą, "ciężką" encję `Uzytkownik`, tworzysz jej "cień" lub "rzut" (stąd nazwa "projekcja"), który zawiera tylko te dane, których faktycznie potrzebujesz.
+
+### Dlaczego warto używać projekcji? (Korzyści)
+
+Główny powód to **WYDAJNOŚĆ**.
+
+1.  **Mniej danych transferowanych z bazy:** Zamiast przesyłać 10 kolumn dla każdego z 1000 użytkowników, przesyłasz tylko 2. To ogromna oszczędność na poziomie sieci i operacji I/O.
+2.  **Mniejsze zużycie pamięci w aplikacji:** Twoja aplikacja nie musi tworzyć w pamięci 1000 pełnych obiektów `Uzytkownik`. Zamiast tego tworzy 1000 małych, lekkich obiektów projekcji.
+3.  **Zoptymalizowane zapytania SQL:** Spring Data jest na tyle inteligentny, że widząc prośbę o projekcję, generuje zapytanie SQL, które od samego początku prosi bazę tylko o wybrane kolumny. Zamiast `SELECT * FROM uzytkownik`, wygeneruje `SELECT imie, nazwisko FROM uzytkownik`.
+
+---
+
+### Jak tworzyć projekcje w Spring Data? (Implementacja)
+
+Spring Data oferuje trzy główne sposoby tworzenia projekcji. Zobaczmy je na przykładzie prostej encji `User`.
+
+**Nasza encja bazowa:**
+
+```java
+@Entity
+public class User {
+    @Id
+    @GeneratedValue
+    private Long id;
+    private String firstName;
+    private String lastName;
+    private String email;
+    private int age;
+
+    // getters, setters, konstruktory...
+}
+```
+
+#### 1. Projekcje oparte na interfejsach (Interface-Based Projections)
+
+To najprostszy i najczęstszy sposób. Tworzysz interfejs, który definiuje "kształt" danych, jakie chcesz otrzymać.
+
+**Krok 1: Stwórz interfejs projekcji**
+
+Nazwy metod "getterów" w interfejsie **muszą odpowiadać nazwom pól w encji**.
+
+```java
+// Chcemy pobrać tylko imię i nazwisko
+public interface UserNameOnly {
+    String getFirstName();
+    String getLastName();
+}
+```
+
+**Krok 2: Użyj interfejsu w swoim repozytorium**
+
+Wystarczy, że jako typ zwracany metody w repozytorium podasz swój interfejs projekcji.
+
+```java
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    // Spring Data zrozumie, że ma pobrać tylko firstName i lastName
+    List<UserNameOnly> findByLastName(String lastName);
+}
+```
+
+**Jak to działa?**
+Spring Data w locie tworzy klasę proxy, która implementuje Twój interfejs. Następnie informuje dostawcę JPA (np. Hibernate), aby wygenerował zapytanie SQL pobierające tylko te kolumny, które są zdefiniowane w interfejsie.
+
+Wygenerowane zapytanie SQL będzie wyglądać mniej więcej tak:
+`SELECT user.first_name, user.last_name FROM user WHERE user.last_name = ?`
+
+**Odmiana: Otwarte projekcje (Open Projections)**
+
+Możesz też tworzyć w interfejsie metody, które nie odpowiadają bezpośrednio polom, używając adnotacji `@Value` i języka SpEL (Spring Expression Language).
+
+```java
+public interface UserSummary {
+    String getFirstName();
+
+    @Value("#{target.firstName + ' ' + target.lastName}") // Łączymy dwa pola
+    String getFullName();
+}
+```
+
+> **Uwaga:** Otwarte projekcje mogą być mniej wydajne! Aby obliczyć wartość `getFullName`, Spring musi najpierw pobrać *całą* encję `User` (z polami `firstName` i `lastName`), a dopiero potem wykonać na niej wyrażenie SpEL. Tracimy wtedy główną zaletę projekcji. Używaj ich z rozwagą.
+
+---
+
+#### 2. Projekcje oparte na klasach (Class-Based Projections / DTO)
+
+Zamiast interfejsu możesz użyć zwykłej klasy (często nazywanej DTO - Data Transfer Object).
+
+**Krok 1: Stwórz klasę DTO**
+
+Klasa musi mieć konstruktor, którego nazwy parametrów **są takie same jak nazwy pól w encji**.
+
+```java
+// Rekordy Javy są do tego idealne!
+public record UserDto(String firstName, String lastName) {
+}
+
+// Lub tradycyjna klasa:
+/*
+public class UserDto {
+    private final String firstName;
+    private final String lastName;
+
+    public UserDto(String firstName, String lastName) { // Nazwy parametrów są kluczowe!
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    // getters...
+}
+*/
+```
+
+**Krok 2: Użyj DTO w repozytorium**
+
+```java
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    List<UserDto> findByAgeGreaterThan(int age);
+}
+```
+
+**Jak to działa?**
+Spring Data analizuje konstruktor klasy `UserDto` i na jego podstawie generuje odpowiednie zapytanie JPQL z klauzulą `SELECT new`:
+`SELECT new com.example.UserDto(u.firstName, u.lastName) FROM User u WHERE u.age > ?`
+
+To zapytanie również skutkuje pobraniem z bazy tylko niezbędnych kolumn.
+
+---
+
+#### 3. Projekcje dynamiczne (Dynamic Projections)
+
+Co jeśli chcesz, aby jedna metoda w repozytorium mogła zwracać dane w różnej formie – raz pełną encję, a raz projekcję? Z pomocą przychodzą projekcje dynamiczne.
+
+**Krok 1: Zdefiniuj generyczną metodę w repozytorium**
+
+Metoda przyjmuje dodatkowy argument: `Class<T> type`, który określa, w jakiej formie chcemy otrzymać wynik.
+
+```java
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    <T> List<T> findByLastName(String lastName, Class<T> type);
+}
+```
+
+**Krok 2: Wywołaj metodę, podając żądany typ**
+
+Teraz w warstwie serwisu możesz decydować, jakich danych potrzebujesz:
+
+```java
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    public void demonstrateProjections() {
+        String lastName = "Kowalski";
+
+        // 1. Pobierz pełne encje
+        List<User> allData = userRepository.findByLastName(lastName, User.class);
+
+        // 2. Pobierz projekcję interfejsową
+        List<UserNameOnly> namesOnly = userRepository.findByLastName(lastName, UserNameOnly.class);
+
+        // 3. Pobierz projekcję DTO
+        List<UserDto> userDtos = userRepository.findByLastName(lastName, UserDto.class);
+    }
+}
+```
+
+To bardzo elastyczne rozwiązanie, które pozwala uniknąć tworzenia wielu podobnych metod w repozytorium (`findUsersByLastName`, `findUserNamesByLastName` itd.).
+
+### Podsumowanie: Kiedy czego używać?
+
+*   **Projekcje interfejsowe (zamknięte):**
+*   **Kiedy:** Najczęstszy wybór dla prostych scenariuszy "tylko do odczytu".
+*   **Zalety:** Bardzo proste w implementacji, świetna wydajność.
+*   **Projekcje oparte na klasach (DTO):**
+*   **Kiedy:** Gdy DTO ma zawierać dodatkową logikę, jest używane w wielu miejscach aplikacji (np. zwracane przez REST API) lub gdy po prostu wolisz pracować z konkretnymi klasami niż interfejsami.
+*   **Zalety:** Bardziej jawne, DTO może mieć własne metody, łatwe do serializacji.
+*   **Projekcje dynamiczne:**
+*   **Kiedy:** Gdy chcesz mieć jedną, uniwersalną metodę w repozytorium, która może zwracać dane w różnych formatach w zależności od kontekstu wywołania.
+*   **Zalety:** Maksymalna elastyczność i redukcja powtarzalnego kodu w repozytorium.
+
+Projekcje to potężne narzędzie w arsenale Spring Data, które pozwala na pisanie czystszego i znacznie bardziej wydajnego kodu do pobierania danych.
