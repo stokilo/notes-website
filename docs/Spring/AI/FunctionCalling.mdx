@@ -1,0 +1,149 @@
+---
+sidebar_label: 'Function calling'
+---
+
+# Explain approach with LLM function calling
+
+Jasne, wyjaśnijmy to krok po kroku. Koncepcja "function calling" (w nowszej terminologii często nazywana **"tool calling"** czyli "wołaniem narzędzi") jest kluczowa, aby LLM-y mogły wchodzić w interakcję ze światem zewnętrznym.
+
+Wyobraź sobie, że LLM to bardzo inteligentny, ale zamknięty w pokoju asystent. Nie ma dostępu do internetu, zegarka ani żadnych zewnętrznych systemów. "Function calling" to mechanizm, który pozwala temu asystentowi poprosić Ciebie (czyli Twoją aplikację) o wykonanie czegoś w jego imieniu i przekazanie mu wyniku.
+
+**Ważne:** LLM sam **nie wykonuje** kodu. On jedynie **prosi o jego wykonanie**, zwracając precyzyjnie sformatowaną prośbę (najczęściej w formacie JSON).
+
+### Jak to działa w kontekście Ollama i Spring AI?
+
+Ollama to platforma do uruchamiania modeli językowych lokalnie. Kluczowe jest to, jaki model uruchomisz w Ollamie. Nowoczesne modele, takie jak **Llama 3, Phi-3 czy nowsze wersje Mistral**, zostały wytrenowane tak, aby na specjalnie skonstruowane zapytanie potrafiły odpowiedzieć strukturalnym JSON-em, opisującym, jaką funkcję należy wywołać.
+
+Spring AI działa tutaj jako **orkiestrator** całego procesu. Ukrywa przed Tobą całą złożoność komunikacji i sprawia, że wygląda to prawie jak zwykłe wywołanie metody w Javie.
+
+### Krok po kroku na przykładzie pogody (Spring AI + Ollama)
+
+Załóżmy, że chcemy, aby nasz chatbot potrafił odpowiadać na pytania o pogodę.
+
+#### Krok 1: Definicja "Narzędzia" (Funkcji) w kodzie Java
+
+Najpierw musimy w naszej aplikacji Spring Boot zdefiniować usługę, która potrafi pobrać dane o pogodzie. Dla uproszczenia, nasza funkcja będzie zwracać stałą wartość.
+
+W Spring AI robimy to za pomocą adnotacji `@Bean` i `@Description`.
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Description;
+
+import java.util.function.Function;
+
+@Configuration
+public class WeatherTools {
+
+    // Adnotacja @Description jest kluczowa!
+    // To jest opis, który Spring AI wyśle do LLM, aby model wiedział,
+    // do czego służy to narzędzie i jakie przyjmuje parametry.
+    @Bean
+    @Description("Pobiera aktualne informacje o pogodzie dla danego miasta")
+    public Function<WeatherRequest, WeatherResponse> getCurrentWeather() {
+        return request -> {
+            System.out.println(">>> Wywołano funkcję pogody dla miasta: " + request.city());
+            // W prawdziwej aplikacji tutaj byłoby wywołanie zewnętrznego API
+            return new WeatherResponse("W mieście " + request.city() + " jest 22 stopnie Celsjusza i jest słonecznie.");
+        };
+    }
+
+    // Rekordy definiujące strukturę zapytania i odpowiedzi dla naszej funkcji
+    public record WeatherRequest(String city) {}
+    public record WeatherResponse(String weatherInfo) {}
+}
+```
+
+**Co się tu stało?**
+1.  Stworzyliśmy bean Springa, który jest `Function<WeatherRequest, WeatherResponse>`.
+2.  Użyliśmy `@Description` do opisania w języku naturalnym, co robi ta funkcja. Ten opis zostanie wysłany do modelu w Ollamie!
+
+#### Krok 2: Zapytanie użytkownika
+
+Użytkownik pisze do naszego chatbota: `Jaka jest pogoda w Warszawie?`
+
+#### Krok 3: Komunikacja Spring AI z Ollama (Pierwsze zapytanie)
+
+Teraz dzieje się magia Spring AI:
+
+1.  Bierze zapytanie użytkownika: `Jaka jest pogoda w Warszawie?`.
+2.  Znajduje wszystkie beany oznaczone jako narzędzia (jak nasz `getCurrentWeather`).
+3.  Generuje specjalny, złożony prompt dla modelu w Ollamie, który wygląda mniej więcej tak (w uproszczeniu):
+
+> **System:** Jesteś pomocnym asystentem. Masz do dyspozycji następujące narzędzia. Jeśli chcesz użyć któregoś z nich, odpowiedz w formacie JSON, podając nazwę narzędzia i argumenty.
+    >
+    > **Narzędzia dostępne:**
+    > ```json
+    > [
+  {
+    "name": "getCurrentWeather",
+    "description": "Pobiera aktualne informacje o pogodzie dla danego miasta",
+    "input_schema": {
+      "type": "object",
+      "properties": { "city": { "type": "string" } }
+    }
+  }
+    > ]
+    > ```
+    > **Użytkownik:** Jaka jest pogoda w Warszawie?
+
+4.  Ten cały prompt wysyła do modelu (np. Llama 3) uruchomionego w Ollamie.
+
+#### Krok 4: Odpowiedź LLM (Ollama)
+
+Model Llama 3 analizuje prompt. Rozumie, że pytanie "Jaka jest pogoda w Warszawie?" pasuje idealnie do opisu narzędzia `getCurrentWeather`.
+
+Zamiast odpowiadać tekstem, **zwraca JSON**, który jest prośbą o wywołanie funkcji:
+
+```json
+{
+  "tool_calls": [
+    {
+      "name": "getCurrentWeather",
+      "arguments": "{\"city\":\"Warszawa\"}"
+    }
+  ]
+}
+```
+*Uwaga: format może się nieznacznie różnić w zależności od modelu i wersji Spring AI, ale idea jest ta sama.*
+
+#### Krok 5: Interpretacja i wykonanie przez Spring AI
+
+1.  Spring AI odbiera ten JSON od Ollamy.
+2.  Widzi, że model prosi o wywołanie funkcji `getCurrentWeather` z argumentem `city` o wartości `Warszawa`.
+3.  Automatycznie znajduje w kontekście Springa bean o tej nazwie (`getCurrentWeather`).
+4.  Wywołuje go, przekazując `new WeatherRequest("Warszawa")`.
+5.  Nasz kod Java jest wykonywany, a na konsoli pojawia się `>>> Wywołano funkcję pogody dla miasta: Warszawa`.
+6.  Funkcja zwraca obiekt `WeatherResponse` z tekstem: `"W mieście Warszawa jest 22 stopnie Celsjusza i jest słonecznie."`.
+
+#### Krok 6: Komunikacja Spring AI z Ollama (Drugie zapytanie)
+
+Proces się nie kończy! Spring AI musi teraz przekazać wynik z powrotem do LLM-a, aby ten mógł sformułować ostateczną odpowiedź dla użytkownika.
+
+1.  Spring AI ponownie kontaktuje się z Ollamą.
+2.  Tym razem wysyła całą historię konwersacji, w tym informację o tym, że narzędzie zostało wywołane i jaki był jego wynik. Prompt wygląda mniej więcej tak:
+
+> **Użytkownik:** Jaka jest pogoda w Warszawie?
+> **Asystent (prośba o narzędzie):** `wywołaj getCurrentWeather z city=Warszawa`
+> **Wynik narzędzia:** `W mieście Warszawa jest 22 stopnie Celsjusza i jest słonecznie.`
+> **System:** Teraz odpowiedz na pierwotne pytanie użytkownika, używając wyniku narzędzia.
+
+#### Krok 7: Finałowa odpowiedź LLM
+
+Model w Ollamie otrzymuje teraz wszystkie potrzebne informacje. Na podstawie wyniku narzędzia generuje naturalną, przyjazną dla użytkownika odpowiedź, np.:
+
+`"Jasne, sprawdziłem dla Ciebie. W Warszawie jest aktualnie 22 stopnie Celsjusza i jest słonecznie."`
+
+Ten tekst jest zwracany przez Spring AI jako ostateczny wynik operacji, który możesz wyświetlić użytkownikowi.
+
+### Podsumowanie
+
+| Kto?         | Co robi?                                                                                              |
+| :----------- | :---------------------------------------------------------------------------------------------------- |
+| **Ty (Deweloper)** | Definiujesz w Javie funkcje (`@Bean`) i opisujesz je (`@Description`).                              |
+| **Użytkownik** | Zadaje pytanie w języku naturalnym.                                                                 |
+| **Spring AI**  | Działa jak **pośrednik**: formatuje prompty, wysyła je do LLM, parsuje odpowiedzi JSON, wywołuje Twój kod Java i zarządza całą konwersacją. |
+| **Ollama (Model)** | **Nie wykonuje kodu!** Analizuje tekst i opisy narzędzi, a następnie **decyduje, które narzędzie wywołać** i z jakimi argumentami, zwracając prośbę w formacie JSON. Na koniec, na podstawie wyników, formułuje odpowiedź. |
+
+To potężny mechanizm, który pozwala LLM-om na interakcję z bazami danych, API, systemami plików i dowolnym innym kodem, jaki napiszesz. Spring AI sprawia, że ten skomplikowany, wieloetapowy proces jest niemal przezroczysty dla dewelopera.
