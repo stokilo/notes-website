@@ -1,0 +1,143 @@
+---
+sidebar_label: 'RAG and Fine Tunning'
+---
+
+# Explain process of RAG and Fine Tunning for job offer natural language search
+
+Jasne, świetny pomysł! Wyjaśnię Ci krok po kroku, jak możesz "podrasować" model językowy za pomocą Ollama, aby stał się ekspertem od ofert pracy.
+
+Twoje zadanie to klasyczny problem, który można rozwiązać na dwa główne sposoby, a najlepsze efekty daje ich połączenie. Omówimy oba:
+
+1.  **RAG (Retrieval-Augmented Generation)**: To jest absolutna podstawa i prawdopodobnie 80% sukcesu. Chodzi o to, by model miał "ściągawkę" z Twoich ofert pracy.
+2.  **Fine-tuning**: To jest "podrasowanie", o które pytasz. Chodzi o nauczenie modelu *nowego zachowania* lub *stylu odpowiedzi* na podstawie Twoich przykładów.
+
+Zacznijmy od początku, bo bez dobrego fundamentu (RAG) fine-tuning może nie dać oczekiwanych rezultatów.
+
+---
+
+### Krok 1: Fundament - RAG (Dostęp do Wiedzy na Żywo)
+
+Zanim zaczniesz uczyć model nowego *zachowania*, musisz dać mu dostęp do *wiedzy* (Twoich ofert pracy). Model, nawet po fine-tuningu, nie będzie "pamiętał" wszystkich ofert. Zamiast tego, w czasie rzeczywistym, będziemy mu podsuwać te najbardziej pasujące.
+
+**Jak to działa w praktyce?**
+
+1.  **Przygotowanie Danych:** Zbierz wszystkie swoje oferty pracy i zapisz je w ustrukturyzowanym formacie, np. JSON. To bardzo ważne. Im lepsza struktura, tym lepsze wyniki.
+
+*Przykład pliku `oferty.jsonl` (każda oferta w nowej linii):*
+```json
+{"id": 1, "stanowisko": "Junior Python Developer", "firma": "TechCorp", "lokalizacja": "Warszawa, Zdalnie", "widełki": "5000-7000 PLN", "wymagania": ["Python", "Django", "GIT", "SQL"], "opis": "Szukamy młodszego programisty do rozwijającego się zespołu. Praca nad nowymi funkcjonalnościami w naszej aplikacji webowej..."}
+{"id": 2, "stanowisko": "Senior Java Engineer", "firma": "Fintech Solutions", "lokalizacja": "Kraków", "widełki": "18000-25000 PLN", "wymagania": ["Java", "Spring Boot", "Kafka", "AWS", "Kubernetes"], "opis": "Dołącz do naszego zespołu jako starszy inżynier. Będziesz odpowiedzialny za architekturę i rozwój systemów o wysokiej dostępności..."}
+{"id": 3, "stanowisko": "Data Analyst with Python", "firma": "DataMinds", "lokalizacja": "Zdalnie", "widełki": "10000-15000 PLN", "wymagania": ["Python", "Pandas", "SQL", "Tableau"], "opis": "Analizuj duże zbiory danych i twórz wizualizacje, które pomogą podejmować decyzje biznesowe. Wymagana biegła znajomość Pythona i SQL."}
+    ```
+
+2.  **Stworzenie Bazy Wektorowej (Embedding):** To jest kluczowy element. Każda oferta pracy zostanie zamieniona na "wektor", czyli zestaw liczb, który reprezentuje jej znaczenie. Dzięki temu można matematycznie porównywać, jak bardzo podobne są do siebie teksty.
+*   Ollama ma wbudowane modele do tworzenia wektorów! Np. `mxbai-embed-large` lub `nomic-embed-text`.
+*   Proces wygląda tak: Bierzesz każdą ofertę, przepuszczasz przez model `mxbai-embed-large`, a on zwraca Ci wektor (listę liczb). Te wektory zapisujesz w specjalnej bazie danych (np. ChromaDB, Qdrant, FAISS).
+
+3.  **Wyszukiwanie:** Gdy użytkownik wpisuje zapytanie w naturalnym języku, np.:
+> "Szukam pracy zdalnej z pythonem dla kogoś z małym doświadczeniem"
+
+Dzieje się następująca magia:
+a. Twoja aplikacja zamienia to zapytanie na wektor, używając tego samego modelu (`mxbai-embed-large`).
+b. Następnie przeszukuje Twoją bazę wektorową w poszukiwaniu ofert, których wektory są "najbliżej" wektora zapytania.
+c. W wyniku dostajesz np. 2-3 najbardziej pasujące oferty (w naszym przykładzie pewnie ofertę nr 1 i 3).
+
+4.  **Generowanie Odpowiedzi:** Teraz dopiero do akcji wkracza główny model LLM (np. Llama 3). Twoja aplikacja buduje specjalny prompt (polecenie), który zawiera:
+*   Instrukcję (np. "Jesteś asystentem rekrutacyjnym. Odpowiedz na pytanie użytkownika na podstawie poniższych ofert pracy.").
+*   Znalezione w kroku 3 oferty pracy.
+*   Pytanie użytkownika.
+
+Finalny prompt, który trafia do LLM, wygląda mniej więcej tak:
+```
+Jesteś pomocnym asystentem rekrutacyjnym. Przeanalizuj poniższe oferty pracy i odpowiedz na pytanie użytkownika. Odpowiadaj rzeczowo i przyjaźnie.
+
+--- OFERTY PRACY ---
+Oferta 1: {"id": 1, "stanowisko": "Junior Python Developer", "firma": "TechCorp", ...}
+Oferta 3: {"id": 3, "stanowisko": "Data Analyst with Python", "firma": "DataMinds", ...}
+--- KONIEC OFERT ---
+
+Pytanie użytkownika: "Szukam pracy zdalnej z pythonem dla kogoś z małym doświadczeniem"
+    ```
+
+Model LLM (nawet bez fine-tuningu) świetnie sobie z tym poradzi i wygeneruje odpowiedź w stylu:
+> "Znalazłem dwie interesujące oferty, które mogą Cię zainteresować! Pierwsza to Junior Python Developer w TechCorp, która jest częściowo zdalna i skierowana do osób na początku kariery. Druga to w pełni zdalna rola Analityka Danych w DataMinds, gdzie kluczowy jest Python. Obie wymagają znajomości Pythona."
+
+**Narzędzia do RAG:** Frameworki takie jak **LangChain** czy **LlamaIndex** automatyzują cały ten proces.
+
+---
+
+### Krok 2: "Podrasowanie" - Fine-tuning (Nauka Nowego Zachowania)
+
+Teraz, gdy masz już fundament RAG, możesz pomyśleć o fine-tuningu. Fine-tuning **nie uczy modelu nowej wiedzy** (on nie "zapamięta" ofert), ale **uczy go, jak ma się zachowywać**.
+
+**Kiedy warto robić fine-tuning?**
+*   Gdy chcesz, aby model **zawsze odpowiadał w konkretnym formacie** (np. zawsze zwracał JSON z podsumowaniem).
+*   Gdy chcesz, aby miał **specyficzny styl lub ton** (np. był bardziej formalny, albo bardziej żartobliwy).
+*   Gdy chcesz nauczyć go **specyficznej logiki rozumowania**, której standardowy model nie posiada (np. jak oceniać "widełki" płacowe w kontekście lat doświadczenia).
+
+**Jak przeprowadzić fine-tuning na przykładzie Ollama?**
+
+Załóżmy, że chcesz, aby model na podstawie opisu oferty **perfekcyjnie wyciągał kluczowe informacje i zwracał je w formacie JSON**.
+
+1.  **Przygotowanie Danych Treningowych:** To najważniejszy krok. Musisz stworzyć zestaw danych w formacie "pytanie -> idealna odpowiedź". Im więcej dobrych przykładów (setki, a najlepiej tysiące), tym lepszy wynik.
+
+*Stwórz plik `dataset.jsonl`*:
+```json
+{"messages": [{"role": "user", "content": "Przeanalizuj i podsumuj tę ofertę w formacie JSON: Stanowisko: Junior Python Developer w firmie TechCorp zlokalizowanej w Warszawie (praca zdalna możliwa). Wynagrodzenie od 5000 do 7000 PLN brutto. Wymagamy znajomości Python, Django, GIT oraz podstaw SQL. Będziesz pracować nad naszą aplikacją webową."}, "role": "assistant", "content": "{\"stanowisko\":\"Junior Python Developer\",\"firma\":\"TechCorp\",\"tryb_pracy\":\"hybrydowy\",\"miasto\":\"Warszawa\",\"widełki_min\":5000,\"widełki_max\":7000,\"waluta\":\"PLN\",\"wymagania_kluczowe\":[\"Python\",\"Django\",\"GIT\",\"SQL\"]}"}]}
+{"messages": [{"role": "user", "content": "Zrób JSON z tej oferty: Szukamy Senior Java Engineer do Fintech Solutions w Krakowie. Praca stacjonarna. Płaca 18-25k PLN na B2B. Konieczny Spring, Kafka i doświadczenie z chmurą AWS."}, "role": "assistant", "content": "{\"stanowisko\":\"Senior Java Engineer\",\"firma\":\"Fintech Solutions\",\"tryb_pracy\":\"stacjonarny\",\"miasto\":\"Kraków\",\"widełki_min\":18000,\"widełki_max\":25000,\"waluta\":\"PLN\",\"wymagania_kluczowe\":[\"Java\",\"Spring Boot\",\"Kafka\",\"AWS\"]}"}]}
+    ```
+*Uwaga: Użyłem formatu "messages", który jest popularny i wspierany przez nowoczesne modele.*
+
+2.  **Wybór Modelu Bazowego:** Wybierz model z Ollama, który chcesz "podrasować". Dobrymi kandydatami są `llama3:8b`, `mistral` lub `gemma:7b`. Są wystarczająco potężne, by nauczyć się nowych zadań, i wystarczająco małe, by trening nie trwał wiecznie.
+
+3.  **Proces Treningu (z użyciem narzędzi zewnętrznych):**
+Ollama sama w sobie nie ma komendy do trenowania. Służy do uruchamiania modeli. Trening (fine-tuning) przeprowadza się za pomocą zewnętrznych narzędzi, które generują tzw. **adapter LoRA**. LoRA to sprytna technika, która pozwala na modyfikację niewielkiej części modelu, co jest znacznie szybsze i tańsze niż trenowanie całości.
+
+Popularne narzędzia to np. **Axolotl**, **LLaMA Factory** lub skrypty z **Hugging Face TRL**.
+
+Proces w uproszczeniu:
+a. Instalujesz np. Axolotl.
+b. Tworzysz plik konfiguracyjny, w którym wskazujesz:
+        *   Model bazowy (np. `meta-llama/Llama-3-8B`).
+        *   Ścieżkę do Twojego pliku z danymi treningowymi (`dataset.jsonl`).
+        *   Parametry treningu (np. ile epok, jaki learning rate).
+c. Uruchamiasz trening. Po kilku(nastu) minutach/godzinach (zależnie od sprzętu i danych) narzędzie wygeneruje plik adaptera, np. `adapter_model.safetensors`.
+
+4.  **Integracja z Ollama przez `Modelfile`:**
+Teraz najlepsza część. Możesz wziąć swój wytrenowany adapter i "nałożyć" go na model bazowy bezpośrednio w Ollama! Tworzysz plik o nazwie `Modelfile`:
+
+```Modelfile
+# Użyj Llama 3 jako modelu bazowego
+FROM llama3:8b
+
+# Ustaw systemowy prompt, który zawsze będzie dodawany na początku
+SYSTEM """
+Jesteś ekspertem w analizowaniu ofert pracy. Twoim zadaniem jest przekształcanie opisu oferty na precyzyjny format JSON.
+"""
+
+# To jest kluczowy moment: załaduj swój wytrenowany adapter
+# Ścieżka musi być absolutna lub względna do lokalizacji Modelfile
+ADAPTER ./adapter_model.safetensors
+    ```
+
+5.  **Stworzenie i Uruchomienie Twojego Modelu:**
+W terminalu, w folderze gdzie masz `Modelfile` i `adapter_model.safetensors`, wykonaj:
+```bash
+# Stwórz nowy, spersonalizowany model o nazwie 'job-expert'
+ollama create job-expert -f ./Modelfile
+
+# Uruchom swój model!
+ollama run job-expert
+    ```
+Od teraz, gdy w `ollama run job-expert` wkleisz opis oferty, model będzie miał silną tendencję do odpowiadania idealnym JSON-em, tak jak go nauczyłeś!
+
+### Podsumowanie: Najlepsze z Obu Światów (RAG + Fine-tuning)
+
+Idealne rozwiązanie dla Ciebie to połączenie obu metod:
+
+1.  Użytkownik wpisuje zapytanie: "praca w krakowie z javą, najlepiej w finansach".
+2.  Twój system **RAG** znajduje 3 najbardziej pasujące oferty z Twojej bazy.
+3.  Te 3 oferty są przekazywane do Twojego **fine-tunowanego modelu** `job-expert`.
+4.  Twój `job-expert` (dzięki treningowi) nie tylko rozumie treść, ale potrafi ją genialnie podsumować, porównać i przedstawić w uporządkowany, czytelny sposób, dokładnie tak, jak go tego nauczyłeś.
+
+**Rekomendacja:** Zacznij od zaimplementowania **RAG**. Już sam ten krok da Ci ogromny wzrost jakości. Jeśli zauważysz, że modelowi brakuje precyzji w formacie odpowiedzi lub specyficznego "rozumowania" branżowego, wtedy dołóż do tego **fine-tuning**.
