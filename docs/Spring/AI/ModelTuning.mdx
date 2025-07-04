@@ -1,0 +1,114 @@
+---
+sidebar_label: 'Model Tuning'
+---
+
+# Explain how tuning model works on dataset.jsonl to ensure model understand i.e. remote work location in natural language
+
+Doskonałe pytanie! Dotykasz sedna tego, co sprawia, że fine-tuning jest tak potężny. To nie jest "magia", ale bardzo logiczny proces uczenia przez przykłady.
+
+Wyjaśnijmy to na Twoim przykładzie: połączenie zapytania **"praca z domu"** z ofertą, która zawiera **"Location: Remote"**.
+
+### Jak myśli standardowy model (bez fine-tuningu)?
+
+Standardowy, duży model językowy (jak Llama 3) był trenowany na gigantycznej ilości tekstu z internetu. On "wie", że "praca z domu", "praca zdalna" i "remote work" to pojęcia semantycznie bliskie. Zazwyczaj sobie z tym poradzi.
+
+**Problem polega na tym, że:**
+*   Jego "wiedza" jest ogólna. Może nie być idealnie dopasowana do specyfiki polskiego rynku pracy.
+*   Może nie zrozumieć niuansów, np. "możliwa praca zdalna po okresie próbnym" vs "100% remote".
+*   Jego odpowiedź może być zbyt rozwlekła lub nie w tym formacie, którego oczekujesz.
+*   W skrajnym przypadku, jeśli w ofercie będzie tylko mało popularne sformułowanie (np. "tryb: rozproszony"), model może go pominąć.
+
+### Jak fine-tuning uczy model "nowego rozumowania"?
+
+Fine-tuning to proces pokazywania modelowi setek lub tysięcy par: **"taki problem" -> "oto idealne rozwiązanie"**. Model, analizując te przykłady, dostosowuje swoje wewnętrzne "wagi" (parametry), aby jego odpowiedzi stawały się coraz bardziej podobne do tych "idealnych", które mu pokazujesz.
+
+**On nie uczy się faktów, ale uczy się *schematu rozumowania*.**
+
+To tak, jakbyś uczył nowego pracownika firmowego żargonu. Na początku nie wie, że "Projekt Feniks" to tak naprawdę "nowy system do fakturowania". Po kilku razach, gdy mu powiesz "Zrób raport z Projektu Feniks" i pokażesz mu raport z systemu fakturowania, on załapie tę zależność. Model LLM robi to samo, ale na masową skalę.
+
+---
+
+### Tworzenie `dataset.jsonl` dla problemu "Praca z domu"
+
+Stwórzmy teraz konkretne przykłady do pliku `dataset.jsonl`, które nauczą model precyzyjnego łączenia różnych sformułowań pracy zdalnej.
+
+**Kluczowa koncepcja:** W polu `"content"` dla roli `"user"` umieszczamy **zarówno zapytanie użytkownika, jak i kontekst z ofert pracy (czyli to, co zwróciłby system RAG)**. W polu `"content"` dla roli `"assistant"` umieszczamy **dokładnie taką odpowiedź, jaką chcemy, aby model wygenerował**.
+
+Oto kilka przykładów, które pokazują, jakich "schematów rozumowania" uczymy model:
+
+**Przykład 1: Uczenie synonimów ("praca z domu" -> "Remote")**
+
+Chcemy, aby model jednoznacznie połączył te dwa pojęcia.
+
+```json
+{"messages": [
+  {"role": "user", "content": "Pytanie użytkownika: 'Cześć, szukam jakiejś pracy z domu'. Przeanalizuj poniższą ofertę i odpowiedz.\n\n--- KONTEKST ---\n{\"id\": 101, \"stanowisko\": \"Backend Developer\", \"firma\": \"Cloud Solutions\", \"Location\": \"Remote\", \"wymagania\": [\"Go\", \"AWS\"]}"},
+  {"role": "assistant", "content": "Znalazłem idealną ofertę pracy zdalnej! Firma Cloud Solutions szuka Backend Developera. Praca jest w 100% zdalna (w ofercie oznaczona jako 'Remote')."}
+]}
+```
+**Czego model się uczy?**
+*   Gdy użytkownik pyta o "pracę z domu".
+*   A w kontekście jest oferta z polem `"Location": "Remote"`.
+*   To ta oferta jest prawidłową odpowiedzią.
+*   Idealna odpowiedź jest zwięzła, przyjazna i wprost wskazuje, że "Remote" oznacza pracę zdalną.
+
+---
+
+**Przykład 2: Uczenie niuansów (praca hybrydowa)**
+
+Chcemy, aby model nie traktował pracy hybrydowej jako w pełni zdalnej.
+
+```json
+{"messages": [
+  {"role": "user", "content": "Pytanie użytkownika: 'Interesuje mnie tylko praca 100% zdalna'. Przeanalizuj poniższą ofertę i odpowiedz.\n\n--- KONTEKST ---\n{\"id\": 202, \"stanowisko\": \"Frontend Engineer\", \"firma\": \"Office First\", \"lokalizacja\": \"Warszawa\", \"opis\": \"Oferujemy elastyczne godziny pracy i tryb hybrydowy (3 dni z biura, 2 zdalnie).\"}"},
+  {"role": "assistant", "content": "Ta oferta może nie być dla Ciebie idealna. Stanowisko Frontend Engineer w Office First to praca w trybie hybrydowym, co oznacza, że wymaga obecności w biurze w Warszawie przez 3 dni w tygodniu."}
+]}
+```
+**Czego model się uczy?**
+*   Rozróżniania "100% zdalna" od "hybrydowa".
+*   Gdy użytkownik stawia twardy warunek, model musi go uszanować.
+*   Ma precyzyjnie wyjaśnić, dlaczego oferta nie spełnia kryteriów (wskazując na model hybrydowy).
+
+---
+
+**Przykład 3: Uczenie obsługi negatywnych przypadków (brak ofert)**
+
+To jest niezwykle ważne, aby model nie "halucynował" i nie wymyślał ofert, gdy ich nie ma.
+
+```json
+{"messages": [
+  {"role": "user", "content": "Pytanie użytkownika: 'Pokaż mi jakieś oferty zdalne'. Przeanalizuj poniższą ofertę i odpowiedz.\n\n--- KONTEKST ---\n{\"id\": 303, \"stanowisko\": \"Project Manager\", \"firma\": \"BuildCorp\", \"lokalizacja\": \"Kraków (praca stacjonarna)\"}"},
+  {"role": "assistant", "content": "Niestety, na podstawie dostarczonej oferty nie znalazłem żadnej pracy zdalnej. Stanowisko w BuildCorp jest pracą stacjonarną w Krakowie."}
+]}
+```
+**Czego model się uczy?**
+*   Jak odpowiedzieć, gdy w dostarczonym kontekście nie ma pasujących wyników.
+*   Być "uczciwym" i opierać się tylko na faktach z kontekstu.
+*   Zwrócić zwięzłą, pomocną informację zwrotną.
+
+---
+
+**Przykład 4: Uczenie obsługi wielu sformułowań i formatów**
+
+Dodajmy więcej różnorodności, aby model był bardziej elastyczny.
+
+```json
+{"messages": [
+  {"role": "user", "content": "Pytanie użytkownika: 'Czy jest coś bez dojazdów do biura?'. Przeanalizuj poniższe oferty.\n\n--- KONTEKST ---\nOferta 1: {\"id\": 404, \"position\": \"Data Scientist\", \"company\": \"DataVerse\", \"work_mode\": \"fully remote\"}\nOferta 2: {\"id\": 505, \"position\": \"UX Designer\", \"company\": \"Creative Agency\", \"work_mode\": \"on-site\"}"},
+  {"role": "assistant", "content": "Tak, mam coś dla Ciebie! Oferta na stanowisko Data Scientist w firmie DataVerse jest w pełni zdalna ('fully remote'), więc nie wymaga dojazdów do biura."}
+]}
+```
+**Czego model się uczy?**
+*   Kolejnego synonimu: "bez dojazdów do biura".
+*   Obsługi różnych nazw pól w JSON-ach (`position` zamiast `stanowisko`, `work_mode` zamiast `lokalizacja`).
+*   Ignorowania niepasujących ofert i skupiania się na tej właściwej.
+
+### Podsumowując:
+
+Tworząc taki `dataset.jsonl` i używając go do fine-tuningu, nie "wgrywasz" do modelu wiedzy o tych ofertach. Ty **rzeźbisz jego zachowanie**. Uczysz go:
+1.  **Mapowania pojęć:** "praca z domu" == "Remote" == "fully remote".
+2.  **Logiki zadania:** "Jeśli użytkownik chce 100% zdalnie, odrzuć oferty hybrydowe".
+3.  **Obsługi przypadków brzegowych:** "Jeśli nic nie pasuje, powiedz o tym wprost".
+4.  **Formatu odpowiedzi:** "Odpowiadaj krótko, przyjaźnie i na temat".
+
+Po takim treningu, gdy model `job-expert` dostanie nowe, niewidziane wcześniej zapytanie o "home office" i kontekst z ofertą zawierającą "tryb pracy: zdalny", z dużo większym prawdopodobieństwem i precyzją połączy te fakty i udzieli odpowiedzi w stylu, którego go nauczyłeś.
