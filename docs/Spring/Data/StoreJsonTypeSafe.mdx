@@ -1,0 +1,378 @@
+---
+sidebar_label: 'JSON serialization database'
+---
+
+# I want to serialize and deserialize java class into json and store it in db
+
+Oczywiście, że tak! To jest bardzo popularny i potężny wzorzec, który łączy elastyczność dokumentowych baz danych (jak MongoDB) z siłą i spójnością relacyjnej bazy danych jak PostgreSQL.
+
+W skrócie: **Tak, możesz zapisywać dane w formacie JSON/JSONB w PostgreSQL i w sposób w pełni "typesafe" mapować je na instancje klas w Javie przy użyciu Spring Data JPA i Hibernate.**
+
+Oto szczegółowe wyjaśnienie, jak to działa i jak to zaimplementować.
+
+---
+
+### Jak to działa? Koncepcja
+
+Proces polega na tym, że Twoja aplikacja w Javie "widzi" pole jako zwykły obiekt (POJO), a warstwa dostępu do danych (Hibernate/JPA) automatycznie tłumaczy ten obiekt na tekstowy format JSON (lub binarny JSONB) przed zapisem do bazy. W drugą stronę, podczas odczytu, dane w formacie JSON są automatycznie deserializowane z powrotem do instancji Twojej klasy.
+
+1.  **Aplikacja Java:** Pracujesz z obiektami, np. `product.setAttributes(new ProductAttributes("niebieski", 1.5));`
+2.  **Hibernate/JPA:** Przed wysłaniem zapytania `INSERT` lub `UPDATE` serializuje obiekt `ProductAttributes` do stringa JSON: `{"color":"niebieski", "weight":1.5}`.
+3.  **PostgreSQL:** Zapisuje ten string w kolumnie typu `JSONB`.
+4.  **Odczyt:** Proces jest odwracany. Hibernate odczytuje string JSON z bazy i używa biblioteki (np. Jackson) do stworzenia z niego instancji klasy `ProductAttributes`.
+
+### Krok po kroku: Implementacja w Spring Boot
+
+#### 1. Baza danych (PostgreSQL)
+
+Zawsze używaj typu **`JSONB`** zamiast `JSON`. `JSONB` to binarna, zoptymalizowana reprezentacja JSON. Jest szybsza w przetwarzaniu i, co najważniejsze, **wspiera indeksowanie**.
+
+```sql
+CREATE TABLE products (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    -- Tutaj przechowamy nasz obiekt jako JSONB
+    attributes JSONB
+);
+```
+
+#### 2. Zależności (Maven/Gradle)
+
+Aby ułatwić Hibernate'owi mapowanie typów JSON, najłatwiej jest użyć biblioteki **`hypersistence-utils`** (wcześniej znanej jako `hibernate-types`). Eliminuje to potrzebę pisania własnych, skomplikowanych konwerterów.
+
+Upewnij się, że masz w `pom.xml` odpowiednią wersję biblioteki, zgodną z Twoją wersją Hibernate (Spring Boot dobiera ją automatycznie).
+
+```xml
+<!-- pom.xml -->
+<dependency>
+    <groupId>io.hypersistence</groupId>
+    <!-- Zmień końcówkę (-63) na zgodną z Twoją wersją Hibernate, np. -62, -55 itd. -->
+    <!-- Dla Spring Boot 3.x / Hibernate 6.x najczęściej będzie to -62 lub -63 -->
+    <artifactId>hypersistence-utils-hibernate-63</artifactId>
+    <version>3.7.2</version> <!-- Użyj najnowszej wersji -->
+</dependency>
+```
+
+#### 3. Klasa POJO (obiekt do zagnieżdżenia)
+
+Stwórz zwykłą klasę Javy, która będzie reprezentować strukturę Twojego JSON-a. Musi być `Serializable`.
+
+```java
+import java.io.Serializable;
+
+// Prosta klasa POJO, której instancje będziemy serializować do JSON
+public class ProductAttributes implements Serializable {
+    private String color;
+    private double weight;
+    // Można tu zagnieżdżać kolejne obiekty
+    private Dimensions dimensions;
+
+    // Ważne: pusty konstruktor dla deserializatora (np. Jackson)
+    public ProductAttributes() {}
+
+    public ProductAttributes(String color, double weight, Dimensions dimensions) {
+        this.color = color;
+        this.weight = weight;
+        this.dimensions = dimensions;
+    }
+
+    // Gettery i settery...
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
+    public double getWeight() { return weight; }
+    public void setWeight(double weight) { this.weight = weight; }
+    public Dimensions getDimensions() { return dimensions; }
+    public void setDimensions(Dimensions dimensions) { this.dimensions = dimensions; }
+}
+
+// Przykład zagnieżdżonego obiektu
+public class Dimensions implements Serializable {
+    private int width;
+    private int height;
+    private int depth;
+    // Konstruktory, gettery, settery...
+}
+```
+
+#### 4. Encja JPA
+
+Teraz "magia". W swojej głównej encji użyj adnotacji `@Type` z biblioteki `hypersistence-utils`, aby poinformować Hibernate, jak ma mapować to pole.
+
+```java
+import io.hypersistence.utils.hibernate.type.json.JsonType;
+import jakarta.persistence.*;
+import org.hibernate.annotations.Type;
+
+@Entity
+@Table(name = "products")
+public class Product {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    @Type(JsonType.class) // <-- To jest kluczowe!
+    @Column(columnDefinition = "jsonb") // <-- Dobra praktyka, by JPA tworzyło poprawny typ kolumny
+    private ProductAttributes attributes;
+
+    // Konstruktory, gettery i settery...
+
+    public Product() {}
+
+    public Product(String name, ProductAttributes attributes) {
+        this.name = name;
+        this.attributes = attributes;
+    }
+
+    // ...
+}
+```
+
+#### 5. Repozytorium i użycie
+
+Repozytorium jest standardowe, niczym się nie wyróżnia.
+
+```java
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ProductRepository extends JpaRepository<Product, Long> {
+}
+```
+
+A teraz użycie w serwisie. Pracujesz na obiektach, a cała konwersja do JSON dzieje się w tle.
+
+```java
+@Service
+public class ProductService {
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    public void createSampleProduct() {
+        // Tworzysz normalne obiekty Java
+        Dimensions dims = new Dimensions(10, 20, 5);
+        ProductAttributes attrs = new ProductAttributes("czerwony", 0.8, dims);
+        Product newProduct = new Product("Głośnik Bluetooth", attrs);
+
+        // Zapisujesz encję. Hibernate zajmie się konwersją `attrs` do JSONB.
+        productRepository.save(newProduct);
+
+        // Odczyt
+        Product savedProduct = productRepository.findById(newProduct.getId()).get();
+
+        // Dostęp do pól jest w pełni typesafe!
+        String color = savedProduct.getAttributes().getColor(); // "czerwony"
+        int width = savedProduct.getAttributes().getDimensions().getWidth(); // 10
+
+        System.out.println("Kolor produktu: " + color);
+        System.out.println("Szerokość produktu: " + width);
+    }
+}
+```
+
+---
+
+### Bezpieczeństwo rzutowania i "Typesafe"
+
+Pytasz o bezpieczeństwo. Na czym ono polega?
+
+1.  **Bezpieczeństwo na poziomie aplikacji:** Twoja aplikacja jest w 100% "typesafe". Kompilator Javy pilnuje, żebyś odwoływał się do istniejących pól i metod (`getAttributes()`, `getColor()`). Nie pracujesz z surowymi stringami JSON, więc nie ma ryzyka literówek w nazwach kluczy.
+
+2.  **Bezpieczeństwo deserializacji:** "Bezpieczne rzutowanie" jest realizowane przez bibliotekę Jackson (domyślnie używaną przez `hypersistence-utils`). Jeśli dane w bazie danych w kolumnie `JSONB` nie będą pasowały do struktury klasy `ProductAttributes` (np. pole `weight` będzie stringiem zamiast liczbą), Jackson **zgłosi wyjątek** (`JsonProcessingException` lub podobny) podczas próby odczytu. **To jest pożądane zachowanie!** Zamiast otrzymać uszkodzony lub niekompletny obiekt, dostajesz jasny sygnał błędu, że dane w bazie są niespójne z modelem w aplikacji.
+
+### Potencjalne pułapki (Ewolucja schematu)
+
+Największym wyzwaniem jest zarządzanie zmianami w strukturze klasy POJO (np. `ProductAttributes`).
+
+*   **Dodanie nowego pola:** Jeśli dodasz nowe pole do klasy, stare rekordy w bazie go nie będą miały. Jackson domyślnie ustawi wartość tego pola na `null` lub wartość domyślną typu prostego. Zazwyczaj jest to bezpieczne.
+*   **Zmiana nazwy pola:** To jest niebezpieczne! Jeśli zmienisz w Javie pole `color` na `colour`, Jackson nie znajdzie go w starych rekordach i ustawi `null`. Można to obejść, używając adnotacji Jacksona: `@JsonProperty("color") private String colour;`.
+*   **Usunięcie pola:** Stare dane w bazie nadal będą miały to pole, ale Jackson je zignoruje podczas deserializacji. To jest bezpieczne.
+
+### Podsumowanie
+
+**Tak, to doskonały i nowoczesny sposób na modelowanie danych.** Daje Ci to, co najlepsze z obu światów:
+
+*   **Elastyczność:** Możesz przechowywać złożone, zagnieżdżone struktury danych bez tworzenia dziesiątek tabel i relacji.
+*   **Integralność:** Nadal korzystasz z transakcji, kluczy obcych i spójności, które oferuje relacyjna baza danych.
+*   **Wygoda i bezpieczeństwo w kodzie:** Pracujesz z silnie typowanymi obiektami Javy, a cała "brudna robota" z konwersją JSON jest ukryta.
+
+
+# How to migrate schema in json column i.e. rename field, I don't want to get cast exceptions on runtime
+
+Doskonałe pytanie! To jeden z najważniejszych problemów, na które natrafisz, używając tego wzorca. Zmiana nazwy pola jest operacją "destrukcyjną" z punktu widzenia deserializacji, jeśli nie zostanie przeprowadzona prawidłowo.
+
+Masz szczęście, ponieważ biblioteka Jackson (której Hibernate używa pod spodem) ma wbudowane, eleganckie mechanizmy do radzenia sobie z taką sytuacją.
+
+Oto jak należy to zrobić, krok po kroku, od najprostszego rozwiązania po kompletną strategię migracji danych.
+
+### Rozwiązanie 1: Natychmiastowe i proste (Użycie adnotacji `@JsonProperty`)
+
+To jest najszybszy i najpopularniejszy sposób na zapewnienie kompatybilności wstecznej bez natychmiastowej zmiany danych w bazie.
+
+Załóżmy, że masz klasę `ProductAttributes` i chcesz zmienić nazwę pola `color` na `productColor`.
+
+**Wersja pierwotna:**
+
+```java
+public class ProductAttributes implements Serializable {
+    private String color;
+    private double weight;
+    // ... gettery, settery
+}
+```
+
+W bazie danych masz rekordy z JSON-em w postaci: `{"color": "czerwony", "weight": 1.5}`
+
+**Wersja po zmianie (nieprawidłowa):**
+
+```java
+// NIE RÓB TEGO BEZ ADNOTACJI!
+public class ProductAttributes implements Serializable {
+    private String productColor; // <-- zmiana nazwy
+    private double weight;
+    // ... gettery, settery
+}
+```
+
+Jeśli teraz wdrożysz ten kod, Jackson podczas odczytu starych rekordów nie znajdzie klucza `"productColor"` w JSON-ie i pole `productColor` w obiekcie będzie miało wartość `null`. **Stracisz dane!**
+
+---
+
+**Wersja po zmianie (PRAWIDŁOWA):**
+
+Użyj adnotacji `@JsonProperty` z biblioteki Jackson, aby poinformować deserializator, jakiej nazwy klucza ma szukać w JSON-ie.
+
+```java
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
+
+public class ProductAttributes implements Serializable {
+
+    @JsonProperty("color") // <-- MAGIA DZIEJE SIĘ TUTAJ
+    private String productColor; // Nazwa pola w kodzie Java jest nowa
+
+    private double weight;
+
+    // ... gettery i settery dla productColor i weight
+
+    // Konstruktor może używać już nowej nazwy
+    public ProductAttributes(String productColor, double weight) {
+        this.productColor = productColor;
+        this.weight = weight;
+    }
+}
+```
+
+**Jak to działa?**
+
+1.  **Podczas odczytu (deserializacji):** Gdy Jackson napotka JSON `{"color": "czerwony", ...}`, zobaczy adnotację `@JsonProperty("color")` przy polu `productColor`. Zrozumie, że wartość klucza `"color"` z JSON-a ma zostać przypisana do pola `productColor` w obiekcie Java.
+2.  **Podczas zapisu (serializacji):** Gdy będziesz zapisywać nowy lub zaktualizowany obiekt, Jackson (domyślnie) użyje nazwy klucza z adnotacji. Oznacza to, że nowe rekordy nadal będą zapisywane jako `{"color": "...", ...}`. Dzięki temu zachowujesz spójny format w bazie danych.
+
+To rozwiązanie jest świetne, bo pozwala na wdrożenie zmiany w kodzie bez natychmiastowej migracji danych. Twoja aplikacja będzie działać poprawnie zarówno ze starymi, jak i nowymi danymi.
+
+### Rozwiązanie 2: Pełna migracja danych (Zalecane na dłuższą metę)
+
+Pozostawienie adnotacji `@JsonProperty` na zawsze jest formą długu technicznego. Kod nie odzwierciedla już w 100% struktury danych, co może być mylące dla przyszłych programistów. Dlatego najlepszym podejściem jest przeprowadzenie pełnej migracji.
+
+Proces ten składa się z trzech etapów:
+
+#### Etap 1: Wdrożenie kodu z adnotacją (tzw. "most")
+
+Dokładnie to, co opisano w Rozwiązaniu 1. Wdrażasz wersję aplikacji, która potrafi czytać stary format i mapować go na nową nazwę pola. Ta wersja będzie też (domyślnie) zapisywać dane w starym formacie, utrzymując spójność.
+
+#### Etap 2: Migracja danych w bazie
+
+Teraz, gdy aplikacja działa i jest "odporna" na stary format, możesz bezpiecznie przeprowadzić migrację danych w bazie PostgreSQL. Można to zrobić na dwa sposoby:
+
+**A) Skrypt SQL (najwydajniejszy i zalecany)**
+
+PostgreSQL ma potężne funkcje do manipulacji JSONB. Użyjemy funkcji `jsonb_set` oraz operatora `-` do usunięcia starego klucza.
+
+```sql
+-- Ten skrypt zmienia nazwę klucza 'color' na 'productColor' we wszystkich rekordach
+-- w tabeli 'products', gdzie klucz 'color' istnieje.
+
+UPDATE products
+SET
+    -- 1. Dodaj nowy klucz 'productColor' z wartością pobraną ze starego klucza 'color'
+    -- 2. Następnie usuń stary klucz 'color'
+    attributes = jsonb_set(attributes, '{productColor}', attributes -> 'color') - 'color'
+WHERE
+    -- Upewnij się, że modyfikujesz tylko te rekordy, które faktycznie mają stary klucz
+    attributes ? 'color';
+```
+
+**Wyjaśnienie skryptu:**
+
+*   `attributes -> 'color'`: pobiera wartość spod klucza `color` jako JSONB.
+*   `jsonb_set(attributes, '{productColor}', ...)`: wstawia nową parę klucz-wartość. `{productColor}` to ścieżka.
+*   `... - 'color'`: operator `-` usuwa klucz z najwyższego poziomu obiektu JSONB.
+*   `attributes ? 'color'`: warunek `WHERE` zapewnia, że operacja dotknie tylko tych JSON-ów, które zawierają klucz `color`.
+
+**B) Skrypt w aplikacji (np. `CommandLineRunner` w Spring Boot)**
+
+Możesz też napisać jednorazowy skrypt w Javie, który odczyta wszystkie encje, zmodyfikuje obiekt i zapisze go z powrotem.
+
+```java
+@Component
+public class DataMigrationRunner implements CommandLineRunner {
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Override
+    @Transactional
+    public void run(String... args) throws Exception {
+        // Ta metoda jest bardzo nieefektywna dla dużych zbiorów danych!
+        // Używaj jej ostrożnie.
+        List<Product> products = productRepository.findAll();
+        for (Product product : products) {
+            ProductAttributes attrs = product.getAttributes();
+            if (attrs != null && attrs.getProductColor() != null) { // Zakładając, że pole już jest zmapowane
+                // Wystarczy zapisać obiekt, Hibernate i Jackson zajmą się resztą
+                // jeśli skonfigurujesz Jacksona by zapisywał z nową nazwą pola.
+                // Aby to zrobić, musisz dostosować zachowanie @JsonProperty
+            }
+        }
+        // W praktyce prościej jest po prostu zapisać encję, a Hibernate wygeneruje UPDATE.
+        // productRepository.saveAll(products); // Uważaj na wydajność!
+    }
+}
+```
+**Uwaga:** Metoda z `CommandLineRunner` jest znacznie wolniejsza i bardziej zasobożerna niż czysty skrypt SQL. Jest dobra dla małych zestawów danych lub gdy nie masz bezpośredniego dostępu do bazy.
+
+#### Etap 3: Sprzątanie kodu
+
+Gdy masz 100% pewności, że wszystkie dane w bazie zostały zmigrowane do nowego formatu (czyli wszystkie JSON-y mają klucz `productColor` zamiast `color`), możesz usunąć "most" z kodu.
+
+**Wersja finalna (czysta):**
+
+```java
+// Już bez adnotacji Jacksona!
+public class ProductAttributes implements Serializable {
+    private String productColor;
+    private double weight;
+    // ... gettery, settery
+}
+```
+
+Teraz Twój kod jest czysty, spójny ze schematem danych w bazie i łatwy do zrozumienia.
+
+### Podsumowanie - zalecana strategia
+
+1.  **Zmień nazwę pola w klasie Java.**
+2.  **Dodaj adnotację `@JsonProperty("stara_nazwa_pola")`** do nowego pola.
+3.  **Wdróż aplikację.** Aplikacja działa teraz w trybie przejściowym.
+4.  **Napisz i uruchom skrypt migracyjny w SQL**, aby zaktualizować dane w bazie.
+5.  Po pomyślnej migracji, **usuń adnotację `@JsonProperty`** z kodu.
+6.  **Wdróż aplikację ponownie.** Gotowe!
+
+Takie podejście zapewnia zero przestojów (zero-downtime deployment), bezpieczeństwo danych i finalnie czysty, czytelny kod.
+
+
+
+
+
+
