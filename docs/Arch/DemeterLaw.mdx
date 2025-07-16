@@ -1,0 +1,166 @@
+---
+sidebar_label: 'Demeter Law'
+---
+
+# What is Demeter Law ?
+
+Świetny wybór! Prawo Demeter to jedna z tych zasad, która po zrozumieniu diametralnie zmienia sposób, w jaki patrzymy na interakcje między obiektami. Jest prosta w założeniach, ale ma ogromny wpływ na elastyczność i łatwość utrzymania kodu.
+
+### Prawo Demeter (Law of Demeter - LoD)
+
+Inaczej nazywane **"Zasadą Najmniejszej Wiedzy" (Principle of Least Knowledge)**.
+
+#### Wersja w jednym zdaniu:
+**Nie rozmawiaj z nieznajomymi; rozmawiaj tylko ze swoimi najbliższymi przyjaciółmi.**
+
+#### Analogia z życia wzięta:
+Wyobraź sobie, że idziesz do sklepu. Chcesz zapłacić za zakupy.
+
+*   **Złe podejście (łamanie Prawa Demeter):** Podchodzisz do kasjera i mówisz: "Proszę wziąć mój portfel, otworzyć go, wyjąć z niego odpowiednią kartę kredytową, włożyć ją do terminala i wpisać PIN". Ujawnisz całą strukturę swojego portfela i proces płatności. Kasjer musi wiedzieć, jak zbudowany jest Twój portfel.
+*   **Dobre podejście (zgodne z Prawem Demeter):** Podchodzisz do kasjera i mówisz: "Proszę, oto 50 złotych" lub podajesz mu kartę, mówiąc "Płacę kartą". Przekazujesz mu tylko to, co jest niezbędne, i prosisz o wykonanie operacji. Nie obchodzi Cię, jak kasjer obsługuje terminal, a kasjera nie obchodzi, skąd wziąłeś pieniądze czy kartę.
+
+W kodzie "nieznajomi" to obiekty, do których dostęp uzyskujemy poprzez inne obiekty. "Przyjaciele" to obiekty, z którymi mamy bezpośrednią relację.
+
+---
+
+### Formalna definicja w kodzie
+
+Metoda `m` obiektu `O` powinna wywoływać metody tylko tych obiektów, które są:
+1.  Samym obiektem `O` (czyli `this`).
+2.  Parametrami przekazanymi do metody `m`.
+3.  Obiektami utworzonymi wewnątrz metody `m` (`new ...`).
+4.  Bezpośrednimi składnikami (polami) obiektu `O`.
+
+**W skrócie: unikaj łańcuchów wywołań metod, takich jak `obiekt.getA().getB().zrobCos()`.** Taki łańcuch jest często nazywany **"pociągiem" (train wreck)**.
+
+---
+
+### Przykład w Javie (kontekst aplikacji Spring)
+
+Załóżmy, że mamy serwis, który musi sprawdzić, w jakim mieście mieszka klient, który złożył zamówienie, aby obliczyć koszt dostawy.
+
+#### ŹLE: Łamanie Prawa Demeter
+
+```java
+// Encje (np. JPA)
+class Order {
+    private Customer customer;
+    // ... gettery
+}
+
+class Customer {
+    private Address address;
+    // ... gettery
+}
+
+class Address {
+    private String city;
+    // ... gettery
+}
+
+// Serwis
+@Service
+public class ShippingService {
+
+    public BigDecimal calculateShippingCost(Order order) {
+        // Ten łańcuch to "pociąg" - klasyczny przykład łamania Prawa Demeter
+        String city = order.getCustomer().getAddress().getCity();
+
+        if ("Warszawa".equals(city)) {
+            return new BigDecimal("10.00");
+        }
+        return new BigDecimal("20.00");
+    }
+}
+```
+
+**Dlaczego to jest złe?**
+1.  **Silne Powiązanie (High Coupling):** `ShippingService` jest teraz ściśle powiązany nie tylko z klasą `Order`, ale także z wewnętrzną strukturą klas `Customer` i `Address`.
+2.  **Kruchość Kodu:** Co się stanie, jeśli klasa `Customer` zostanie zmieniona i nie będzie już przechowywać obiektu `Address`, a zamiast tego `addressId`? Albo jeśli `Address` zmieni pole `city` na `cityName`? **Musisz modyfikować `ShippingService`**, mimo że jego główna odpowiedzialność (kalkulacja kosztu) się nie zmieniła!
+3.  **Łamanie Hermetyzacji:** `ShippingService` wie za dużo o tym, jak `Customer` zarządza swoimi danymi adresowymi.
+
+---
+
+#### DOBRZE: Stosowanie Prawa Demeter
+
+Aby to naprawić, prosimy obiekty, aby same wykonały dla nas pracę, zamiast wyciągać z nich dane i operować na nich na zewnątrz.
+
+**Rozwiązanie 1: Dodanie metody pomocniczej**
+
+Wprowadzamy nową metodę w klasie `Customer`, która ukrywa szczegóły dotyczące adresu.
+
+```java
+class Customer {
+    private Address address;
+
+    public String getCity() {
+        // Customer wie, jak dostać się do miasta, nikt inny nie musi
+        return address.getCity();
+    }
+    // ...
+}
+```
+
+Teraz serwis wygląda lepiej, ale wciąż jest "jeden przystanek za daleko".
+
+```java
+@Service
+public class ShippingService {
+    public BigDecimal calculateShippingCost(Order order) {
+        // Lepiej, ale wciąż sięgamy przez Customer
+        String city = order.getCustomer().getCity();
+        // ... reszta logiki
+    }
+}
+```
+
+**Rozwiązanie 2 (Najlepsze): Pełne zastosowanie zasady**
+
+`ShippingService` powinien rozmawiać tylko ze swoim bezpośrednim "przyjacielem", czyli z obiektem `Order`. To `Order` powinien delegować zadanie dalej.
+
+```java
+class Order {
+    private Customer customer;
+
+    // Order wie, jak zapytać swojego klienta o miasto
+    public String getCustomerCity() {
+        return customer.getCity(); // Zakładając, że metoda z Rozwiązania 1 istnieje w Customer
+    }
+    // ...
+}
+
+// Serwis jest teraz czysty i stabilny
+@Service
+public class ShippingService {
+
+    public BigDecimal calculateShippingCost(Order order) {
+        // IDEALNIE: Serwis rozmawia tylko z obiektem Order.
+        String city = order.getCustomerCity();
+
+        if ("Warszawa".equals(city)) {
+            return new BigDecimal("10.00");
+        }
+        return new BigDecimal("20.00");
+    }
+}
+```
+Teraz, jeśli zmienisz strukturę `Customer` lub `Address`, jedyne miejsce, które wymaga modyfikacji, to klasy `Customer` i/lub `Order`. `ShippingService` pozostaje nietknięty, dopóki kontrakt (`order.getCustomerCity()`) jest zachowany.
+
+### Powiązana zasada: "Tell, Don't Ask" (Mów, nie pytaj)
+
+Prawo Demeter jest mocno związane z tą zasadą. Zamiast *pytać* obiekt o jego stan (`get...`), a następnie podejmować decyzje na zewnątrz, *powiedz* obiektowi, co ma zrobić.
+
+W naszym przykładzie, zamiast pytać `Order` o miasto, moglibyśmy pójść o krok dalej i powiedzieć mu: `order.calculateShippingCost()`. Wtedy cała logika przeniosłaby się do modelu domenowego, co jest celem w architekturze takiej jak DDD.
+
+### Wyjątki i niuanse
+
+*   **Obiekty DTO (Data Transfer Objects):** W przypadku prostych obiektów służących tylko do transferu danych (np. odpowiedzi z API), których celem jest właśnie ujawnienie struktury, łańcuchy getterów są często akceptowalne. DTO z definicji nie mają logiki biznesowej, którą moglibyśmy naruszyć.
+*   **Fluent API / Buildery:** Konstrukcje takie jak `StringBuilder.append("a").append("b")` lub `Stream.of(1,2,3).map(...).filter(...).collect(...)` technicznie wyglądają jak łamanie zasady, ale w rzeczywistości nie łamią jej ducha, ponieważ każda metoda zwraca ten sam obiekt (`this`) lub nowy obiekt, który staje się naszym "bezpośrednim przyjacielem" w następnym kroku.
+
+### Podsumowanie korzyści
+
+Stosowanie Prawa Demeter prowadzi do:
+1.  **Niższego Powiązania (Loose Coupling):** Komponenty są od siebie bardziej niezależne.
+2.  **Lepszej Hermetyzacji (Encapsulation):** Wewnętrzna struktura obiektów jest ukryta.
+3.  **Łatwiejszego Utrzymania i Refaktoryzacji:** Zmiany w jednym module nie powodują kaskadowych zmian w całym systemie.
+4.  **Czytelniejszego Kodu:** Intencje są jaśniejsze, bo obiekty oferują usługi na wyższym poziomie abstrakcji (`getCustomerCity()` vs `getCustomer().getAddress().getCity()`).
