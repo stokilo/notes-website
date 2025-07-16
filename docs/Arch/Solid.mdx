@@ -11,3 +11,1116 @@ import EmbeddedBoard from "../components/EmbeddedBoard";
   importUrl="https://notes.slawomirstec.com/diagrams/solid.json"
 />
 
+## S – Single Responsibility Principle
+
+Oczywiście. Z przyjemnością wytłumaczę **Zasadę Jednej Odpowiedzialności (Single Responsibility Principle - SRP)** na praktycznym przykładzie z użyciem **Javy i frameworka Spring**, który odzwierciedla realne scenariusze spotykane w pracy.
+
+### Wprowadzenie do zasady
+
+**Zasada Jednej Odpowiedzialności** mówi, że:
+
+> **Klasa powinna mieć tylko jeden powód do zmiany.**
+
+Co to jest "powód do zmiany"? W kontekście aplikacji biznesowej, najlepiej myśleć o tym jako o **odpowiedzialności wobec różnych "aktorów" lub działów w organizacji**. Jeśli zmiana wymagań od działu marketingu (np. treść maila powitalnego) oraz zmiana wymagań od działu IT (np. migracja bazy danych) zmusza Cię do modyfikacji tej samej klasy, to ta klasa łamie SRP. Ma co najmniej dwa "powody do zmiany".
+
+---
+
+### Scenariusz: Rejestracja nowego użytkownika w aplikacji e-commerce
+
+Proces rejestracji użytkownika w systemie opartym na Spring Boot składa się z kilku kroków:
+1.  Odebranie żądania HTTP z danymi (JSON).
+2.  Walidacja danych wejściowych (czy email jest poprawny, hasło silne itp.).
+3.  Sprawdzenie logiki biznesowej (czy użytkownik o tym e-mailu już nie istnieje).
+4.  Zapisanie nowego użytkownika w bazie danych (hasło musi być zahaszowane).
+5.  Wysłanie asynchronicznego e-maila powitalnego.
+
+---
+
+### Zły przykład - Naruszenie zasady SRP w komponencie Spring
+
+Początkujący programista mógłby umieścić całą tę logikę w jednym komponencie `@Service`.
+
+**Kod (po angielsku):**
+
+```java
+// 👎 BAD EXAMPLE - VIOLATES SRP
+
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository; // Załóżmy, że to interfejs JpaRepository
+
+    @Autowired
+    private JavaMailSender mailSender; // Bezpośrednia zależność od implementacji mailowej
+
+    // Metoda, która robi wszystko
+    public void registerUser(String email, String rawPassword) {
+
+        // 1. Odpowiedzialność: Walidacja danych wejściowych
+        if (email == null || !email.contains("@")) {
+            throw new IllegalArgumentException("Invalid email format.");
+        }
+        if (rawPassword == null || rawPassword.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long.");
+        }
+
+        // 2. Odpowiedzialność: Logika biznesowa (sprawdzanie duplikatów)
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new IllegalStateException("User with this email already exists.");
+        }
+
+        // 3. Odpowiedzialność: Haszowanie hasła (szczegół implementacyjny)
+        String hashedPassword = BCrypt.hashpw(rawPassword, BCrypt.gensalt());
+
+        // 4. Odpowiedzialność: Tworzenie i zapis do bazy danych
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(hashedPassword);
+        userRepository.save(user);
+
+        // 5. Odpowiedzialność: Wysyłanie powiadomienia e-mail
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("noreply@example.com");
+        message.setTo(email);
+        message.setSubject("Welcome to our platform!");
+        message.setText("Thank you for registering. We are happy to have you.");
+
+        try {
+            mailSender.send(message);
+        } catch (MailException e) {
+            // Co jeśli wysyłka się nie powiedzie? Logika obsługi błędów też jest tutaj.
+            // Blokuje to również odpowiedź do użytkownika na czas wysyłki maila.
+            System.err.println("Failed to send email: " + e.getMessage());
+        }
+    }
+}
+```
+
+#### Analiza problemu
+
+Ta klasa `UserService` ma **kilka różnych odpowiedzialności**, a co za tym idzie – **kilka powodów do zmiany**:
+
+1.  **Zmiana reguł walidacji:** Analityk biznesowy zmienia wymagania dotyczące hasła. **Musimy modyfikować `UserService`**.
+2.  **Zmiana sposobu przechowywania danych:** Zmieniamy `UserRepository` na inne źródło danych. Potencjalnie **musimy modyfikować `UserService`**.
+3.  **Zmiana algorytmu haszowania:** Wprowadzamy Argon2 zamiast BCrypt. **Musimy modyfikować `UserService`**.
+4.  **Zmiana szablonu lub sposobu wysyłki e-maili:** Dział marketingu chce dodać HTML do maila, albo przechodzimy na SendGrid API. **Musimy modyfikować `UserService`**.
+5.  **Zmiana polityki obsługi błędów wysyłki:** Co zrobić, gdy mail się nie wyśle? Zapisać w kolejce? **Musimy modyfikować `UserService`**.
+
+Klasa jest trudna do testowania (jak testować logikę bez prawdziwej bazy i serwera SMTP?), sztywna i podatna na błędy.
+
+---
+
+### Dobry przykład - Zastosowanie zasady SRP w architekturze Spring
+
+Rozbijamy logikę na wyspecjalizowane komponenty Springa. Każdy ma jedną, jasno zdefiniowaną odpowiedzialność.
+
+#### 1. `RegistrationRequest` (DTO z walidacją)
+Odpowiedzialność: Przenoszenie danych z warstwy kontrolera i deklarowanie reguł walidacji.
+
+```java
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
+
+public class RegistrationRequest {
+    @NotEmpty
+    @Email(message = "Invalid email format")
+    private String email;
+
+    @NotEmpty
+    @Size(min = 8, message = "Password must be at least 8 characters long")
+    private String password;
+
+    // Getters and Setters
+}
+```
+
+#### 2. `UserRegistrationController` (Warstwa API)
+Odpowiedzialność: Obsługa żądań HTTP, walidacja DTO i delegowanie pracy do serwisu.
+
+```java
+@RestController
+@RequestMapping("/api/users")
+public class UserRegistrationController {
+
+    private final RegistrationService registrationService;
+
+    @Autowired
+    public UserRegistrationController(RegistrationService registrationService) {
+        this.registrationService = registrationService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<String> registerUser(@Valid @RequestBody RegistrationRequest request) {
+        registrationService.register(request.getEmail(), request.getPassword());
+        return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
+    }
+}
+```
+
+#### 3. `PasswordEncoder` (Komponent do haszowania)
+Odpowiedzialność: Tylko i wyłącznie haszowanie i weryfikacja haseł. W Springu to standard, konfigurujemy go jako Bean.
+
+```java
+// W klasie konfiguracyjnej @Configuration
+@Bean
+public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+}
+```
+
+#### 4. `NotificationService` (Serwis powiadomień)
+Odpowiedzialność: Wysyłanie powiadomień. Może być asynchroniczny, aby nie blokować głównego wątku.
+
+```java
+public interface NotificationService {
+    void sendWelcomeEmail(String email);
+}
+
+@Service
+public class EmailNotificationService implements NotificationService {
+
+    private final JavaMailSender mailSender;
+
+    @Autowired
+    public EmailNotificationService(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
+    }
+
+    @Async // Wykonywane asynchronicznie w oddzielnym wątku
+    @Override
+    public void sendWelcomeEmail(String email) {
+        // ... logika tworzenia i wysyłania maila ...
+        System.out.println("Sending welcome email to " + email);
+        // mailSender.send(...)
+    }
+}
+// Pamiętaj o dodaniu @EnableAsync w głównej klasie aplikacji
+```
+
+#### 5. `RegistrationService` (Orkiestrator)
+Odpowiedzialność: **Koordynacja** procesu rejestracji. Nie zawiera logiki walidacji, haszowania, zapisu do bazy czy wysyłki maili. Deleguje te zadania do innych komponentów.
+
+```java
+// 👍 GOOD EXAMPLE - FOLLOWS SRP
+
+@Service
+public class RegistrationService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
+
+    // Zależności są wstrzykiwane przez konstruktor
+    @Autowired
+    public RegistrationService(UserRepository userRepository,
+                               PasswordEncoder passwordEncoder,
+                               NotificationService notificationService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.notificationService = notificationService;
+    }
+
+    public void register(String email, String rawPassword) {
+        // Krok 1: Sprawdzenie logiki biznesowej (delegacja do repozytorium)
+        userRepository.findByEmail(email).ifPresent(user -> {
+            throw new IllegalStateException("User with this email already exists.");
+        });
+
+        // Krok 2: Haszowanie hasła (delegacja do PasswordEncoder)
+        String hashedPassword = passwordEncoder.encode(rawPassword);
+
+        // Krok 3: Stworzenie obiektu encji
+        User user = new User(email, hashedPassword);
+
+        // Krok 4: Zapisanie użytkownika (delegacja do repozytorium)
+        userRepository.save(user);
+
+        // Krok 5: Wysłanie powiadomienia (delegacja do serwisu powiadomień)
+        notificationService.sendWelcomeEmail(user.getEmail());
+    }
+}
+```
+
+### Podsumowanie korzyści z podejścia SRP w Springu
+
+1.  **Maksymalna Testowalność:**
+*   Możesz testować `RegistrationService` z użyciem mocków (np. `Mockito`), aby sprawdzić, czy wywołuje odpowiednie metody na repozytorium i serwisie powiadomień, bez potrzeby uruchamiania bazy danych czy serwera SMTP.
+*   Możesz osobno testować logikę `EmailNotificationService`.
+
+2.  **Elastyczność i Łatwość Zmian:**
+*   Chcesz zmienić treść maila lub system wysyłki na SMS? Modyfikujesz **tylko** `NotificationService`.
+*   Chcesz zmienić algorytm haszowania? Zmieniasz **tylko** konfigurację beana `PasswordEncoder`.
+*   Nowe reguły walidacji? Dodajesz adnotacje w DTO (`RegistrationRequest`).
+*   Klasa `RegistrationService` pozostaje nienaruszona, stabilna i czysta.
+
+3.  **Czytelność i Spójność:**
+*   Kod w `RegistrationService` jest zwięzły i opisuje proces biznesowy na wysokim poziomie abstrakcji. Czytając go, od razu wiesz, co się dzieje, bez zagłębiania się w szczegóły implementacyjne.
+
+4.  **Wielokrotne Użycie (Reusability):**
+*   `NotificationService` może być używany w innych częściach aplikacji, np. do wysyłania powiadomień o zresetowaniu hasła.
+*   `PasswordEncoder` jest używany także przy logowaniu.
+
+Stosowanie SRP w aplikacjach Spring, w połączeniu z wstrzykiwaniem zależności (Dependency Injection), prowadzi do tworzenia solidnych, skalowalnych i łatwych w utrzymaniu systemów.
+
+## O – Open/Closed Principle
+
+Oczywiście. Wyjaśnię **Zasadę Otwarte/Zamknięte (Open/Closed Principle - OCP)**, korzystając z praktycznego, realistycznego przykładu w **Javie i frameworku Spring**.
+
+### Wprowadzenie do zasady
+
+**Zasada Otwarte/Zamknięte** jest jedną z najważniejszych zasad SOLID i głosi, że:
+
+> **Komponenty (klasy, moduły, funkcje) powinny być otwarte na rozszerzenia, ale zamknięte na modyfikacje.**
+
+Co to oznacza w praktyce?
+*   **Otwarte na rozszerzenia:** Powinieneś być w stanie dodawać nowe funkcjonalności lub zachowania do komponentu bez zmieniania jego kodu źródłowego.
+*   **Zamknięte na modyfikacje:** Gdy komponent został opracowany i przetestowany, jego kod źródłowy nie powinien być modyfikowany w celu dodania nowej funkcjonalności. Zmiany powinny dotyczyć tylko naprawy błędów.
+
+Głównym sposobem na osiągnięcie tego jest użycie **abstrakcji (interfejsów lub klas abstrakcyjnych)**, co pozwala na tworzenie architektury typu "plug-in".
+
+---
+
+### Scenariusz: System przetwarzania płatności w aplikacji e-commerce
+
+Wyobraźmy sobie, że budujemy serwis, który ma za zadanie przetwarzać płatności za zamówienia.
+*   **Początkowe wymaganie:** System musi obsługiwać płatności kartą kredytową.
+*   **Przyszłe wymagania:** Biznes planuje w przyszłości dodać nowe metody płatności, takie jak PayPal, a później również polski system BLIK.
+
+Naszym celem jest zaprojektowanie systemu tak, aby dodanie nowej metody płatności nie wymagało modyfikacji istniejącego, działającego kodu serwisu płatności.
+
+---
+
+### Zły przykład - Naruszenie zasady OCP
+
+Podejście, które łamie OCP, polega na użyciu instrukcji warunkowych (`if-else` lub `switch`) do rozróżniania metod płatności.
+
+**Kod (po angielsku):**
+
+```java
+// 👎 BAD EXAMPLE - VIOLATES OCP
+
+// Enum do reprezentowania metod płatności
+public enum PaymentMethod {
+    CREDIT_CARD,
+    PAYPAL,
+    BLIK
+}
+
+@Service
+public class PaymentService {
+
+    public void processPayment(BigDecimal amount, PaymentMethod method) {
+        // Ten blok if-else jest ZŁAMANIEM ZASADY OCP
+        if (method == PaymentMethod.CREDIT_CARD) {
+            // Logika specyficzna dla płatności kartą
+            System.out.println("Processing credit card payment of: " + amount);
+            // ... wywołanie API bramek płatniczych dla kart ...
+        } else if (method == PaymentMethod.PAYPAL) {
+            // Logika specyficzna dla PayPal
+            System.out.println("Redirecting to PayPal for payment of: " + amount);
+            // ... logika przekierowania do PayPal ...
+        }
+        // ... więcej warunków w przyszłości ...
+    }
+}
+```
+
+#### Analiza problemu
+
+Ten kod jest **zamknięty na rozszerzenia** i **otwarty na modyfikacje** – dokładnie na odwrót, niż mówi zasada.
+1.  **Aby dodać BLIK**, programista musi **zmodyfikować** klasę `PaymentService`, dodając kolejny blok `else if`.
+2.  Każda taka modyfikacja zwiększa złożoność klasy i ryzyko wprowadzenia błędu (regresji) w już działających metodach płatności.
+3.  Testowanie staje się coraz trudniejsze, ponieważ trzeba przetestować wszystkie gałęzie instrukcji warunkowej.
+4.  Klasa `PaymentService` zaczyna łamać również Zasadę Jednej Odpowiedzialności (SRP), ponieważ wie za dużo o szczegółach implementacyjnych każdej metody płatności.
+
+---
+
+### Dobry przykład - Zastosowanie zasady OCP w architekturze Spring
+
+Aby zaimplementować OCP, użyjemy wzorca projektowego **Strategia (Strategy Pattern)**, który idealnie komponuje się z mechanizmem wstrzykiwania zależności w Springu.
+
+#### 1. Stworzenie Abstrakcji (Kontraktu) - `PaymentProvider`
+Definiujemy interfejs, który będzie kontraktem dla wszystkich przyszłych metod płatności.
+
+```java
+public enum PaymentMethod {
+    CREDIT_CARD,
+    PAYPAL,
+    BLIK
+}
+
+public interface PaymentProvider {
+    /**
+     * Processes the payment.
+     */
+    void processPayment(BigDecimal amount);
+
+    /**
+     * Checks if this provider supports the given payment method.
+     */
+    boolean supports(PaymentMethod paymentMethod);
+}
+```
+
+#### 2. Stworzenie Konkretnych Implementacji (Rozszerzeń)
+Teraz tworzymy osobne klasy dla każdej metody płatności. Każda z nich implementuje nasz interfejs `PaymentProvider` i jest oznaczona jako komponent Springa (`@Component`).
+
+```java
+// Implementacja dla kart kredytowych
+@Component
+public class CreditCardPaymentProvider implements PaymentProvider {
+    @Override
+    public void processPayment(BigDecimal amount) {
+        System.out.println("Processing credit card payment of: " + amount);
+        // ... skomplikowana logika specyficzna dla kart ...
+    }
+
+    @Override
+    public boolean supports(PaymentMethod paymentMethod) {
+        return paymentMethod == PaymentMethod.CREDIT_CARD;
+    }
+}
+
+// Implementacja dla PayPal
+@Component
+public class PayPalPaymentProvider implements PaymentProvider {
+    @Override
+    public void processPayment(BigDecimal amount) {
+        System.out.println("Redirecting to PayPal for payment of: " + amount);
+        // ... skomplikowana logika specyficzna dla PayPal ...
+    }
+
+    @Override
+    public boolean supports(PaymentMethod paymentMethod) {
+        return paymentMethod == PaymentMethod.PAYPAL;
+    }
+}
+```
+
+#### 3. Stworzenie Orkiestratora (Komponent "Zamknięty")
+`PaymentService` staje się teraz "orkiestratorem". Nie wie nic o konkretnych implementacjach. Jego jedynym zadaniem jest znalezienie odpowiedniego dostawcy i delegowanie do niego pracy. **Jego kod nie będzie wymagał zmian, gdy dodamy nową metodę płatności.**
+
+Wykorzystamy tutaj potężną funkcję Springa: **wstrzykiwanie wszystkich beanów danego typu do listy.**
+
+```java
+// 👍 GOOD EXAMPLE - FOLLOWS OCP
+
+@Service
+public class PaymentService {
+
+    private final List<PaymentProvider> paymentProviders;
+
+    // Spring automatycznie wstrzyknie listę wszystkich beanów,
+    // które implementują interfejs PaymentProvider.
+    @Autowired
+    public PaymentService(List<PaymentProvider> paymentProviders) {
+        this.paymentProviders = paymentProviders;
+    }
+
+    public void processPayment(BigDecimal amount, PaymentMethod method) {
+        // Znajdź odpowiedniego dostawcę bez użycia if-else
+        PaymentProvider provider = paymentProviders.stream()
+                .filter(p -> p.supports(method))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported payment method: " + method));
+
+        // Deleguj wykonanie płatności
+        provider.processPayment(amount);
+    }
+}
+```
+
+#### Jak teraz dodać nową metodę płatności (np. BLIK)?
+
+Wystarczy stworzyć **nową klasę**. Nie dotykamy `PaymentService` ani żadnej innej istniejącej klasy!
+
+```java
+// Nowe rozszerzenie - dodane bez modyfikacji istniejącego kodu!
+@Component
+public class BlikPaymentProvider implements PaymentProvider {
+    @Override
+    public void processPayment(BigDecimal amount) {
+        System.out.println("Generating BLIK code for payment of: " + amount);
+        // ... logika specyficzna dla BLIK ...
+    }
+
+    @Override
+    public boolean supports(PaymentMethod paymentMethod) {
+        return paymentMethod == PaymentMethod.BLIK;
+    }
+}
+```
+
+Gdy aplikacja Springa uruchomi się ponownie, automatycznie wykryje nowy bean `BlikPaymentProvider`, doda go do listy w `PaymentService` i system od razu zacznie obsługiwać płatności BLIK.
+
+### Podsumowanie korzyści z podejścia OCP
+
+1.  **Elastyczność i skalowalność:** System jest "otwarty na rozszerzenia". Nowe funkcjonalności są dodawane poprzez tworzenie nowych klas, a nie modyfikację starych. To architektura typu "plug-and-play".
+2.  **Stabilność i mniejsze ryzyko:** System jest "zamknięty na modyfikacje". Główna logika biznesowa w `PaymentService` jest stabilna, przetestowana i nie jest narażona na błędy regresji przy dodawaniu nowych opcji.
+3.  **Łatwość utrzymania i testowania:** Każdą metodę płatności (`PaymentProvider`) można rozwijać i testować niezależnie. Testowanie `PaymentService` jest proste – wystarczy dostarczyć mu listę zamockowanych dostawców.
+4.  **Zgodność z innymi zasadami SOLID:**
+*   **SRP:** Każdy `PaymentProvider` ma jedną, dobrze zdefiniowaną odpowiedzialność.
+*   **DIP:** `PaymentService` zależy od abstrakcji (`PaymentProvider`), a nie od konkretnych implementacji.
+
+Zastosowanie OCP prowadzi do tworzenia czystych, modułowych i elastycznych systemów, które łatwo adaptują się do zmieniających się wymagań biznesowych.
+
+
+## L – Liskov Substitution Principle
+
+Oczywiście. Wyjaśnię **Zasadę Otwarte/Zamknięte (Open/Closed Principle - OCP)**, korzystając z praktycznego, realistycznego przykładu w **Javie i frameworku Spring**.
+
+### Wprowadzenie do zasady
+
+**Zasada Otwarte/Zamknięte** jest jedną z najważniejszych zasad SOLID i głosi, że:
+
+> **Komponenty (klasy, moduły, funkcje) powinny być otwarte na rozszerzenia, ale zamknięte na modyfikacje.**
+
+Co to oznacza w praktyce?
+*   **Otwarte na rozszerzenia:** Powinieneś być w stanie dodawać nowe funkcjonalności lub zachowania do komponentu bez zmieniania jego kodu źródłowego.
+*   **Zamknięte na modyfikacje:** Gdy komponent został opracowany i przetestowany, jego kod źródłowy nie powinien być modyfikowany w celu dodania nowej funkcjonalności. Zmiany powinny dotyczyć tylko naprawy błędów.
+
+Głównym sposobem na osiągnięcie tego jest użycie **abstrakcji (interfejsów lub klas abstrakcyjnych)**, co pozwala na tworzenie architektury typu "plug-in".
+
+---
+
+### Scenariusz: System przetwarzania płatności w aplikacji e-commerce
+
+Wyobraźmy sobie, że budujemy serwis, który ma za zadanie przetwarzać płatności za zamówienia.
+*   **Początkowe wymaganie:** System musi obsługiwać płatności kartą kredytową.
+*   **Przyszłe wymagania:** Biznes planuje w przyszłości dodać nowe metody płatności, takie jak PayPal, a później również polski system BLIK.
+
+Naszym celem jest zaprojektowanie systemu tak, aby dodanie nowej metody płatności nie wymagało modyfikacji istniejącego, działającego kodu serwisu płatności.
+
+---
+
+### Zły przykład - Naruszenie zasady OCP
+
+Podejście, które łamie OCP, polega na użyciu instrukcji warunkowych (`if-else` lub `switch`) do rozróżniania metod płatności.
+
+**Kod (po angielsku):**
+
+```java
+// 👎 BAD EXAMPLE - VIOLATES OCP
+
+// Enum do reprezentowania metod płatności
+public enum PaymentMethod {
+    CREDIT_CARD,
+    PAYPAL,
+    BLIK
+}
+
+@Service
+public class PaymentService {
+
+    public void processPayment(BigDecimal amount, PaymentMethod method) {
+        // Ten blok if-else jest ZŁAMANIEM ZASADY OCP
+        if (method == PaymentMethod.CREDIT_CARD) {
+            // Logika specyficzna dla płatności kartą
+            System.out.println("Processing credit card payment of: " + amount);
+            // ... wywołanie API bramek płatniczych dla kart ...
+        } else if (method == PaymentMethod.PAYPAL) {
+            // Logika specyficzna dla PayPal
+            System.out.println("Redirecting to PayPal for payment of: " + amount);
+            // ... logika przekierowania do PayPal ...
+        }
+        // ... więcej warunków w przyszłości ...
+    }
+}
+```
+
+#### Analiza problemu
+
+Ten kod jest **zamknięty na rozszerzenia** i **otwarty na modyfikacje** – dokładnie na odwrót, niż mówi zasada.
+1.  **Aby dodać BLIK**, programista musi **zmodyfikować** klasę `PaymentService`, dodając kolejny blok `else if`.
+2.  Każda taka modyfikacja zwiększa złożoność klasy i ryzyko wprowadzenia błędu (regresji) w już działających metodach płatności.
+3.  Testowanie staje się coraz trudniejsze, ponieważ trzeba przetestować wszystkie gałęzie instrukcji warunkowej.
+4.  Klasa `PaymentService` zaczyna łamać również Zasadę Jednej Odpowiedzialności (SRP), ponieważ wie za dużo o szczegółach implementacyjnych każdej metody płatności.
+
+---
+
+### Dobry przykład - Zastosowanie zasady OCP w architekturze Spring
+
+Aby zaimplementować OCP, użyjemy wzorca projektowego **Strategia (Strategy Pattern)**, który idealnie komponuje się z mechanizmem wstrzykiwania zależności w Springu.
+
+#### 1. Stworzenie Abstrakcji (Kontraktu) - `PaymentProvider`
+Definiujemy interfejs, który będzie kontraktem dla wszystkich przyszłych metod płatności.
+
+```java
+public enum PaymentMethod {
+    CREDIT_CARD,
+    PAYPAL,
+    BLIK
+}
+
+public interface PaymentProvider {
+    /**
+     * Processes the payment.
+     */
+    void processPayment(BigDecimal amount);
+
+    /**
+     * Checks if this provider supports the given payment method.
+     */
+    boolean supports(PaymentMethod paymentMethod);
+}
+```
+
+#### 2. Stworzenie Konkretnych Implementacji (Rozszerzeń)
+Teraz tworzymy osobne klasy dla każdej metody płatności. Każda z nich implementuje nasz interfejs `PaymentProvider` i jest oznaczona jako komponent Springa (`@Component`).
+
+```java
+// Implementacja dla kart kredytowych
+@Component
+public class CreditCardPaymentProvider implements PaymentProvider {
+    @Override
+    public void processPayment(BigDecimal amount) {
+        System.out.println("Processing credit card payment of: " + amount);
+        // ... skomplikowana logika specyficzna dla kart ...
+    }
+
+    @Override
+    public boolean supports(PaymentMethod paymentMethod) {
+        return paymentMethod == PaymentMethod.CREDIT_CARD;
+    }
+}
+
+// Implementacja dla PayPal
+@Component
+public class PayPalPaymentProvider implements PaymentProvider {
+    @Override
+    public void processPayment(BigDecimal amount) {
+        System.out.println("Redirecting to PayPal for payment of: " + amount);
+        // ... skomplikowana logika specyficzna dla PayPal ...
+    }
+
+    @Override
+    public boolean supports(PaymentMethod paymentMethod) {
+        return paymentMethod == PaymentMethod.PAYPAL;
+    }
+}
+```
+
+#### 3. Stworzenie Orkiestratora (Komponent "Zamknięty")
+`PaymentService` staje się teraz "orkiestratorem". Nie wie nic o konkretnych implementacjach. Jego jedynym zadaniem jest znalezienie odpowiedniego dostawcy i delegowanie do niego pracy. **Jego kod nie będzie wymagał zmian, gdy dodamy nową metodę płatności.**
+
+Wykorzystamy tutaj potężną funkcję Springa: **wstrzykiwanie wszystkich beanów danego typu do listy.**
+
+```java
+// 👍 GOOD EXAMPLE - FOLLOWS OCP
+
+@Service
+public class PaymentService {
+
+    private final List<PaymentProvider> paymentProviders;
+
+    // Spring automatycznie wstrzyknie listę wszystkich beanów,
+    // które implementują interfejs PaymentProvider.
+    @Autowired
+    public PaymentService(List<PaymentProvider> paymentProviders) {
+        this.paymentProviders = paymentProviders;
+    }
+
+    public void processPayment(BigDecimal amount, PaymentMethod method) {
+        // Znajdź odpowiedniego dostawcę bez użycia if-else
+        PaymentProvider provider = paymentProviders.stream()
+                .filter(p -> p.supports(method))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported payment method: " + method));
+
+        // Deleguj wykonanie płatności
+        provider.processPayment(amount);
+    }
+}
+```
+
+#### Jak teraz dodać nową metodę płatności (np. BLIK)?
+
+Wystarczy stworzyć **nową klasę**. Nie dotykamy `PaymentService` ani żadnej innej istniejącej klasy!
+
+```java
+// Nowe rozszerzenie - dodane bez modyfikacji istniejącego kodu!
+@Component
+public class BlikPaymentProvider implements PaymentProvider {
+    @Override
+    public void processPayment(BigDecimal amount) {
+        System.out.println("Generating BLIK code for payment of: " + amount);
+        // ... logika specyficzna dla BLIK ...
+    }
+
+    @Override
+    public boolean supports(PaymentMethod paymentMethod) {
+        return paymentMethod == PaymentMethod.BLIK;
+    }
+}
+```
+
+Gdy aplikacja Springa uruchomi się ponownie, automatycznie wykryje nowy bean `BlikPaymentProvider`, doda go do listy w `PaymentService` i system od razu zacznie obsługiwać płatności BLIK.
+
+### Podsumowanie korzyści z podejścia OCP
+
+1.  **Elastyczność i skalowalność:** System jest "otwarty na rozszerzenia". Nowe funkcjonalności są dodawane poprzez tworzenie nowych klas, a nie modyfikację starych. To architektura typu "plug-and-play".
+2.  **Stabilność i mniejsze ryzyko:** System jest "zamknięty na modyfikacje". Główna logika biznesowa w `PaymentService` jest stabilna, przetestowana i nie jest narażona na błędy regresji przy dodawaniu nowych opcji.
+3.  **Łatwość utrzymania i testowania:** Każdą metodę płatności (`PaymentProvider`) można rozwijać i testować niezależnie. Testowanie `PaymentService` jest proste – wystarczy dostarczyć mu listę zamockowanych dostawców.
+4.  **Zgodność z innymi zasadami SOLID:**
+*   **SRP:** Każdy `PaymentProvider` ma jedną, dobrze zdefiniowaną odpowiedzialność.
+*   **DIP:** `PaymentService` zależy od abstrakcji (`PaymentProvider`), a nie od konkretnych implementacji.
+
+Zastosowanie OCP prowadzi do tworzenia czystych, modułowych i elastycznych systemów, które łatwo adaptują się do zmieniających się wymagań biznesowych.
+
+
+## I – Interface Segregation Principle
+
+Oczywiście, przejdźmy do **Zasady Segregacji Interfejsów (Interface Segregation Principle - ISP)**, ilustrując ją praktycznym przykładem w Javie i Springu.
+
+### Wprowadzenie do zasady
+
+**Zasada Segregacji Interfejsów** jest jedną z najprostszych do zrozumienia zasad SOLID. Mówi ona, że:
+
+> **Klienci (klasy) nie powinni być zmuszani do implementowania interfejsów, których metod nie używają.**
+
+Innymi słowy, lepiej jest mieć wiele małych, specyficznych interfejsów niż jeden duży, ogólny ("gruby" interfejs). Kiedy klasa implementuje interfejs, powinna wykorzystywać wszystkie jego metody. Jeśli jest zmuszona do implementowania metod, które w jej kontekście nie mają sensu (np. poprzez rzucanie `UnsupportedOperationException` lub pozostawianie pustej implementacji), jest to sygnał naruszenia ISP.
+
+---
+
+### Scenariusz: Zarządzanie dokumentami w systemie firmowym
+
+Wyobraźmy sobie system, w którym zarządzamy różnymi typami dokumentów. Mamy dokumenty, które są przechowywane w bazie danych, a także dokumenty, które są generowane w locie i mogą być drukowane lub eksportowane do formatu PDF.
+
+Chcemy stworzyć jednolity mechanizm do operacji na dokumentach.
+
+---
+
+### Zły przykład - Naruszenie zasady ISP ("Gruby" interfejs)
+
+Początkowe podejście może polegać na stworzeniu jednego, dużego interfejsu, który obejmuje wszystkie możliwe operacje.
+
+**Kod (po angielsku):**
+
+```java
+// 👎 BAD EXAMPLE - "FAT" INTERFACE VIOLATING ISP
+
+public interface DocumentOperations {
+
+    // Metody związane z trwałością (bazą danych)
+    void save(Document d);
+    Document findById(long id);
+    void delete(long id);
+
+    // Metody związane z konwersją i wydrukiem
+    byte[] toPdf(Document d);
+    void print(Document d);
+}
+```
+
+Teraz spróbujmy zaimplementować ten interfejs dla różnych typów dokumentów.
+
+**Implementacja dla dokumentu trwałego (np. faktury):**
+Faktura jest przechowywana w bazie, może być drukowana i eksportowana. Wygląda to w miarę OK.
+
+```java
+@Component
+public class InvoiceDocumentManager implements DocumentOperations {
+
+    @Override
+    public void save(Document d) { /* ... logika zapisu do DB ... */ }
+
+    @Override
+    public Document findById(long id) { /* ... logika odczytu z DB ... */ return null; }
+
+    @Override
+    public void delete(long id) { /* ... logika usunięcia z DB ... */ }
+
+    @Override
+    public byte[] toPdf(Document d) { /* ... logika generowania PDF ... */ return new byte[0]; }
+
+    @Override
+    public void print(Document d) { /* ... logika wysłania do drukarki ... */ }
+}
+```
+
+**Implementacja dla dokumentu generowanego w locie (np. raportu tymczasowego):**
+Raport tymczasowy nie jest zapisywany w bazie danych. Jest tworzony, eksportowany do PDF, a następnie znika. Tutaj pojawia się problem:
+
+```java
+@Component
+public class TemporaryReportManager implements DocumentOperations {
+
+    // Te metody nie mają sensu dla raportu tymczasowego.
+    // Jesteśmy zmuszeni do ich zaimplementowania.
+    @Override
+    public void save(Document d) {
+        throw new UnsupportedOperationException("Temporary reports cannot be saved.");
+    }
+
+    @Override
+    public Document findById(long id) {
+        throw new UnsupportedOperationException("Temporary reports cannot be found by ID.");
+    }
+
+    @Override
+    public void delete(long id) {
+        // Co tu zrobić? Zostawić puste? To też jest mylące.
+    }
+
+    // Te metody są używane
+    @Override
+    public byte[] toPdf(Document d) {
+        System.out.println("Generating PDF for a temporary report.");
+        // ... logika generowania PDF ...
+        return new byte[0];
+    }
+
+    @Override
+    public void print(Document d) {
+        System.out.println("Printing a temporary report.");
+        // ... logika wysłania do drukarki ...
+    }
+}
+```
+
+#### Analiza problemu
+
+1.  **Wymuszona implementacja:** Klasa `TemporaryReportManager` jest zmuszona do implementowania metod `save`, `findById`, `delete`, mimo że ich nie potrzebuje. To prowadzi do nieczystego kodu (puste metody, rzucanie wyjątków), który jest trudny w utrzymaniu i mylący dla innych programistów.
+2.  **Kruchość i niejasny kontrakt:** Klient, który otrzymuje obiekt typu `DocumentOperations`, nie wie, czy może bezpiecznie wywołać na nim metodę `save()`. Musiałby użyć `instanceof`, aby sprawdzić, z jaką konkretnie implementacją ma do czynienia, co łamie również zasadę Liskov.
+3.  **Niepotrzebne zależności:** Jeśli klient potrzebuje tylko konwertować dokument do PDF, wciąż musi mieć zależność do całego "grubego" interfejsu, włączając w to metody, których nigdy nie użyje.
+
+---
+
+### Dobry przykład - Zastosowanie zasady ISP (Segregacja interfejsów)
+
+Rozwiązaniem jest podzielenie "grubego" interfejsu na mniejsze, bardziej spójne interfejsy, każdy z nich skupiony na jednej, konkretnej odpowiedzialności.
+
+```java
+// 👍 GOOD EXAMPLE - SEGREGATED INTERFACES
+
+// Interfejs dla operacji na trwałych danych (CRUD)
+public interface PersistentDocumentStore {
+    void save(Document d);
+    Document findById(long id);
+    void delete(long id);
+}
+
+// Interfejs dla operacji konwersji
+public interface ConvertibleDocument {
+    byte[] toPdf(Document d);
+}
+
+// Interfejs dla operacji wydruku
+public interface PrintableDocument {
+    void print(Document d);
+}
+```
+
+Teraz nasze klasy implementują tylko te interfejsy, których funkcjonalności rzeczywiście dostarczają.
+
+**Implementacja dla `InvoiceDocumentManager`:**
+Faktura może być przechowywana, konwertowana i drukowana, więc implementuje wszystkie trzy interfejsy.
+
+```java
+@Component
+public class InvoiceDocumentManager implements PersistentDocumentStore, ConvertibleDocument, PrintableDocument {
+    @Override
+    public void save(Document d) { /* ... */ }
+
+    @Override
+    public Document findById(long id) { /* ... */ return null; }
+
+    @Override
+    public void delete(long id) { /* ... */ }
+
+    @Override
+    public byte[] toPdf(Document d) { /* ... */ return new byte[0]; }
+
+    @Override
+    public void print(Document d) { /* ... */ }
+}
+```
+
+**Implementacja dla `TemporaryReportManager`:**
+Raport tymczasowy może być tylko konwertowany i drukowany.
+
+```java
+@Component
+public class TemporaryReportManager implements ConvertibleDocument, PrintableDocument {
+
+    // Implementuje tylko te metody, które mają sens.
+    @Override
+    public byte[] toPdf(Document d) {
+        System.out.println("Generating PDF for a temporary report.");
+        return new byte[0];
+    }
+
+    @Override
+    public void print(Document d) {
+        System.out.println("Printing a temporary report.");
+    }
+}
+```
+
+#### Jak to wygląda po stronie klienta (np. serwisu Springa)?
+
+Klient (serwis) deklaruje zależność tylko od tych interfejsów, których potrzebuje do wykonania swojego zadania.
+
+```java
+@Service
+public class DocumentProcessingService {
+
+    private final ConvertibleDocument pdfConverter;
+    private final PersistentDocumentStore documentStore;
+
+    @Autowired
+    public DocumentProcessingService(
+        // Wstrzykujemy konkretną implementację, np. TemporaryReportManager
+        @Qualifier("temporaryReportManager") ConvertibleDocument pdfConverter,
+        // Wstrzykujemy inną implementację, np. InvoiceDocumentManager
+        @Qualifier("invoiceDocumentManager") PersistentDocumentStore documentStore) {
+        this.pdfConverter = pdfConverter;
+        this.documentStore = documentStore;
+    }
+
+    // Ta metoda potrzebuje tylko możliwości konwersji do PDF
+    public byte[] generatePdfReport(Document reportData) {
+        // Wie, że pdfConverter na pewno ma metodę toPdf()
+        return pdfConverter.toPdf(reportData);
+    }
+
+    // Ta metoda potrzebuje tylko możliwości zapisu do bazy
+    public void archiveDocument(Document docToArchive) {
+        // Wie, że documentStore na pewno ma metodę save()
+        documentStore.save(docToArchive);
+    }
+}
+```
+Dzięki `@Qualifier` Spring wie, którą implementację danego interfejsu ma wstrzyknąć, jeśli istnieje więcej niż jedna.
+
+### Podsumowanie korzyści z podejścia ISP
+
+1.  **Spójność i Czysty Kod:** Klasy implementują tylko te metody, które są dla nich istotne. Unikamy pustych implementacji i wyjątków `UnsupportedOperationException`.
+2.  **Jasne Kontrakty:** Kiedy klient zależy od małego interfejsu (np. `PrintableDocument`), ma 100% pewności, że każdy obiekt, który otrzyma, będzie w stanie wykonać operację `print()`.
+3.  **Lepsza Elastyczność i Mniejsze Powiązania (Loose Coupling):** Klient zależy tylko od tego, czego potrzebuje. Zmiany w interfejsie `PersistentDocumentStore` nie wpłyną na klienta, który używa tylko `ConvertibleDocument`.
+4.  **Łatwość Utrzymania i Testowania:** Małe interfejsy są łatwiejsze do zrozumienia, implementacji i mockowania w testach jednostkowych.
+
+Zasada Segregacji Interfejsów zachęca do myślenia o rolach i odpowiedzialnościach nie tylko na poziomie klas, ale także na poziomie ich "publicznych kontraktów", czyli interfejsów.
+
+## D – Dependency Inversion Principle
+
+Oczywiście. Przejdźmy do ostatniej, ale niezwykle ważnej zasady – **Zasady Odwrócenia Zależności (Dependency Inversion Principle - DIP)**. Pokażę ją na przykładzie w Javie i Springu, ponieważ ten framework jest w dużej mierze zbudowany wokół tej zasady.
+
+### Wprowadzenie do zasady
+
+**Zasada Odwrócenia Zależności** składa się z dwóch kluczowych stwierdzeń:
+
+1.  **Moduły wysokiego poziomu nie powinny zależeć od modułów niskiego poziomu. Oba powinny zależeć od abstrakcji (np. interfejsów).**
+2.  **Abstrakcje nie powinny zależeć od szczegółów. To szczegóły (konkretne implementacje) powinny zależeć od abstrakcji.**
+
+Co to oznacza w praktyce?
+*   **Moduł wysokiego poziomu:** Kod, który zawiera główną logikę biznesową, np. serwis przetwarzający zamówienie.
+*   **Moduł niskiego poziomu:** Kod, który zajmuje się technicznymi detalami, np. zapis do konkretnej bazy danych (MySQL), wysyłka maila przez konkretnego dostawcę (Gmail SMTP).
+*   **"Odwrócenie zależności":** Zamiast sytuacji, w której `LogikaBiznesowa -> KonkretnaBazaDanych`, tworzymy sytuację, w której `LogikaBiznesowa -> InterfejsBazyDanych <- KonkretnaBazaDanych`. Kierunek zależności został "odwrócony" od konkretnej implementacji w stronę abstrakcji.
+
+Głównym narzędziem do implementacji DIP jest **Wstrzykiwanie Zależności (Dependency Injection - DI)**, które jest sercem frameworka Spring.
+
+---
+
+### Scenariusz: Serwis do generowania raportów
+
+Wyobraźmy sobie serwis, którego zadaniem jest generowanie raportu sprzedaży.
+1.  **Moduł wysokiego poziomu:** `ReportService` – jego zadaniem jest pobranie danych sprzedażowych, przetworzenie ich i wygenerowanie raportu.
+2.  **Moduły niskiego poziomu:**
+*   `MySqlSalesRepository` – moduł odpowiedzialny za pobieranie danych o sprzedaży z bazy danych MySQL.
+*   `PdfReportGenerator` – moduł odpowiedzialny za formatowanie danych i tworzenie pliku PDF.
+
+---
+
+### Zły przykład - Naruszenie zasady DIP
+
+W podejściu łamiącym DIP, moduł wysokiego poziomu bezpośrednio tworzy i zależy od modułów niskiego poziomu.
+
+**Kod (po angielsku):**
+
+```java
+// 👎 BAD EXAMPLE - VIOLATES DIP
+
+// ------ Moduły niskiego poziomu (szczegóły implementacyjne) ------
+class MySqlSalesRepository {
+    public List<SaleData> fetchSalesData(LocalDate from, LocalDate to) {
+        System.out.println("Fetching data from MySQL database...");
+        // ... logika SQL ...
+        return List.of(new SaleData(), new SaleData());
+    }
+}
+
+class PdfReportGenerator {
+    public byte[] generate(List<SaleData> data) {
+        System.out.println("Generating PDF report...");
+        // ... logika tworzenia PDF za pomocą biblioteki iText/PDFBox ...
+        return new byte[1024];
+    }
+}
+
+
+// ------ Moduł wysokiego poziomu (logika biznesowa) ------
+@Service
+public class ReportService {
+
+    // BEZPOŚREDNIA, SZTYWNA ZALEŻNOŚĆ OD KONKRETNYCH KLAS
+    private final MySqlSalesRepository repository;
+    private final PdfReportGenerator generator;
+
+    public ReportService() {
+        // Serwis SAM tworzy swoje zależności. To jest "zapach kodu".
+        this.repository = new MySqlSalesRepository();
+        this.generator = new PdfReportGenerator();
+    }
+
+    public byte[] generateSalesReport(LocalDate from, LocalDate to) {
+        // Logika biznesowa jest ściśle powiązana z implementacją
+        List<SaleData> salesData = repository.fetchSalesData(from, to);
+        // ... jakaś dodatkowa logika, np. obliczanie sum ...
+        byte[] report = generator.generate(salesData);
+        return report;
+    }
+}
+```
+
+#### Analiza problemu
+
+1.  **Sztywne powiązania (Tight Coupling):** `ReportService` jest "przyklejony" do `MySqlSalesRepository` i `PdfReportGenerator`.
+*   Co jeśli chcemy zmienić bazę danych na PostgreSQL? Musimy **zmodyfikować kod `ReportService`**.
+*   Co jeśli chcemy generować raporty w formacie CSV zamiast PDF? Musimy **zmodyfikować kod `ReportService`**.
+2.  **Nietestowalność:** Jak przetestować `ReportService` w izolacji? To prawie niemożliwe. Każdy test `ReportService` będzie również testem `MySqlSalesRepository`, co wymaga działającej bazy danych MySQL. Nie możemy łatwo "podmienić" repozytorium na testową atrapę (mock).
+3.  **Łamanie OCP:** System jest zamknięty na rozszerzenia. Dodanie nowej opcji (np. raport CSV) wymaga modyfikacji istniejącej klasy.
+
+---
+
+### Dobry przykład - Zastosowanie zasady DIP z pomocą Springa
+
+Teraz "odwrócimy" zależności. Logika biznesowa będzie zależeć od abstrakcji, a nie od konkretów.
+
+#### 1. Zdefiniowanie Abstrakcji (Interfejsów)
+Najpierw tworzymy interfejsy, które opisują, **CO** mają robić moduły niskiego poziomu, a nie **JAK**. To są nasze kontrakty.
+
+```java
+// Kontrakt dla repozytorium danych
+public interface SalesRepository {
+    List<SaleData> fetchSalesData(LocalDate from, LocalDate to);
+}
+
+// Kontrakt dla generatora raportów
+public interface ReportGenerator {
+    byte[] generate(List<SaleData> data);
+    ReportFormat supports();
+}
+
+public enum ReportFormat {
+    PDF, CSV
+}
+```
+
+#### 2. Stworzenie Konkretnych Implementacji (Szczegółów)
+Teraz tworzymy konkretne klasy, które implementują nasze interfejsy. Są one oznaczone jako komponenty Springa.
+
+```java
+// Implementacja dla MySQL
+@Repository("mysqlSalesRepository") // Nadajemy nazwę, aby uniknąć konfliktów
+public class MySqlSalesRepository implements SalesRepository {
+    @Override
+    public List<SaleData> fetchSalesData(LocalDate from, LocalDate to) {
+        System.out.println("Fetching data from MySQL database...");
+        return List.of(new SaleData());
+    }
+}
+
+// Implementacja dla PostgreSQL (możemy ją dodać w przyszłości)
+@Repository("postgresSalesRepository")
+public class PostgresSalesRepository implements SalesRepository {
+    @Override
+    public List<SaleData> fetchSalesData(LocalDate from, LocalDate to) {
+        System.out.println("Fetching data from PostgreSQL database...");
+        return List.of(new SaleData());
+    }
+}
+
+// Implementacja dla PDF
+@Component
+public class PdfReportGenerator implements ReportGenerator {
+    @Override
+    public byte[] generate(List<SaleData> data) {
+        System.out.println("Generating PDF report...");
+        return new byte[0];
+    }
+    @Override
+    public ReportFormat supports() { return ReportFormat.PDF; }
+}
+```
+
+#### 3. Zmodyfikowanie Modułu Wysokiego Poziomu
+`ReportService` zależy teraz tylko od abstrakcji. Nie wie nic o MySQL ani o PDF. Zależności są mu "wstrzykiwane" z zewnątrz przez Springa.
+
+```java
+// 👍 GOOD EXAMPLE - FOLLOWS DIP
+
+@Service
+public class ReportService {
+
+    // Zależność od ABSTRAKCJI, a nie od konkretnej klasy
+    private final SalesRepository repository;
+    private final List<ReportGenerator> generators; // Wstrzykujemy listę wszystkich generatorów
+
+    // Zależności są WSTRZYKIWANE przez konstruktor - to jest Dependency Injection
+    @Autowired
+    public ReportService(
+        @Qualifier("mysqlSalesRepository") SalesRepository repository, // Wybieramy implementację
+        List<ReportGenerator> generators) {
+        this.repository = repository;
+        this.generators = generators;
+    }
+
+    public byte[] generateSalesReport(LocalDate from, LocalDate to, ReportFormat format) {
+        // Logika biznesowa nie jest już powiązana z technicznymi szczegółami
+        List<SaleData> salesData = repository.fetchSalesData(from, to);
+
+        // Znajdź odpowiedni generator
+        ReportGenerator generator = generators.stream()
+            .filter(g -> g.supports().equals(format))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Unsupported report format: " + format));
+
+        byte[] report = generator.generate(salesData);
+        return report;
+    }
+}
+```
+
+### Podsumowanie korzyści z podejścia DIP
+
+1.  **Luźne powiązania (Loose Coupling):** `ReportService` jest całkowicie odizolowany od szczegółów implementacyjnych. Możemy podmieniać implementacje repozytorium (np. z MySQL na PostgreSQL) lub dodawać nowe generatory raportów (np. CSV) bez dotykania ani jednej linijki kodu w `ReportService`. Wystarczy zmienić adnotację `@Qualifier` lub dodać nową klasę implementującą `ReportGenerator`.
+2.  **Maksymalna Testowalność:** Testowanie `ReportService` staje się trywialne. W teście jednostkowym możemy stworzyć mocki (atrapy) `SalesRepository` i `ReportGenerator` za pomocą Mockito i wstrzyknąć je do serwisu, aby w pełni kontrolować warunki testu.
+
+```java
+// Przykład testu
+@Test
+void testReportGeneration() {
+    SalesRepository mockRepo = Mockito.mock(SalesRepository.class);
+    ReportGenerator mockGenerator = Mockito.mock(ReportGenerator.class);
+
+    // Konfiguracja mocków...
+    Mockito.when(mockRepo.fetchSalesData(any(), any())).thenReturn(List.of(new SaleData()));
+    Mockito.when(mockGenerator.supports()).thenReturn(ReportFormat.PDF);
+
+    ReportService service = new ReportService(mockRepo, List.of(mockGenerator));
+
+    service.generateSalesReport(LocalDate.now(), LocalDate.now(), ReportFormat.PDF);
+
+    // Weryfikacja, czy mocki zostały poprawnie wywołane...
+    Mockito.verify(mockRepo).fetchSalesData(any(), any());
+    Mockito.verify(mockGenerator).generate(any());
+}
+```
+3.  **Elastyczność i Zgodność z OCP:** System jest naturalnie otwarty na rozszerzenia. Chcesz dodać raport CSV? Stwórz klasę `CsvReportGenerator`. `ReportService` nie wymaga zmian.
+4.  **Czytelność:** Moduły wysokiego poziomu stają się czystsze, ponieważ skupiają się wyłącznie na logice biznesowej, delegując techniczne detale do wyspecjalizowanych, wymienialnych komponentów.
+
+**Zasada Odwrócenia Zależności jest fundamentem nowoczesnego, obiektowego projektowania oprogramowania i kluczem do tworzenia elastycznych, testowalnych i łatwych w utrzymaniu systemów.** Frameworki takie jak Spring czy Quarkus są zbudowane po to, aby maksymalnie ułatwić jej stosowanie.
+
