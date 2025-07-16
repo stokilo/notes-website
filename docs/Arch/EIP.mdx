@@ -108,3 +108,279 @@ Stosowanie EIP daje Ci:
 *   **Elastyczność i Skalowalność:** Łatwo jest dodawać nowe kroki w przepływie, zmieniać logikę routingu czy skalować poszczególne części systemu niezależnie.
 *   **Niezawodność:** Wzorce takie jak Dead-Letter Channel pozwalają budować systemy odporne na błędy.
 *   **Reużywalność:** Gotowe komponenty z frameworków (Camel, Spring Integration) przyspieszają pracę i gwarantują, że używasz sprawdzonych rozwiązań.
+
+
+# Spring Integration Example
+
+
+Oczywiście. Połączenie Spring Integration z wzorcem Outbox, Kafką i bazą danych (PostgreSQL) to doskonały, zaawansowany przykład pokazujący, jak budować niezawodne systemy rozproszone.
+
+Zanim przejdziemy do kodu, wyjaśnijmy **problem**, który rozwiązuje wzorzec Outbox.
+
+### Problem: Atomowość operacji w systemach rozproszonych
+
+Wyobraź sobie prostą operację: "Użytkownik tworzy zamówienie". W systemie musi się zadziać:
+1.  Zapisanie zamówienia w bazie danych (PostgreSQL).
+2.  Wysłanie zdarzenia `OrderCreated` do Kafki, aby inne serwisy (np. od płatności, wysyłki) mogły na nie zareagować.
+
+Co się stanie, jeśli:
+*   **Zapis do bazy się powiedzie, ale wysłanie do Kafki zawiedzie?** → Masz "ciche" zamówienie w systemie, o którym nikt inny nie wie. Błąd.
+*   **Wysłanie do Kafki się powiedzie, ale transakcja bazodanowa zostanie wycofana?** → Inne serwisy zaczną przetwarzać zamówienie, które formalnie nie istnieje. Jeszcze gorszy błąd.
+
+Nie da się objąć tych dwóch operacji (zapisu do bazy i wysłania do brokera) jedną, atomową transakcją.
+
+### Rozwiązanie: Wzorzec Transakcyjny Outbox
+
+Wzorzec Outbox rozwiązuje ten problem w genialnie prosty sposób:
+1.  W ramach **jednej transakcji bazodanowej** robisz dwie rzeczy:
+*   Zapisujesz dane biznesowe (np. `Order` w tabeli `orders`).
+*   Zapisujesz zdarzenie, które chcesz wysłać, w specjalnej tabeli `outbox` (np. jako JSON).
+2.  Ponieważ obie operacje są w tej samej transakcji, albo obie się powiodą, albo obie zostaną wycofane. **System pozostaje spójny.**
+3.  Osobny, asynchroniczny proces (zwany **pollerem** lub **przekaźnikiem**) regularnie odpytuje tabelę `outbox` o nieprzetworzone zdarzenia.
+4.  Gdy poller znajdzie nowe zdarzenie, publikuje je w Kafce.
+5.  Po pomyślnej publikacji, poller oznacza zdarzenie w tabeli `outbox` jako "przetworzone".
+
+Tutaj właśnie wkracza **Spring Integration** – idealnie nadaje się do zaimplementowania kroku 3, 4 i 5.
+
+---
+
+### Przykład: Implementacja w Spring Boot
+
+#### 1. Zależności (`pom.xml`)
+
+Potrzebujemy JPA, sterownika PostgreSQL, Kafki i Spring Integration (z modułami JPA i Kafka).
+
+```xml
+<dependencies>
+    <!-- Web i JPA -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+
+    <!-- Spring Integration & Kafka -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-integration</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.integration</groupId>
+        <artifactId>spring-integration-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.integration</groupId>
+        <artifactId>spring-integration-kafka</artifactId>
+    </dependency>
+
+    <!-- Narzędzia pomocnicze -->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+    </dependency>
+</dependencies>
+```
+
+#### 2. Konfiguracja (`application.properties`)
+
+```properties
+# Konfiguracja bazy danych PostgreSQL
+spring.datasource.url=jdbc:postgresql://localhost:5432/mydatabase
+spring.datasource.username=user
+spring.datasource.password=password
+
+# Pokazuje SQL generowany przez Hibernate
+spring.jpa.show-sql=true
+spring.jpa.hibernate.ddl-auto=update
+
+# Konfiguracja Kafki
+spring.kafka.bootstrap-servers=localhost:9092
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer
+```
+
+#### 3. Encje: `Order` i `OutboxEvent`
+
+Nasza encja biznesowa i encja dla tabeli outbox.
+
+```java
+// Encja biznesowa
+@Entity
+@Table(name = "orders")
+@Data // Lombok
+@NoArgsConstructor
+public class Order {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String product;
+    private int quantity;
+    private Instant createdAt;
+}
+
+// Encja dla wzorca Outbox
+@Entity
+@Table(name = "outbox")
+@Data // Lombok
+@Builder // Lombok
+@NoArgsConstructor
+@AllArgsConstructor
+public class OutboxEvent {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    private String aggregateType; // Np. "Order"
+    private String aggregateId;   // Np. ID zamówienia
+
+    private String eventType;     // Np. "OrderCreated"
+    private String payload;       // Zdarzenie jako JSON
+
+    private Instant createdAt;
+
+    @Builder.Default
+    private boolean processed = false;
+    private Instant processedAt;
+}
+```
+
+#### 4. Serwis Biznesowy (Krok 1 i 2 z opisu)
+
+Serwis, który w jednej transakcji zapisuje zamówienie i zdarzenie w tabeli `outbox`.
+
+```java
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+
+    private final OrderRepository orderRepository;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper; // Do serializacji do JSON
+
+    @Transactional
+    public Order createOrder(String product, int quantity) throws JsonProcessingException {
+        // 1. Stwórz i zapisz encję biznesową
+        Order order = new Order();
+        order.setProduct(product);
+        order.setQuantity(quantity);
+        order.setCreatedAt(Instant.now());
+        Order savedOrder = orderRepository.save(order);
+
+        // 2. Stwórz i zapisz zdarzenie w tabeli outbox w tej samej transakcji
+        String payload = objectMapper.writeValueAsString(savedOrder);
+
+        OutboxEvent event = OutboxEvent.builder()
+                .aggregateType("Order")
+                .aggregateId(savedOrder.getId().toString())
+                .eventType("OrderCreated")
+                .payload(payload)
+                .createdAt(Instant.now())
+                .build();
+        outboxEventRepository.save(event);
+
+        return savedOrder;
+    }
+}
+```
+
+#### 5. Konfiguracja Spring Integration (Krok 3, 4 i 5)
+
+To jest serce mechanizmu. Tworzymy przepływ (Integration Flow), który:
+*   Odpytuje bazę danych o nieprzetworzone zdarzenia.
+*   Wysyła je do Kafki.
+*   Oznacza jako przetworzone.
+
+```java
+@Configuration
+@EnableIntegration
+@RequiredArgsConstructor
+public class OutboxIntegrationConfig {
+
+    private final EntityManagerFactory entityManagerFactory;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final OutboxEventRepository outboxEventRepository;
+
+    // Definiujemy kanał, którym będą płynąć wiadomości z bazy danych
+    @Bean
+    public MessageChannel outboxChannel() {
+        return new DirectChannel();
+    }
+
+    // 1. INBOUND ADAPTER: Poller odpytujący bazę danych
+    @Bean
+    public JpaInboundChannelAdapter jpaInboundAdapter() {
+        JpaInboundChannelAdapter adapter = new JpaInboundChannelAdapter(entityManagerFactory);
+        adapter.setQuery("SELECT e FROM OutboxEvent e WHERE e.processed = false ORDER BY e.createdAt ASC");
+        adapter.setMaxResults(10); // Pobieraj maksymalnie 10 zdarzeń na raz
+        adapter.setExpectSingleResult(false);
+        adapter.setEntityClass(OutboxEvent.class);
+
+        // Po udanym przetworzeniu całego przepływu, wykonaj zapytanie aktualizujące
+        adapter.setUpdateQuery("UPDATE OutboxEvent e SET e.processed = true, e.processedAt = CURRENT_TIMESTAMP WHERE e.id IN (:id)");
+        adapter.setUpdateParameterSourceFactory(new BeanPropertyParameterSourceFactory()); // Automatycznie mapuj 'id' z obiektu
+
+        return adapter;
+    }
+
+    // 2. INTEGRATION FLOW: Definicja całego przepływu
+    @Bean
+    public IntegrationFlow outboxFlow() {
+        return IntegrationFlows
+                // Zaczynamy od poller'a bazodanowego, który działa co 5 sekund
+                .from(jpaInboundAdapter(), config -> config.poller(Pollers.fixedDelay(5000)))
+
+                // Dzielimy listę zdarzeń na pojedyncze wiadomości
+                .split()
+
+                // Przekierowujemy każdą wiadomość do kanału `outboxChannel`
+                .channel(outboxChannel())
+                .get();
+    }
+
+    // 3. SERVICE ACTIVATOR: Komponent nasłuchujący na kanale i wysyłający do Kafki
+    @Bean
+    @ServiceActivator(inputChannel = "outboxChannel")
+    public MessageHandler kafkaMessageHandler() {
+        KafkaProducerMessageHandler<String, String> handler =
+                new KafkaProducerMessageHandler<>(kafkaTemplate);
+
+        // Temat Kafki jest dynamicznie pobierany z typu agregatu (np. "Order" -> temat "orders")
+        handler.setTopicExpression(new SpelExpressionParser().parseExpression("payload.aggregateType.toLowerCase() + 's'"));
+        // Klucz wiadomości to ID agregatu (dla partycjonowania)
+        handler.setMessageKeyExpression(new SpelExpressionParser().parseExpression("payload.aggregateId"));
+        // Ciało wiadomości to payload (JSON)
+        handler.setPayloadExpression(new SpelExpressionParser().parseExpression("payload.payload"));
+
+        return handler;
+    }
+}
+```
+
+### Podsumowanie przepływu
+
+1.  Zewnętrzny klient wywołuje `orderService.createOrder(...)`.
+2.  `@Transactional` rozpoczyna transakcję.
+3.  Do tabeli `orders` trafia nowy wiersz.
+4.  Do tabeli `outbox` trafia nowy wiersz z `processed = false`.
+5.  Transakcja jest zatwierdzana. Dane są bezpieczne w PostgreSQL.
+6.  **Niezależnie**, co 5 sekund, `jpaInboundAdapter` (poller) ze Spring Integration wykonuje zapytanie `SELECT ... WHERE processed = false`.
+7.  Znajduje nasz nowy `OutboxEvent` i wysyła go jako wiadomość do przepływu.
+8.  `.split()` zapewnia, że jeśli poller pobrał kilka zdarzeń, każde będzie przetwarzane osobno.
+9.  Wiadomość trafia na `outboxChannel`.
+10. `kafkaMessageHandler` (Service Activator) odbiera wiadomość, wyciąga z niej temat, klucz i payload, a następnie wysyła do Kafki.
+11. **Jeśli wysyłka do Kafki się powiedzie**, `jpaInboundAdapter` wykonuje zdefiniowane zapytanie `UPDATE ... SET processed = true`, oznaczając zdarzenie jako zakończone. Jeśli wysyłka się nie powiedzie, zdarzenie nie zostanie zaktualizowane i będzie podjęta próba ponownej wysyłki w następnym cyklu pollera.
+
+W ten sposób, używając Spring Integration, stworzyliśmy solidny, odporny na błędy i gwarantujący spójność danych mechanizm do komunikacji między serwisami.
