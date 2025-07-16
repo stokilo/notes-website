@@ -74,8 +74,8 @@ Teraz dzieje się magia Spring AI:
 > **System:** Jesteś pomocnym asystentem. Masz do dyspozycji następujące narzędzia. Jeśli chcesz użyć któregoś z nich, odpowiedz w formacie JSON, podając nazwę narzędzia i argumenty.
     >
     > **Narzędzia dostępne:**
-    > ```json
-    > [
+```json
+[
   {
     "name": "getCurrentWeather",
     "description": "Pobiera aktualne informacje o pogodzie dla danego miasta",
@@ -84,8 +84,8 @@ Teraz dzieje się magia Spring AI:
       "properties": { "city": { "type": "string" } }
     }
   }
-    > ]
-    > ```
+    ]
+```
     > **Użytkownik:** Jaka jest pogoda w Warszawie?
 
 4.  Ten cały prompt wysyła do modelu (np. Llama 3) uruchomionego w Ollamie.
