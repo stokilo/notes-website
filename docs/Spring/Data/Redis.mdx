@@ -1,0 +1,1024 @@
+---
+sidebar_label: 'Spring Redis'
+---
+
+# Spring Redis integration
+
+
+Jasne, z przyjemnością wprowadzę Cię w świat integracji Springa z Redisem. To potężne połączenie, które jest niezwykle popularne w nowoczesnych aplikacjach. Przygotowałem kompletny przewodnik, od podstawowych koncepcji, przez konfigurację i praktyczne przykłady, aż po zaawansowane tematy.
+
+### Spis Treści
+1.  **Czym jest Redis i dlaczego używać go ze Springiem?**
+2.  **Podstawowe Komponenty Integracji (Architektura)**
+3.  **Konfiguracja Projektu (Maven/Gradle + `application.properties`)**
+4.  **Praktyczne Przykłady Użycia**
+*   Użycie `RedisTemplate` (operacje niskopoziomowe)
+*   Użycie Repozytoriów Spring Data (abstrakcja na obiekty)
+5.  **Zaawansowane Zastosowania**
+*   Caching (buforowanie) z adnotacjami Springa
+*   Wiadomości (Pub/Sub)
+*   Transakcje
+6.  **Ważne Aspekty i Dobre Praktyki**
+*   Serializacja danych
+*   Lettuce vs. Jedis
+*   Zarządzanie czasem życia kluczy (TTL)
+
+---
+
+### 1. Czym jest Redis i dlaczego używać go ze Springiem?
+
+**Redis (REmote DIctionary Server)** to ultraszybka, działająca w pamięci (in-memory) baza danych typu klucz-wartość. To jednak znacznie więcej niż prosta mapa. Redis oferuje bogaty zestaw struktur danych, takich jak:
+*   **Strings**: Tekst lub dane binarne.
+*   **Lists**: Listy elementów, działające jak kolejki.
+*   **Sets**: Nieuporządkowane kolekcje unikalnych wartości.
+*   **Hashes**: Mapy (pola i wartości), idealne do przechowywania obiektów.
+*   **Sorted Sets**: Sety, w których każdy element ma przypisany "wynik" (score) do sortowania.
+
+**Główne zastosowania Redis:**
+*   **Caching (Buforowanie):** Najpopularniejsze zastosowanie. Przechowywanie wyników zapytań do wolniejszych baz danych (np. SQL) w Redisie, aby przyspieszyć kolejne odczyty.
+*   **Liczniki i Statystyki:** Szybkie operacje atomowe (`INCR`, `DECR`).
+*   **Zarządzanie Sesjami:** Przechowywanie danych sesji użytkowników w aplikacjach rozproszonych.
+*   **Kolejki Zadań:** Implementacja prostych systemów kolejek.
+*   **Pub/Sub (Publish/Subscribe):** System do przesyłania wiadomości w czasie rzeczywistym.
+
+**Dlaczego Spring + Redis?**
+**Spring Data Redis** to część większego projektu Spring Data, którego celem jest ujednolicenie i uproszczenie dostępu do różnych źródeł danych. Integracja ta daje nam:
+*   **Abstrakcję:** Nie musisz martwić się o niskopoziomowe zarządzanie połączeniami.
+*   **Produktywność:** Używasz znanych wzorców Springa, takich jak `Template` czy `Repository`.
+*   **Łatwą Konfigurację:** Spring Boot sprawia, że podłączenie Redisa jest trywialne.
+*   **Integrację z Ekosystemem Spring:** Bezproblemowe połączenie z modułami takimi jak Spring Cache, Spring Session czy Spring Messaging.
+
+---
+
+### 2. Podstawowe Komponenty Integracji (Architektura)
+
+W Spring Data Redis kluczowe są trzy elementy:
+
+1.  **Connection Factory (`RedisConnectionFactory`)**:
+*   Odpowiada za tworzenie i zarządzanie połączeniami z serwerem Redis.
+*   Spring wspiera dwa popularne klienty Java dla Redisa: **Lettuce** (domyślny i zalecany) oraz **Jedis**.
+
+2.  **Template (`RedisTemplate` i `StringRedisTemplate`)**:
+*   Główny, wysokopoziomowy komponent do interakcji z Redisem.
+*   Dostarcza metody do wykonywania operacji na różnych strukturach danych (`opsForValue()`, `opsForList()`, `opsForHash()` itd.).
+*   Zajmuje się serializacją i deserializacją obiektów (tłumaczeniem obiektów Javy na format zrozumiały dla Redisa i z powrotem).
+*   **`RedisTemplate<K, V>`**: Generyczny szablon, który można skonfigurować do pracy z dowolnymi typami kluczy i wartości.
+*   **`StringRedisTemplate`**: Specjalizowana wersja `RedisTemplate<String, String>`, zoptymalizowana do pracy z kluczami i wartościami w formacie tekstowym. Jest często używana, bo jest prosta i czytelna.
+
+3.  **Repositories**:
+*   Najwyższy poziom abstrakcji. Pozwala na pracę z obiektami w Redisie tak, jakbyś pracował z encjami w bazie SQL przy użyciu JPA.
+*   Definiujesz interfejs dziedziczący po `CrudRepository`, a Spring Data Redis automatycznie implementuje podstawowe operacje CRUD (Create, Read, Update, Delete).
+*   Obiekty są przechowywane w Redisie najczęściej jako `Hashes`.
+
+---
+
+### 3. Konfiguracja Projektu
+
+Konfiguracja w aplikacji Spring Boot jest niezwykle prosta.
+
+**Krok 1: Dodaj zależność (Maven)**
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+```
+Ta jedna zależność ściąga wszystko, czego potrzebujesz, w tym klienta **Lettuce**.
+
+**Krok 2: Skonfiguruj połączenie w `application.properties`**
+
+```properties
+# Adres serwera Redis
+spring.redis.host=localhost
+# Port serwera Redis (domyślny to 6379)
+spring.redis.port=6379
+# Hasło do serwera Redis (jeśli jest wymagane)
+# spring.redis.password=twoje_haslo
+# Numer bazy danych (Redis wspiera wiele baz, domyślnie 0)
+# spring.redis.database=0
+```
+
+I to wszystko! Twoja aplikacja jest gotowa do komunikacji z Redisem. Spring Boot automatycznie skonfiguruje `RedisConnectionFactory` oraz `RedisTemplate` i `StringRedisTemplate`.
+
+**Opcjonalna konfiguracja programistyczna (Java Config):**
+Czasami chcesz dostosować np. sposób serializacji. Domyślnie `RedisTemplate` używa serializacji Javy (JDK), co nie jest zalecane (problemy z kompatybilnością, duży rozmiar). Lepiej użyć JSON.
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+@Configuration
+public class RedisConfig {
+
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        // Ustawienie serializatorów
+        // Klucze będą serializowane jako String
+        template.setKeySerializer(new StringRedisSerializer());
+        // Wartości jako JSON
+        template.setValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
+        // Klucze hashy jako String
+        template.setHashKeySerializer(new StringRedisSerializer());
+        // Wartości hashy jako JSON
+        template.setHashValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
+
+        template.afterPropertiesSet();
+        return template;
+    }
+}
+```
+
+---
+
+### 4. Praktyczne Przykłady Użycia
+
+#### a) Użycie `RedisTemplate`
+
+To podejście daje pełną kontrolę nad operacjami.
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.stereotype.Service;
+
+@Service
+public class SimpleCacheService {
+
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ValueOperations<String, String> valueOps;
+
+    @Autowired
+    public SimpleCacheService(StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+        this.valueOps = stringRedisTemplate.opsForValue();
+    }
+
+    public void cacheValue(String key, String value) {
+        // Zapisz wartość pod kluczem 'key'
+        valueOps.set(key, value);
+        // Przykład: ustawienie czasu wygaśnięcia na 5 minut
+        // stringRedisTemplate.expire(key, 5, TimeUnit.MINUTES);
+    }
+
+    public String getValue(String key) {
+        // Odczytaj wartość dla klucza 'key'
+        return valueOps.get(key);
+    }
+
+    public void deleteValue(String key) {
+        stringRedisTemplate.delete(key);
+    }
+}
+```
+*`opsForValue()` zwraca obiekt do operacji na `Strings`, `opsForList()` na `Lists`, `opsForHash()` na `Hashes` itd.*
+
+#### b) Użycie Repozytoriów Spring Data
+
+To podejście jest idealne do mapowania obiektów.
+
+**Krok 1: Zdefiniuj encję (POJO)**
+
+```java
+import org.springframework.data.annotation.Id;
+import org.springframework.data.redis.core.RedisHash;
+import org.springframework.data.redis.core.index.Indexed;
+
+import java.io.Serializable;
+
+@RedisHash("Product") // Nazwa "tabeli" (właściwie prefiks klucza) w Redis
+public class Product implements Serializable {
+
+    @Id // Klucz główny
+    private String id;
+
+    private String name;
+
+    @Indexed // Umożliwia wyszukiwanie po tym polu
+    private String category;
+
+    private double price;
+
+    // Gettery, settery, konstruktory...
+}
+```
+
+**Krok 2: Zdefiniuj interfejs repozytorium**
+
+```java
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface ProductRepository extends CrudRepository<Product, String> {
+    // Spring Data automatycznie wygeneruje implementację tej metody
+    // na podstawie nazwy i adnotacji @Indexed w klasie Product
+    List<Product> findByCategory(String category);
+}
+```
+
+**Krok 3: Użyj repozytorium w serwisie**
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class ProductService {
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    public Product saveProduct(Product product) {
+        return productRepository.save(product);
+    }
+
+    public Product findProductById(String id) {
+        return productRepository.findById(id).orElse(null);
+    }
+
+    public List<Product> findProductsByCategory(String category) {
+        return productRepository.findByCategory(category);
+    }
+
+    public void deleteProduct(String id) {
+        productRepository.deleteById(id);
+    }
+}
+```
+Jak widać, kod jest bardzo czysty i przypomina pracę z JPA. Spring Data Redis zajmuje się całą magią w tle, mapując obiekt `Product` na strukturę `Hash` w Redis.
+
+---
+
+### 5. Zaawansowane Zastosowania
+
+#### a) Caching (Buforowanie)
+
+Spring Framework ma wbudowany mechanizm cache'owania, który można łatwo zintegrować z Redisem.
+
+**Krok 1: Włącz Caching w głównej klasie aplikacji**
+```java
+@SpringBootApplication
+@EnableCaching // Włącza obsługę cache
+public class MyApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MyApplication.class, args);
+    }
+}
+```
+**Krok 2: Użyj adnotacji w serwisie**
+
+```java
+@Service
+public class HeavyComputationService {
+
+    // Wynik tej metody zostanie zapisany w cache o nazwie "heavyData" pod kluczem 'id'.
+    // Przy kolejnym wywołaniu z tym samym 'id', wynik zostanie zwrócony z Redisa,
+    // a metoda nie zostanie wykonana.
+    @Cacheable(value = "heavyData", key = "#id")
+    public String getHeavyData(String id) {
+        // Symulacja wolnej operacji
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return "Computed data for " + id;
+    }
+
+    // Ta adnotacja usuwa wpis z cache.
+    @CacheEvict(value = "heavyData", key = "#id")
+    public void clearCache(String id) {
+        System.out.println("Clearing cache for " + id);
+    }
+}
+```
+Spring Boot, widząc `spring-boot-starter-data-redis` i `@EnableCaching`, automatycznie skonfiguruje Redisa jako dostawcę cache.
+
+#### b) Wiadomości (Pub/Sub)
+
+Redis może działać jako prosty broker wiadomości.
+
+**Nadawca (Publisher):**
+```java
+@Service
+public class MessagePublisher {
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    public void publish(String topic, String message) {
+        redisTemplate.convertAndSend(topic, message);
+    }
+}
+```
+**Odbiorca (Subscriber):**
+Można to zrealizować, tworząc Listener.
+
+```java
+// Komponent, który będzie nasłuchiwał wiadomości
+@Component
+public class MessageSubscriber {
+    public void handleMessage(String message) {
+        System.out.println("Received message: " + message);
+    }
+}
+
+// Konfiguracja listenera
+@Configuration
+public class RedisPubSubConfig {
+    @Bean
+    MessageListenerAdapter listenerAdapter(MessageSubscriber subscriber) {
+        // Mapuje wiadomość na metodę 'handleMessage' w naszym subscriberze
+        return new MessageListenerAdapter(subscriber, "handleMessage");
+    }
+
+    @Bean
+    RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory, MessageListenerAdapter listenerAdapter) {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        // Subskrybuje kanał (topic) o nazwie "my-topic" i przypisuje do niego listenera
+        container.addMessageListener(listenerAdapter, new PatternTopic("my-topic"));
+        return container;
+    }
+}
+```
+
+#### c) Transakcje
+
+Redis wspiera transakcje, które pozwalają na wykonanie grupy komend atomowo.
+
+```java
+import org.springframework.data.redis.core.SessionCallback;
+
+// ... w serwisie ...
+public void transactionalOperation() {
+    redisTemplate.execute(new SessionCallback<Object>() {
+        @Override
+        public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+            operations.multi(); // Rozpocznij transakcję
+
+            operations.opsForValue().set((K)"key1", (V)"value1");
+            operations.opsForValue().set((K)"key2", (V)"value2");
+
+            return operations.exec(); // Zatwierdź transakcję
+        }
+    });
+}
+```
+
+---
+
+### 6. Ważne Aspekty i Dobre Praktyki
+
+*   **Serializacja:** Jak wspomniano, **unikaj domyślnej serializacji JDK**. Jest nieefektywna i niewspółpracująca z innymi językami. Używaj **JSON** (`Jackson2JsonRedisSerializer`) – jest czytelny, elastyczny i powszechnie wspierany. Do prostych danych tekstowych idealny jest `StringRedisSerializer`.
+*   **Lettuce vs. Jedis:** **Używaj Lettuce**. Jest to domyślny klient w Spring Boot 2.x i nowszych. Jest nowoczesny, asynchroniczny, nieblokujący i znacznie lepiej skalowalny w środowiskach wielowątkowych niż Jedis, który polega na puli blokujących połączeń.
+*   **Zarządzanie czasem życia kluczy (TTL - Time To Live):** Redis działa w pamięci RAM. Jeśli nie będziesz usuwać niepotrzebnych danych, pamięć się wyczerpie. Zawsze, gdy to możliwe, ustawiaj czas wygaśnięcia dla kluczy, zwłaszcza w przypadku cache.
+```java
+// Klucz 'mykey' wygaśnie po 60 sekundach
+redisTemplate.expire("mykey", 60, TimeUnit.SECONDS);
+
+// Lub ustawiając wartość od razu z TTL
+valueOps.set("mykey", "myvalue", 60, TimeUnit.SECONDS);
+```
+*   **Zrozumienie struktur danych Redisa:** Spring Data Redis to abstrakcja, ale znajomość działania samego Redisa jest kluczowa. Wiedza o tym, kiedy użyć `Hash`, a kiedy `String` z serializowanym JSON-em, pozwoli Ci pisać wydajniejszy kod.
+
+Mam nadzieję, że to obszerne wprowadzenie dało Ci solidne podstawy i pokazało potęgę integracji Springa z Redisem. To narzędzie, które warto mieć w swoim arsenale.
+
+## More details for how Redis works
+
+Doskonale. To jest absolutnie kluczowy temat, którego zrozumienie oddziela świadomego programistę od kogoś, kto tylko "używa biblioteki". Wyjaśnijmy to dogłębnie.
+
+Abstrakcja, którą daje Spring Data Redis, jest fantastyczna dla produktywności. Piszesz `productRepository.save(product)`, a obiekt magicznie ląduje w Redis. Ale *jak* on tam ląduje? Spring musi podjąć decyzję, jak zamienić Twój obiekt Javy na struktury danych, które Redis rozumie. Domyślnie ma dwie główne strategie, a wybór między nimi ma ogromny wpływ na wydajność, elastyczność i zużycie pamięci.
+
+Te dwie strategie to:
+1.  **Zapisanie całego obiektu jako jeden String (w formacie JSON).**
+2.  **Zmapowanie obiektu na strukturę typu Hash.**
+
+Przeanalizujmy obie, porównując je na przykładzie obiektu `Product`:
+
+```java
+class Product {
+    private String id;
+    private String name;
+    private double price;
+    private String category;
+}
+```
+
+---
+
+### Scenariusz 1: Obiekt jako JSON w Stringu
+
+#### Jak to działa?
+1.  Bierzesz obiekt `Product` w Javie.
+2.  Używasz serializatora (np. Jackson), aby przekształcić go w ciąg znaków JSON.
+3.  Zapisujesz ten jeden, długi ciąg znaków w Redis pod jednym kluczem.
+
+#### Jak to wygląda w Redisie?
+Za pomocą klienta `redis-cli`, zobaczylibyśmy coś takiego:
+
+```
+> GET product:123
+"{\"id\":\"123\",\"name\":\"Laptop Pro X\",\"price\":4999.99,\"category\":\"Electronics\"}"
+```
+*   **Klucz:** `product:123`
+*   **Wartość:** Jeden, niepodzielny blok tekstu (String) zawierający cały obiekt w formacie JSON.
+
+#### Mapowanie w Spring Data Redis
+Najczęściej osiągasz to, konfigurując `RedisTemplate` z `Jackson2JsonRedisSerializer` dla wartości:
+
+```java
+// W konfiguracji
+template.setValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
+
+// W serwisie
+Product product = new Product("123", "Laptop Pro X", 4999.99, "Electronics");
+redisTemplate.opsForValue().set("product:123", product);
+```
+
+#### Zalety tego podejścia:
+*   **Prostota i atomowość:** Cały obiekt jest pobierany lub zapisywany w jednej operacji (`GET`/`SET`). Gwarantuje to, że zawsze pracujesz na spójnym, kompletnym obiekcie. Nie ma ryzyka odczytania częściowo zaktualizowanego obiektu.
+*   **Łatwość obsługi zagnieżdżonych obiektów:** Jeśli `Product` miałby pole `List<Review> reviews`, serializator JSON bez problemu zamieni całą strukturę na tekst.
+
+#### Wady tego podejścia (BARDZO WAŻNE):
+*   **Niewydajne aktualizacje częściowe:** To jest **główny problem**. Wyobraź sobie, że chcesz zaktualizować tylko cenę produktu. Musisz wykonać następujące kroki:
+1.  Pobierz **cały** string JSON z Redisa (`GET product:123`).
+2.  Zdeserializuj **cały** JSON z powrotem do obiektu `Product` w Javie.
+3.  Zmień pole `price` w obiekcie.
+4.  Zserializuj **cały**, zaktualizowany obiekt z powrotem do stringa JSON.
+5.  Zapisz **cały**, nowy string JSON w Redis, nadpisując stary (`SET product:123 ...`).
+To jest ogromny i niepotrzebny narzut, zwłaszcza dla dużych obiektów. Wysyłasz dużo danych po sieci i obciążasz CPU serializacją/deserializacją tylko po to, by zmienić jedną małą wartość.
+
+*   **Brak możliwości operacji po stronie serwera:** Nie możesz poprosić Redisa: "daj mi tylko cenę produktu 123" albo "zwiększ cenę produktu 123 o 100". Redis widzi tylko blok tekstu i nie rozumie jego wewnętrznej struktury.
+
+---
+
+### Scenariusz 2: Obiekt jako Hash
+
+#### Jak to działa?
+1.  Bierzesz obiekt `Product` w Javie.
+2.  Spring Data Redis mapuje go na strukturę `Hash` w Redis.
+3.  Główny klucz (`product:123`) identyfikuje cały obiekt (Hash), a pola obiektu (`name`, `price`) stają się polami wewnątrz tego Hasha.
+
+#### Jak to wygląda w Redisie?
+W `redis-cli` wygląda to zupełnie inaczej:
+```
+> HGETALL product:123
+1) "id"
+2) "123"
+3) "name"
+4) "Laptop Pro X"
+5) "price"
+6) "4999.99"
+7) "category"
+8) "Electronics"
+```
+*   **Klucz:** `product:123`
+*   **Wartość:** To nie jest prosty string, to jest struktura `Hash` zawierająca wiele par pole-wartość.
+
+#### Mapowanie w Spring Data Redis
+To jest **domyślne zachowanie Spring Data Repositories** (`@RedisHash`). Gdy używasz `ProductRepository.save(product)`, Spring robi dokładnie to za Ciebie. Możesz też robić to manualnie:
+
+```java
+// Używając opsForHash()
+redisTemplate.opsForHash().put("product:123", "name", "Laptop Pro X");
+redisTemplate.opsForHash().put("product:123", "price", "4999.99");
+```
+
+#### Zalety tego podejścia:
+*   **Niezwykle wydajne aktualizacje częściowe:** Chcesz zaktualizować tylko cenę? Wystarczy jedna, mała i szybka komenda do Redisa:
+```java
+// W Javie:
+redisTemplate.opsForHash().put("product:123", "price", "5199.99");
+
+// Co odpowiada komendzie w Redis:
+// HSET product:123 price "5199.99"
+    ```
+Nie ma potrzeby pobierania i wysyłania całego obiektu. To jest ogromna oszczędność zasobów.
+
+*   **Wydajny odczyt częściowy:** Potrzebujesz tylko nazwy i ceny?
+```java
+// HMGET product:123 name price
+List<Object> fields = redisTemplate.opsForHash().multiGet("product:123", Arrays.asList("name", "price"));
+    ```
+
+*   **Możliwość operacji po stronie serwera:** Możesz używać atomowych operacji Redisa na polach, np. inkrementacji:
+```java
+// HINCRBY product:123 stock 1  (jeśli mielibyśmy pole 'stock')
+redisTemplate.opsForHash().increment("product:123", "stock", 1);
+```
+
+#### Wady tego podejścia:
+*   **Brak natywnego wsparcia dla zagnieżdżonych obiektów:** Hash w Redis jest płaską strukturą (klucz-wartość). Jeśli Twój `Product` miałby listę obiektów `Review`, nie da się tego bezpośrednio zmapować. Rozwiązaniem jest albo spłaszczenie struktury, albo zapisanie zagnieżdżonego obiektu/listy jako JSON w jednym z pól hasha (podejście hybrydowe).
+*   **Zarządzanie typami:** Wszystkie wartości w hashu są przechowywane jako stringi. Twoja aplikacja (lub Spring) jest odpowiedzialna za poprawną konwersję `String -> Double`, `String -> Integer` itp. podczas odczytu.
+
+---
+
+### Podsumowanie i "Złota Reguła"
+
+| Cecha | String + JSON | Hash |
+| :--- | :--- | :--- |
+| **Aktualizacja pola** | **Bardzo niewydajna** (pobierz całość, zmień, zapisz całość) | **Bardzo wydajna** (atomowa aktualizacja jednego pola) |
+| **Odczyt pola** | Niewydajny (musisz pobrać i zdeserializować całość) | Wydajny (możesz pobrać tylko wybrane pola) |
+| **Operacje atomowe** | Niemożliwe (np. inkrementacja) | Możliwe (np. `HINCRBY`) |
+| **Obiekty zagnieżdżone** | **Łatwe** (JSON to obsługuje natywnie) | **Trudne** (wymaga spłaszczenia lub hybrydy) |
+| **Główny przypadek użycia**| Caching całych, rzadko zmieniających się obiektów. | Modelowanie obiektów domenowych, które żyją i są modyfikowane. |
+| **Domyślne dla...** | Ręczne użycie `RedisTemplate` z serializatorem JSON. | **Spring Data Repositories** (`@RedisHash`). |
+
+**Złota Reguła:**
+
+1.  **Użyj `String + JSON`**, gdy traktujesz obiekt jako **niepodzielną całość**. Głównie do **prostego cachingu**, gdzie zapisujesz wynik jakiejś operacji i odczytujesz go w całości, bez modyfikacji po drodze. Myśl o tym jak o "zamrożonej" kopii danych.
+
+2.  **Użyj `Hash`**, gdy modelujesz **aktywny obiekt domenowy**. Jeśli przewidujesz, że poszczególne pola obiektu będą się zmieniać (aktualizacja ceny, stanu magazynowego, nazwy użytkownika), `Hash` jest bezkonkurencyjny pod względem wydajności. Dlatego właśnie Spring Data Repositories wybrały go jako domyślną strategię.
+
+Znajomość tej różnicy pozwala Ci świadomie projektować interakcje z Redisem, unikać wąskich gardeł wydajnościowych i w pełni wykorzystać moc, którą oferuje Redis jako wielostrukturalna baza danych, a nie tylko prosta mapa klucz-wartość.
+
+## Implement simple Redis Spring Pub Sub App
+
+Oczywiście, przygotowałem kompletny, działający przykład, który realizuje wszystkie Twoje wymagania. Kod jest podzielony na logiczne komponenty, a każdy z nich jest dokładnie opisany.
+
+Przejdziemy przez następujące kroki:
+1.  **Zależności (Maven)**
+2.  **`Customer` DTO**
+3.  **Konfiguracja Redisa** (serializacja JSON, listener Pub/Sub)
+4.  **`CustomerService`** (logika zapisu, ustawianie TTL, publikowanie wiadomości)
+5.  **`CustomerCreationListener`** (odbiorca wiadomości)
+6.  **`DemoRunner`** (do uruchomienia i przetestowania całości)
+7.  **Konfiguracja `application.properties`**
+
+---
+
+### 1. Zależności (Maven)
+
+Upewnij się, że w pliku `pom.xml` masz następującą zależność:
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+    <!-- Jackson jest potrzebny do serializacji JSON, Spring Boot go domyślnie dołącza -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!-- Lombok do uproszczenia kodu DTO (opcjonalny, ale wygodny) -->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+</dependencies>
+```
+
+---
+
+### 2. DTO `Customer`
+
+Prosty obiekt transferu danych reprezentujący klienta. Użyjemy jego pola `id` jako klucza w Redis.
+
+`src/main/java/com/example/redisdemo/dto/Customer.java`
+```java
+package com.example.redisdemo.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+
+@Data // Adnotacja Lombok generuje gettery, settery, toString(), equals(), hashCode()
+@NoArgsConstructor
+@AllArgsConstructor
+public class Customer implements Serializable {
+    // Używamy Serializable, to dobra praktyka dla obiektów przesyłanych i serializowanych
+    private static final long serialVersionUID = 1L;
+
+    private String id;
+    private String name;
+    private String email;
+}
+```
+
+---
+
+### 3. Konfiguracja Redisa (`RedisConfig.java`)
+
+To serce naszej konfiguracji. Ustawiamy tu:
+*   **Serializator JSON** dla `RedisTemplate`, aby nasze obiekty `Customer` były przechowywane w czytelnym formacie.
+*   **Listener wiadomości** dla Pub/Sub, który będzie nasłuchiwał na określonym kanale.
+
+`src/main/java/com/example/redisdemo/config/RedisConfig.java`
+```java
+package com.example.redisdemo.config;
+
+import com.example.redisdemo.dto.Customer;
+import com.example.redisdemo.listener.CustomerCreationListener;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.PatternTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+@Configuration
+public class RedisConfig {
+
+    // Nazwa kanału (tematu), na którym będziemy publikować i nasłuchiwać
+    public static final String CUSTOMER_TOPIC = "customers:new";
+
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        // Ustawiamy serializator dla kluczy na String
+        template.setKeySerializer(new StringRedisSerializer());
+
+        // Ustawiamy serializator dla wartości na JSON.
+        // Dzięki temu nasze obiekty Customer będą zapisywane jako JSON.
+        Jackson2JsonRedisSerializer<Object> jsonSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
+        template.setValueSerializer(jsonSerializer);
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(jsonSerializer);
+
+        template.afterPropertiesSet();
+        return template;
+    }
+
+    @Bean
+    public MessageListenerAdapter listenerAdapter(CustomerCreationListener listener) {
+        // Tworzymy adapter, który potrafi wywołać metodę na naszym listenerze.
+        // Kluczowe jest podanie serializatora, aby Spring automatycznie
+        // zdeserializował wiadomość (JSON) do obiektu Customer.
+        MessageListenerAdapter adapter = new MessageListenerAdapter(listener, "receiveMessage");
+        adapter.setSerializer(new Jackson2JsonRedisSerializer<>(Customer.class));
+        return adapter;
+    }
+
+    @Bean
+    public RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory, MessageListenerAdapter listenerAdapter) {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        // Dodajemy nasz listener i mówimy mu, aby nasłuchiwał na kanale zdefiniowanym w CUSTOMER_TOPIC
+        container.addMessageListener(listenerAdapter, new PatternTopic(CUSTOMER_TOPIC));
+        return container;
+    }
+}
+```
+
+---
+
+### 4. Serwis (`CustomerService.java`)
+
+Ten serwis zawiera logikę biznesową:
+1.  Zapisuje lub aktualizuje klienta.
+2.  Tworzy klucz w formacie `customer:{id}`.
+3.  **Ustawia czas wygaśnięcia (TTL) na 10 minut po każdym zapisie/aktualizacji.**
+4.  Publikuje wiadomość na kanale Pub/Sub.
+
+`src/main/java/com/example/redisdemo/service/CustomerService.java`
+```java
+package com.example.redisdemo.service;
+
+import com.example.redisdemo.config.RedisConfig;
+import com.example.redisdemo.dto.Customer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.util.concurrent.TimeUnit;
+
+@Service
+public class CustomerService {
+
+    private final RedisTemplate<String, Object> redisTemplate;
+    private static final long TTL_MINUTES = 10;
+    private static final String KEY_PREFIX = "customer:";
+
+    @Autowired
+    public CustomerService(RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+
+    public void saveOrUpdateCustomer(Customer customer) {
+        // Tworzymy klucz, używając ID klienta, np. "customer:123-abc"
+        String key = KEY_PREFIX + customer.getId();
+
+        // Zapisujemy cały obiekt Customer pod wygenerowanym kluczem.
+        // Dzięki konfiguracji, obiekt zostanie zserializowany do JSON.
+        redisTemplate.opsForValue().set(key, customer);
+
+        // Ustawiamy (lub resetujemy) czas życia klucza na 10 minut.
+        // Jeśli klient zostanie zaktualizowany, TTL zostanie odświeżony.
+        redisTemplate.expire(key, TTL_MINUTES, TimeUnit.MINUTES);
+        System.out.printf("Saved customer %s. TTL set to %d minutes.%n", customer.getName(), TTL_MINUTES);
+
+        // Publikujemy wiadomość na kanale. Przekazujemy cały obiekt Customer.
+        redisTemplate.convertAndSend(RedisConfig.CUSTOMER_TOPIC, customer);
+        System.out.printf("Published notification for customer %s on topic '%s'.%n", customer.getName(), RedisConfig.CUSTOMER_TOPIC);
+    }
+
+    public Customer getCustomer(String id) {
+        String key = KEY_PREFIX + id;
+        return (Customer) redisTemplate.opsForValue().get(key);
+    }
+}
+```
+
+---
+
+### 5. Listener Pub/Sub (`CustomerCreationListener.java`)
+
+Ten komponent nasłuchuje na wiadomości i loguje je do konsoli, gdy tylko się pojawią.
+
+`src/main/java/com/example/redisdemo/listener/CustomerCreationListener.java`
+```java
+package com.example.redisdemo.listener;
+
+import com.example.redisdemo.dto.Customer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+@Component
+public class CustomerCreationListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(CustomerCreationListener.class);
+
+    /**
+     * Ta metoda zostanie automatycznie wywołana, gdy nadejdzie wiadomość.
+     * Dzięki konfiguracji w RedisConfig, Spring automatycznie zdeserializuje
+     * wiadomość JSON do obiektu Customer.
+     * @param customer Obiekt klienta otrzymany w wiadomości.
+     */
+    public void receiveMessage(Customer customer) {
+        // Logowanie do standardowego wyjścia (stdout) zgodnie z prośbą
+        System.out.println("---------------------------------------------------------");
+        System.out.println(">>> PUBSUB NOTIFICATION: A customer was created/updated!");
+        System.out.println(">>> Customer details: " + customer.toString());
+        System.out.println("---------------------------------------------------------");
+
+        // Logowanie za pomocą loggera (dobra praktyka)
+        logger.info("Received notification via Pub/Sub for customer: {}", customer);
+    }
+}
+```
+
+---
+
+### 6. Runner demonstracyjny (`DemoRunner.java`)
+
+Aby zobaczyć, jak to wszystko działa bez potrzeby budowania API, użyjemy `CommandLineRunner`, który wykona naszą logikę zaraz po uruchomieniu aplikacji.
+
+`src/main/java/com/example/redisdemo/DemoRunner.java`
+```java
+package com.example.redisdemo;
+
+import com.example.redisdemo.dto.Customer;
+import com.example.redisdemo.service.CustomerService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
+
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+@Component
+public class DemoRunner implements CommandLineRunner {
+
+    @Autowired
+    private CustomerService customerService;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    @Override
+    public void run(String... args) throws Exception {
+        System.out.println("--- Starting Redis Demo ---");
+
+        String customerId = UUID.randomUUID().toString();
+        Customer newCustomer = new Customer(customerId, "Jan Kowalski", "jan.kowalski@example.com");
+
+        // 1. Zapisujemy nowego klienta
+        System.out.println("\n[STEP 1] Saving a new customer...");
+        customerService.saveOrUpdateCustomer(newCustomer);
+
+        // Czekamy chwilę, aby listener zdążył odebrać wiadomość i ją wyświetlić
+        Thread.sleep(1000);
+
+        // 2. Sprawdzamy TTL
+        Long ttl = redisTemplate.getExpire("customer:" + customerId, TimeUnit.SECONDS);
+        System.out.printf("\n[VERIFICATION] TTL for customer %s is approximately %d seconds.\n", newCustomer.getName(), ttl);
+
+        // 3. Aktualizujemy klienta po kilku sekundach
+        System.out.println("\n[STEP 2] Updating the customer after 5 seconds...");
+        Thread.sleep(5000);
+        newCustomer.setName("Jan Adam Kowalski (updated)");
+        customerService.saveOrUpdateCustomer(newCustomer);
+        Thread.sleep(1000);
+
+        // 4. Sprawdzamy ponownie TTL - powinien być zresetowany
+        ttl = redisTemplate.getExpire("customer:" + customerId, TimeUnit.SECONDS);
+        System.out.printf("\n[VERIFICATION] TTL for updated customer %s is now approximately %d seconds (reset).\n", newCustomer.getName(), ttl);
+
+        System.out.println("\n--- Demo Finished ---");
+    }
+}
+```
+
+---
+
+### 7. Konfiguracja (`application.properties`)
+
+Dodaj połączenie do Twojego serwera Redis w pliku `src/main/resources/application.properties`.
+
+```properties
+# Adres serwera Redis
+spring.redis.host=localhost
+# Port serwera Redis
+spring.redis.port=6379
+
+# Możesz też dodać hasło, jeśli jest wymagane
+# spring.redis.password=twoje_haslo
+```
+
+### Jak to uruchomić i co zobaczysz?
+
+1.  Upewnij się, że masz działający serwer Redis (np. z Dockera: `docker run -d -p 6379:6379 --name my-redis redis`).
+2.  Uruchom aplikację Spring Boot.
+3.  Obserwuj konsolę. Zobaczysz logi krok po kroku:
+*   Zapisanie klienta i ustawienie TTL.
+*   Publikacja wiadomości.
+*   **Wiadomość z listenera Pub/Sub**, która pojawi się niemal natychmiast, informując o nowym kliencie.
+*   Weryfikację, że TTL został ustawiony.
+*   Aktualizację klienta i ponowną publikację.
+*   **Ponownie wiadomość z listenera.**
+*   Weryfikację, że TTL został zresetowany do pełnych 10 minut.
+
+Ten kod w pełni realizuje Twoje założenia, demonstrując kluczowe mechanizmy integracji Springa z Redisem w praktyczny i przejrzysty sposób.
+
+Doskonałe pytania, które dotykają zaawansowanych i praktycznych aspektów pracy z Redisem w architekturze mikroserwisów.
+
+### 1. Czy listener może być dodany przez adnotacje?
+
+**Tak, jest to możliwe, ale nie jest to mechanizm "wbudowany" w Spring Data Redis w tak prosty sposób jak np. `@KafkaListener` czy `@JmsListener`.**
+
+Domyślna integracja Pub/Sub w Spring Data Redis opiera się na programistycznej konfiguracji `RedisMessageListenerContainer`, tak jak pokazałem w poprzednim przykładzie. Jest to podejście bardziej niskopoziomowe, ale bardzo elastyczne.
+
+Jednakże, ekosystem Springa jest na tyle bogaty, że istnieją sposoby, aby to uprościć i uzyskać zachowanie oparte na adnotacjach. Najpopularniejszym podejściem jest użycie modułu **Spring Messaging** w połączeniu z adnotacją **`@MessageMapping`** (zwykle kojarzoną z WebSocketami/STOMP) lub stworzenie własnej adnotacji.
+
+Oto jak można by to osiągnąć za pomocą **`@RedisListener`**, który musimy sami zaimplementować (lub użyć biblioteki, która to robi). To jest bardziej zaawansowany temat, ale pokazuje możliwości frameworka.
+
+#### Krok 1: Stwórz własną adnotację `@RedisListener`
+
+```java
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface RedisListener {
+    String[] channels(); // Nazwy kanałów, na których metoda ma nasłuchiwać
+}
+```
+
+#### Krok 2: Stwórz procesor, który znajdzie te adnotacje i zarejestruje listenery
+
+Musimy napisać komponent, który po uruchomieniu aplikacji przeskanuje wszystkie beany w poszukiwaniu metod z naszą adnotacją `@RedisListener` i dynamicznie zarejestruje je w `RedisMessageListenerContainer`.
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.listener.PatternTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
+import org.springframework.util.ReflectionUtils;
+
+import javax.annotation.PostConstruct;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Map;
+
+@Configuration
+public class RedisListenerBeanPostProcessor {
+
+    @Autowired
+    private ApplicationContext context;
+
+    @Autowired
+    private RedisConnectionFactory connectionFactory;
+
+    @PostConstruct
+    public void registerListeners() {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+
+        Map<String, Object> beans = context.getBeansWithAnnotation(Configuration.class); // Można skanować wszystkie beany
+
+        for (Object bean : beans.values()) {
+            Method[] methods = ReflectionUtils.getAllDeclaredMethods(bean.getClass());
+            for (Method method : methods) {
+                if (method.isAnnotationPresent(RedisListener.class)) {
+                    RedisListener annotation = method.getAnnotation(RedisListener.class);
+                    MessageListenerAdapter adapter = new MessageListenerAdapter(bean, method.getName());
+                    adapter.afterPropertiesSet(); // Ważne!
+
+                    container.addMessageListener(adapter, Arrays.stream(annotation.channels())
+                        .map(PatternTopic::new)
+                        .toList());
+                }
+            }
+        }
+
+        container.afterPropertiesSet();
+        container.start();
+    }
+}
+```
+*Uwaga: Ten kod jest uproszczonym przykładem. W produkcji należałoby obsłużyć więcej przypadków, np. serializację, parametry metody itd.*
+
+#### Krok 3: Użyj nowej adnotacji w swoim komponencie
+
+```java
+@Component
+public class AnnotationBasedListener {
+
+    // Metoda nasłuchująca na kanale zdefiniowanym w RedisConfig.CUSTOMER_TOPIC
+    @RedisListener(channels = { RedisConfig.CUSTOMER_TOPIC })
+    public void handleCustomerMessage(String message) { // Tutaj trzeba by obsłużyć deserializację
+        System.out.println(">>> ANNOTATION LISTENER: Received message: " + message);
+    }
+}
+```
+
+**Podsumowując:** Tak, można to zrobić, ale wymaga to dodatkowej pracy konfiguracyjnej. Dla większości projektów podejście programistyczne z `RedisMessageListenerContainer` jest wystarczająco proste i czytelne, a jednocześnie daje pełną kontrolę.
+
+---
+
+### 2. Czy można uniknąć sytuacji, że wiele mikroserwisów nadpisuje sobie klucz?
+
+**To jest absolutnie fundamentalny problem w architekturze mikroserwisów i odpowiedź brzmi: tak, można i trzeba tego unikać.**
+
+Konflikty kluczy w Redis (lub w każdej innej współdzielonej pamięci masowej) są częstym źródłem błędów, które są trudne do zdiagnozowania. Wyobraź sobie, że mikroserwis `A` zapisuje dane klienta pod kluczem `customer:123`, a mikroserwis `B` zapisuje dane zamówienia pod tym samym kluczem `customer:123`. Dochodzi do katastrofy.
+
+Oto sprawdzone strategie, jak sobie z tym radzić:
+
+#### Strategia 1: Przestrzenie Nazw (Namespacing) - NAJPROSTSZA I NAJWAŻNIEJSZA
+
+To podstawowa i najważniejsza technika. Każdy mikroserwis powinien dodawać unikalny prefiks do swoich kluczy.
+
+**Zasada:** `[nazwa_serwisu]:[nazwa_domeny]:[id]`
+
+**Przykład:**
+
+*   **Mikroserwis `customer-service`:**
+*   Klucz dla klienta: `customer-service:customer:123`
+*   Klucz dla sesji klienta: `customer-service:session:xyz`
+*   **Mikroserwis `order-service`:**
+*   Klucz dla zamówienia: `order-service:order:456`
+*   Klucz dla koszyka: `order-service:cart:123` (zauważ, że ID `123` może być to samo co ID klienta, ale dzięki prefiksowi nie ma konfliktu).
+
+**Jak to zaimplementować w kodzie?**
+
+Można to robić ręcznie, ale to prowadzi do błędów. Lepiej stworzyć centralny komponent lub stałą w konfiguracji.
+
+```java
+@Service
+public class CustomerService {
+    // Odczytane z application.properties -> app.redis.prefix=customer-service
+    @Value("${app.redis.prefix}")
+    private String redisPrefix;
+
+    // ...
+
+    private String buildKey(String id) {
+        return redisPrefix + ":customer:" + id;
+    }
+
+    public void saveOrUpdateCustomer(Customer customer) {
+        String key = buildKey(customer.getId());
+        redisTemplate.opsForValue().set(key, customer);
+        // ...
+    }
+}
+```
