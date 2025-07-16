@@ -1,0 +1,110 @@
+---
+sidebar_label: 'EIP'
+---
+
+# What is EIP (Enterprise Integration Patterns)?
+
+Doskonały wybór! Wzorce Integracyjne (Enterprise Integration Patterns - EIP) to temat-rzeka, ale niezwykle ważny, zwłaszcza w świecie mikroserwisów i systemów rozproszonych. To one pozwalają zapanować nad chaosem komunikacji między różnymi aplikacjami.
+
+### Wzorce Integracyjne (Enterprise Integration Patterns - EIP)
+
+#### Czym są i po co?
+
+Wyobraź sobie, że budujesz system składający się z wielu niezależnych aplikacji (mikroserwisów, systemów legacy, zewnętrznych API). Każda z nich może:
+*   Mówić w innym "języku" (np. jedna używa JSON, inna XML).
+*   Korzystać z innego protokołu (HTTP, kolejki JMS, pliki FTP, bazy danych).
+*   Mieć inną dostępność (jedna odpowiada natychmiast, inna przetwarza dane wsadowo).
+
+**EIP to zbiór sprawdzonych rozwiązań i uniwersalny, wizualny język do opisywania, projektowania i implementowania przepływu danych między takimi systemami.**
+
+Książka autorstwa Gregora Hohpe i Bobby'ego Woolfa, "Enterprise Integration Patterns", jest biblią w tym temacie. Wprowadzili oni prostą i genialną analogię, która wszystko wyjaśnia.
+
+#### Analogia: System Pocztowy
+
+Pomyśl o integracji systemów jak o globalnym systemie pocztowym:
+*   **Wiadomość (Message):** To jak list lub paczka. Zawiera dane, które chcesz przesłać.
+*   **Kanał (Channel):** To jak skrzynka pocztowa lub taśmociąg na sortowni. Miejsce, przez które przepływają wiadomości.
+*   **Nadawca i Odbiorca (Sender/Receiver):** To Twoje aplikacje.
+*   **Router, Filtr, Tłumacz (Router, Filter, Translator):** To pracownicy poczty i maszyny na sortowni, które decydują, co zrobić z paczką.
+
+EIP to właśnie opis ról tych "pracowników poczty" i zasad organizacji całej "sortowni".
+
+---
+
+### Kluczowe Komponenty i Wzorce
+
+Zanim przejdziemy do wzorców, poznajmy podstawowe elementy składowe:
+
+1.  **Wiadomość (Message):** Podstawowa jednostka danych. Składa się z:
+*   **Nagłówka (Header):** Metadane o wiadomości (np. ID, adres zwrotny, typ danych).
+*   **Ciała (Body / Payload):** Właściwe dane, które przesyłamy (np. obiekt zamówienia w formacie JSON).
+
+2.  **Kanał (Channel):** "Rura", którą płyną wiadomości z jednego punktu do drugiego. Może to być np. kolejka komunikatów (RabbitMQ, Kafka) lub prosty bufor w pamięci.
+
+3.  **Punkt Końcowy (Endpoint):** "Brama" przez którą aplikacja łączy się z systemem integracyjnym, aby wysyłać lub odbierać wiadomości. Może to być kontroler REST, listener kolejki JMS, czy katalog na serwerze FTP.
+
+A teraz najważniejsze wzorce, czyli co można z tymi wiadomościami robić:
+
+#### 1. Wzorce Przesyłania Wiadomości (Messaging Patterns)
+
+*   **Point-to-Point:** Jedna wiadomość ma dokładnie jednego odbiorcę. Jak list polecony. Idealne do zadań, które muszą być wykonane raz (np. przetworzenie płatności).
+*   **Publish-Subscribe (Pub/Sub):** Jeden nadawca wysyła wiadomość do kanału (zwanego "tematem"), a wszyscy zainteresowani subskrybenci otrzymują jej kopię. Jak gazeta lub newsletter. Idealne do rozgłaszania zdarzeń (np. "użytkownik się zarejestrował").
+
+#### 2. Wzorce Trasowania (Routing Patterns)
+
+Decydują, dokąd ma trafić wiadomość.
+
+*   **Content-Based Router (Router oparty na treści):** "Sortownik". Patrzy na treść wiadomości (lub jej nagłówki) i na tej podstawie kieruje ją do odpowiedniego kanału.
+*   **Przykład:** Zamówienia od klientów VIP trafiają do kanału priorytetowego, a standardowe do zwykłego.
+
+*   **Message Filter (Filtr):** "Ochroniarz". Decyduje, czy wiadomość może przejść dalej, czy ma być odrzucona.
+*   **Przykład:** Przepuszczaj tylko wiadomości o statusie "ZATWIERDZONE", a resztę ignoruj.
+
+*   **Recipient List (Lista odbiorców):** Podobne do routera, ale jedna wiadomość może być wysłana do wielu odbiorców na podstawie określonych reguł.
+*   **Przykład:** Wiadomość o nowym produkcie jest wysyłana jednocześnie do serwisu inwentaryzacji, serwisu marketingu i serwisu analitycznego.
+
+*   **Splitter (Rozdzielacz):** Dzieli jedną złożoną wiadomość na wiele mniejszych.
+*   **Przykład:** Jedno duże zamówienie zawierające 10 produktów jest dzielone na 10 osobnych wiadomości, każda z jednym produktem, aby przetwarzać je niezależnie.
+
+*   **Aggregator (Agregator):** "Kolekcjoner". Odwrotność Splittera. Czeka na serię powiązanych wiadomości i łączy je w jedną, spójną wiadomość.
+*   **Przykład:** Po przetworzeniu wszystkich 10 wiadomości o produktach, agregator zbiera wyniki i tworzy jedną wiadomość z potwierdzeniem całego zamówienia.
+
+#### 3. Wzorce Transformacji (Transformation Patterns)
+
+Zmieniają zawartość lub strukturę wiadomości.
+
+*   **Translator / Mapper (Tłumacz):** Tłumaczy dane z jednego formatu na inny (np. z XML na JSON). Nie zmienia sensu biznesowego.
+*   **Przykład:** Serwis A wysyła dane klienta w formacie XML, a serwis B oczekuje ich w formacie JSON. Translator dokonuje konwersji.
+
+*   **Content Enricher (Wzbogacacz treści):** Pobiera dane z zewnętrznego źródła i dodaje je do wiadomości.
+*   **Przykład:** Wiadomość zawiera tylko ID klienta. Wzbogacacz odpytuje bazę danych o pełne dane klienta (imię, nazwisko, adres) i dołącza je do wiadomości.
+
+#### 4. Wzorce Obsługi Błędów
+
+*   **Dead-Letter Channel (Kanał martwych listów):** Jeśli wiadomość nie może być przetworzona (np. z powodu błędu), zamiast ją odrzucać, jest przenoszona do specjalnego kanału "martwych listów". Dzięki temu można ją później przeanalizować, naprawić i ponownie przetworzyć. Niezwykle ważne dla niezawodności systemów.
+
+---
+
+### Jak to wygląda w praktyce w Javie i Springu?
+
+Nie musisz implementować tych wzorców od zera! Istnieją do tego potężne frameworki. Dwa najpopularniejsze w ekosystemie Javy to:
+
+1.  **Apache Camel:** To szwajcarski scyzoryk do integracji. Udostępnia gotowe komponenty dla niemal każdego EIP i setki konektorów do różnych systemów (HTTP, Kafka, FTP, Salesforce, itd.). Definiujesz w nim "trasy" (routes), które opisują przepływ wiadomości.
+```java
+// Przykład trasy w Apache Camel (Java DSL)
+from("file:data/inbox")                // Endpoint: pobierz pliki z katalogu
+    .unmarshal().jacksonxml(Order.class) // Translator: z XML do obiektu Java
+    .filter(simple("${body.isVip}"))   // Filter: przepuść tylko VIPów
+    .to("jms:queue:vip_orders");         // Endpoint: wyślij do kolejki JMS
+```
+
+2.  **Spring Integration:** To część ekosystemu Spring. Pozwala na budowanie przepływów integracyjnych z wykorzystaniem komponentów Springa (beanów). Jest głęboko zintegrowany ze Springiem, co jest jego dużą zaletą, jeśli cała aplikacja jest oparta na tym frameworku. Konfiguracja jest bardzo podobna, choć często bardziej oparta na adnotacjach i beanach.
+
+### Podsumowanie korzyści
+
+Stosowanie EIP daje Ci:
+*   **Wspólny Język:** Wszyscy w zespole (nawet architekci i analitycy) mogą rozmawiać o integracji, używając tych samych, dobrze zdefiniowanych pojęć.
+*   **Luźne Powiązanie (Loose Coupling):** Aplikacje nie wiedzą o sobie nawzajem. Komunikują się przez abstrakcyjne kanały, co ułatwia ich wymianę i modyfikację.
+*   **Elastyczność i Skalowalność:** Łatwo jest dodawać nowe kroki w przepływie, zmieniać logikę routingu czy skalować poszczególne części systemu niezależnie.
+*   **Niezawodność:** Wzorce takie jak Dead-Letter Channel pozwalają budować systemy odporne na błędy.
+*   **Reużywalność:** Gotowe komponenty z frameworków (Camel, Spring Integration) przyspieszają pracę i gwarantują, że używasz sprawdzonych rozwiązań.
