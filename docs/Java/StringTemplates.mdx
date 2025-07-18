@@ -1,0 +1,104 @@
+---
+sidebar_label: 'String Templates'
+---
+
+# Any better aproach to format string in latest java ?
+
+
+Oczywiście! To świetne pytanie, bo Java rozwija się w kierunku większej czytelności i zwięzłości kodu. Od Javy 15 (a w finalnej wersji od Javy 21) mamy do dyspozycji mechanizm o nazwie **Szablony Strunowe (String Templates)**, który jest znacznie nowocześniejszy i bezpieczniejszy niż `String.format` czy konkatenacja `+`.
+
+### Najlepszy sposób: Szablony Strunowe (String Templates - JEP 430)
+
+Szablony strunowe (String Templates) to nowa funkcja języka, która pozwala wstawiać wartości i wyrażenia bezpośrednio do literału tekstowego w sposób bardziej naturalny i bezpieczny.
+
+**Jak to działa?**
+
+Używasz specjalnego "procesora szablonu", takiego jak `STR.`, przed literałem tekstowym. Zmienne i wyrażenia umieszczasz wewnątrz tekstu, poprzedzając je odwrotnym ukośnikiem `\` wewnątrz `\{}`.
+
+#### Porównanie: `String.format` vs. Szablon Strunowy `STR`
+
+Twój oryginalny kod z `String.format`:
+```java
+String errorMessage = String.format(
+    "Cannot archive Asset with ID [%s] because its status is '%s', but 'READY' is required.",
+    this.id.uuid(),
+    this.status
+);
+```
+**Wady `String.format`:**
+1.  **Rozdzielenie:** Format i argumenty są oddzielone. Łatwo o pomyłkę w kolejności lub liczbie argumentów.
+2.  **Brak sprawdzania typów w czasie kompilacji:** Jeśli podasz zły typ do formatu `%s` (choć `%s` jest elastyczny), lub `%d` dla stringa, błąd pojawi się dopiero w czasie wykonania.
+3.  **Mało czytelne:** Przy wielu argumentach trzeba skakać wzrokiem między szablonem a listą argumentów.
+
+---
+
+Ten sam kod z użyciem szablonu strunowego `STR`:
+```java
+// Wymaga Javy 21+
+String errorMessage = STR."""
+    Cannot archive Asset with ID [\{this.id.uuid()}] \
+    because its status is '\{this.status}', but 'READY' is required.\
+    """;
+```
+
+**Zalety szablonów strunowych:**
+1.  **Czytelność:** Wyrażenia są umieszczone dokładnie tam, gdzie ich wartość ma się pojawić. Wygląda to naturalnie, jak w wielu nowoczesnych językach (Python f-strings, JavaScript template literals).
+2.  **Bezpieczeństwo:** Kompilator sprawdza, czy wyrażenia w `\{...}` są poprawne. Nie ma ryzyka niedopasowania liczby argumentów do "placeholderów".
+3.  **Zwięzłość:** Kod jest krótszy i bardziej wyrazisty. Można używać zarówno standardowych literałów `"..."`, jak i bloków tekstu `"""..."""`.
+4.  **Elastyczność:** Wewnątrz `\{...}` możesz umieścić dowolne poprawne wyrażenie Javy, np. wywołanie metody `this.id.uuid()`, dostęp do pola `this.status` czy nawet proste obliczenia.
+
+**Ważna uwaga dotycząca składni:**
+W przykładzie użyłem bloku tekstu `"""..."""` oraz `\` na końcu linii. Ten `\` służy do usunięcia znaku nowej linii, co pozwala na ładne formatowanie długiego stringa w kodzie bez wstawiania niechcianych enterów do finalnego wyniku. Jeśli chcesz, aby Twój string był w jednej linii, możesz to zapisać tak:
+
+```java
+// Jednolinijkowa wersja
+String errorMessage = STR."Cannot archive Asset with ID [\{this.id.uuid()}] because its status is '\{this.status}', but 'READY' is required.";
+```
+
+### Inne, starsze alternatywy (ale gorsze niż szablony strunowe)
+
+Jeśli z jakiegoś powodu nie możesz używać Javy 21+, oto inne opcje:
+
+#### 1. Konkatenacja za pomocą `+`
+```java
+String errorMessage = "Cannot archive Asset with ID [" + this.id.uuid() +
+                      "] because its status is '" + this.status +
+                      "', but 'READY' is required.";
+```
+*   **Wady:** Mało czytelne przy wielu częściach. Historycznie mniej wydajne (choć nowoczesne JVM-y dobrze to optymalizują). Bardzo łatwo o pomyłkę (np. zapomnienie spacji).
+
+#### 2. `StringBuilder` lub `StringBuffer`
+```java
+String errorMessage = new StringBuilder()
+    .append("Cannot archive Asset with ID [")
+    .append(this.id.uuid())
+    .append("] because its status is '")
+    .append(this.status)
+    .append("', but 'READY' is required.")
+    .toString();
+```
+*   **Wady:** Bardzo rozwlekły kod (verbose). Użyteczny głównie w pętlach lub przy skomplikowanej, warunkowej budowie stringa.
+
+#### 3. `MessageFormat` (bardziej do internacjonalizacji)
+```java
+import java.text.MessageFormat;
+
+String errorMessage = MessageFormat.format(
+    "Cannot archive Asset with ID [{0}] because its status is ''{1}'', but ''READY'' is required.",
+    this.id.uuid(),
+    this.status
+);
+```
+*   **Wady:** Bardziej skomplikowany niż `String.format`. Stworzony głównie do obsługi i18n (np. zmiany kolejności argumentów w różnych językach). Apostrofy trzeba podwajać (`''`), co jest niewygodne.
+
+### Podsumowanie i rekomendacja
+
+| Metoda                    | Wersja Javy       | Ocena i rekomendacja                                                                                                                                                             |
+| ------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Szablony `STR`**        | **21+** (finalna) | **Zdecydowanie najlepszy wybór.** Najbardziej czytelny, bezpieczny i nowoczesny. Jeśli tylko możesz, używaj tej metody.                                                           |
+| `String.format()`         | 1.5+              | **Dobry, sprawdzony standard.** Jeśli jesteś na starszej wersji Javy (np. 11 lub 17), jest to nadal solidny i preferowany wybór w porównaniu do konkatenacji.                       |
+| Konkatenacja `+`          | 1.0+              | **Unikaj przy więcej niż 2-3 częściach.** Szybko staje się nieczytelna i podatna na błędy.                                                                                       |
+| `StringBuilder`           | 1.5+              | **Używaj tylko w specyficznych przypadkach**, np. budowanie stringa w pętli. Do prostego formatowania jest zbyt rozwlekła.                                                        |
+| `MessageFormat`           | 1.1+              | **Niszowe zastosowanie**, głównie i18n. Zbyt skomplikowana składnia do codziennego formatowania.                                                                                   |
+
+**Wniosek:** Jeśli twój projekt jest na Javie 21 lub nowszej, zdecydowanie przejdź na **Szablony Strunowe (String Templates)**. Jeśli pracujesz na Javie 11 lub 17, `String.format()` pozostaje bardzo dobrym i czytelnym wyborem.
