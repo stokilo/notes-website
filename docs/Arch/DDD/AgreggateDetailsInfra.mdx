@@ -1,0 +1,120 @@
+---
+sidebar_label: 'Aggregate Details Infra'
+---
+
+# Should aggregate for asset include i.e. type of cloud where asset will be uploaded?
+
+
+To jest absolutnie kluczowe pytanie, które doskonale testuje zrozumienie granic między domeną a infrastrukturą w DDD.
+
+Krótka odpowiedź: **Nie, agregat `Asset` nie powinien zawierać detali takich jak nazwa chmury ("AWS", "Google").**
+
+Jest to klasyczny przykład "przeciekania" szczegółów implementacyjnych (infrastruktury) do czystego modelu domenowego, czego w DDD staramy się unikać za wszelką cenę.
+
+---
+
+### Dlaczego nie? Analiza przez pryzmat DDD
+
+1.  **Język Wszechobecny (Ubiquitous Language):** Czy Twój ekspert domenowy (np. menedżer produktu) mówi: "Ten obrazek jest *w AWS*, a ten *w Google Cloud*"? Raczej nie. Powie raczej: "Ten obrazek jest w *szybkim dostępie* (hot storage), a ten jest *zarchiwizowany* (cold storage)". Nazwa dostawcy chmury to żargon techniczny, a nie język biznesu. Model domeny ma odzwierciedlać język biznesu.
+
+2.  **Czystość i Stabilność Modelu Domenowego:** Twoja domena biznesowa powinna być stabilna. Logika biznesowa dotycząca `Asset` nie powinna się zmieniać tylko dlatego, że dział IT zdecydował się na migrację z AWS S3 na Azure Blob Storage. Gdyby agregat `Asset` miał pole `private String cloudProvider = "AWS";`, taka migracja wymagałaby zmiany w sercu Twojej logiki biznesowej. To poważny sygnał ostrzegawczy (design smell).
+
+3.  **Separacja Warstw:**
+*   **Domena:** Co się dzieje z assetem? Jaki jest jego cykl życia? (`UPLOADING`, `ACTIVE`, `ARCHIVED`). Jakie są jego właściwości biznesowe? (`wersja`, `właściciel`, `metadane`).
+*   **Infrastruktura:** Gdzie fizycznie leży plik? Jak się z nim połączyć? (`AWS S3`, `bucket-name`, `region`, `klucze API`).
+
+Mieszanie tych dwóch światów prowadzi do kruchego, trudnego w utrzymaniu i testowaniu kodu.
+
+### Jak więc zamodelować to poprawnie?
+
+Zamiast konkretnej technologii, modeluj **koncepcję biznesową**, którą ta technologia realizuje.
+
+Załóżmy, że używasz różnych chmur z powodów biznesowych, np. jedna jest tania do archiwizacji, a druga szybka do codziennego użytku.
+
+#### Krok 1: Zdefiniuj pojęcie biznesowe w domenie
+
+Wprowadź do domeny pojęcie, które rozumie biznes, np. `StorageTier` (poziom przechowywania) lub `StoragePolicy` (polityka przechowywania).
+
+```java
+// W warstwie domeny (domain layer)
+
+public enum StorageTier {
+    HOT,   // Dla plików wymagających szybkiego dostępu
+    COLD,  // Dla plików archiwalnych, rzadko używanych
+    TEMPORARY // Dla plików w trakcie przetwarzania
+}
+
+public class Asset {
+    // ... inne pola
+    private AssetStorageId storageId; // Logiczny identyfikator pliku
+    private StorageTier storageTier;  // Koncepcja biznesowa, a nie technologia!
+
+    public void archive() {
+        if (this.storageTier == StorageTier.COLD) {
+            throw new IllegalStateException("Asset is already archived.");
+        }
+        // Logika biznesowa związana z archiwizacją...
+        this.storageTier = StorageTier.COLD;
+
+        // Zwróć zdarzenie, aby infrastruktura mogła zareagować
+        // (np. przenieść plik z S3 do Glacier)
+        // return new AssetMarkedForArchivingEvent(this.id);
+    }
+}
+```
+Teraz Twój agregat `Asset` wie, że jest w "szybkim" lub "zimnym" magazynie, co jest informacją biznesową. Nie wie nic o AWS czy Google.
+
+#### Krok 2: Mapuj koncepcję biznesową na technologię w warstwie infrastruktury
+
+Odpowiedzialnością warstwy infrastruktury jest "wiedzieć", że `StorageTier.HOT` oznacza `AWS S3 w regionie eu-central-1`, a `StorageTier.COLD` to `Google Cloud Storage Nearline`.
+
+To mapowanie może być zrealizowane na wiele sposobów, najczęściej poprzez konfigurację.
+
+**Przykład (`application.yml`):**
+```yaml
+storage:
+  tiers:
+    HOT:
+      provider: "aws-s3"
+      config:
+        bucket: "my-company-hot-bucket"
+        region: "eu-central-1"
+    COLD:
+      provider: "gcp-storage"
+      config:
+        bucket: "my-company-archive-bucket"
+        type: "nearline"
+```
+
+Następnie tworzysz komponent w warstwie infrastruktury (np. `StorageResolver`), który na podstawie `StorageTier` i `AssetStorageId` jest w stanie zbudować pełny, fizyczny adres URL do pliku lub uzyskać do niego dostęp.
+
+```java
+// W warstwie infrastruktury (infrastructure layer)
+public interface StorageService {
+    URL getUrl(AssetStorageId storageId, StorageTier tier);
+    void move(AssetStorageId storageId, StorageTier from, StorageTier to);
+}
+
+// Konkretna implementacja, która czyta plik .yml
+@Component
+public class ConfigurableStorageService implements StorageService {
+    // ... wstrzyknięta konfiguracja
+
+    @Override
+    public URL getUrl(AssetStorageId storageId, StorageTier tier) {
+        // Logika, która na podstawie konfiguracji wybiera odpowiedniego klienta
+        // (S3Client lub StorageClient) i generuje URL.
+    }
+    // ...
+}
+```
+
+### Kiedy agregat MÓGŁBY wiedzieć o technologii? (Wyjątek potwierdzający regułę)
+
+Jest jeden scenariusz, w którym nazwa dostawcy mogłaby być częścią domeny: **jeśli Twoja domena biznesowa to zarządzanie chmurą.**
+
+Jeśli piszesz aplikację taką jak Terraform, Pulumi albo narzędzie do optymalizacji kosztów chmurowych, to "AWS", "Azure", "S3 Bucket", "EC2 Instance" **są** Twoimi kluczowymi pojęciami domenowymi. Wtedy są one sercem Twojego Języka Wszechobecnego i muszą znaleźć się w agregatach.
+
+Dla większości aplikacji (np. e-commerce, systemy rezerwacyjne, aplikacje społecznościowe) jest to jednak detal infrastrukturalny.
+
+**Podsumowując:** Trzymaj agregat `Asset` z dala od konkretnych nazw technologii. Zamiast tego, modeluj abstrakcyjną koncepcję biznesową, a mapowanie tej koncepcji na konkretną technologię pozostaw warstwie infrastruktury i konfiguracji.
