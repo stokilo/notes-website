@@ -1,0 +1,57 @@
+---
+sidebar_label: 'Exceptions'
+---
+
+# Is extending RuntimeException without message a good practice?
+
+To świetne pytanie, które dotyka sedna dobrych praktyk w projektowaniu API i obsługi błędów w Javie, szczególnie w kontekście DDD.
+
+Krótka odpowiedź brzmi: tworzenie własnego, nazwanego wyjątku jest **doskonałą praktyką**. Jednak pominięcie wiadomości (message) jest **ryzykowne i zazwyczaj niezalecane**.
+
+Przeanalizujmy to szczegółowo.
+
+### Zalety Twojego podejścia (Własny typ wyjątku)
+
+Stworzenie klasy `public class AssetOperationNotSupportedException extends RuntimeException` jest bardzo dobrym posunięciem. Robisz to, co zalecają najlepsi programiści:
+
+1.  **Semantyka i Czytelność (Semantics & Readability):** Nazwa wyjątku sama w sobie jest dokumentacją. Kod, który go obsługuje, jest natychmiast zrozumiały:
+```java
+try {
+    asset.archive();
+} catch (AssetOperationNotSupportedException e) {
+    // Logika dla sytuacji, gdy operacja jest niedozwolona
+    // O wiele lepsze niż catch (IllegalStateException e)
+}
+    ```
+2.  **Separacja logiki błędów (Error Logic Separation):** Pozwala na precyzyjne wyłapywanie konkretnego problemu. Możesz inaczej zareagować na `AssetNotFoundException`, a inaczej na `AssetOperationNotSupportedException`. To kluczowe przy mapowaniu błędów na kody statusu HTTP w API (np. 404 Not Found vs. 409 Conflict).
+3.  **Zgodność z DDD:** Wyjątek staje się częścią **Języka Wszechobecnego (Ubiquitous Language)**. Jeśli biznes mówi: "Nie można zarchiwizować zasobu w trakcie przetwarzania", to wyjątek `AssetOperationNotSupportedException` idealnie to odzwierciedla.
+
+### Wady pominięcia wiadomości (`message`)
+
+Tutaj dochodzimy do sedna Twojego pytania. Mimo że nazwa klasy jest wymowna, brak wiadomości to duża strata, głównie z perspektywy **diagnostyki i konserwacji systemu**.
+
+1.  **Brak kontekstu przy debugowaniu:**
+Wyobraź sobie, że widzisz w logach (np. w Sentry, Datadog lub zwykłym pliku logu) taki błąd:
+```
+ERROR com.myapp.AssetService - Operation failed
+com.myapp.domain.AssetOperationNotSupportedException
+    at com.myapp.domain.Asset.archive(Asset.java:58)
+    at com.myapp.AssetService.archiveAsset(AssetService.java:112)
+    ...
+    ```
+Jako deweloper zadajesz sobie pytania:
+*   **Który** zasób (Asset) spowodował błąd? Jakie było jego ID?
+*   **Dlaczego** operacja była niedozwolona? Jaki był stan (`status`) tego zasobu?
+*   Jaką operację próbowano wykonać?
+
+Sama nazwa wyjątku nie daje odpowiedzi na te pytania.
+
+2.  **Utrudnione logowanie:**
+Standardowe praktyki logowania opierają się na wiadomości z wyjątku. `log.error("Błąd podczas archiwizacji", e);` wyświetli wiadomość wyjątku. Jeśli jest ona `null`, log jest znacznie mniej użyteczny.
+
+3.  **Niejasność dla użytkownika API:**
+Jeśli ten wyjątek jest mapowany na odpowiedź API, użytkownik dostanie ogólnikową informację "Operation Not Supported". Znacznie lepsza byłaby odpowiedź: `"Cannot archive asset 'abc-123' because it is currently in 'PROCESSING' state."`
+
+### Best Practice: Zawsze dodawaj konstruktory i używaj wiadomości
+
+Najlepszą praktyką jest połączenie obu podejść: **stwórz własny typ wyjątku i zawsze rzucaj go z precyzyjną, kontekstową wiadomością**.
