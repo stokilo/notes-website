@@ -1,0 +1,146 @@
+---
+sidebar_label: 'Aggregate Event Sourcing'
+---
+
+# Shouldn't root aggregate methods take events as arguments? Or only return events after processing?
+
+To jest świetne, wnikliwe pytanie, które prowadzi nas do rozróżnienia dwóch potężnych, ale różnych wzorców projektowania w DDD.
+
+Krótka odpowiedź: To, co opisujesz, jest charakterystyczne dla wzorca **Event Sourcing**, a nie dla "klasycznego" podejścia do agregatów. W klasycznym podejściu metody agregatu **nie przyjmują** eventów jako argumentów.
+
+Przeanalizujmy oba podejścia.
+
+---
+
+### Podejście 1: Klasyczny Agregat (State-Stored Aggregate)
+
+To jest najczęstsze i domyślne podejście, które opisałem w poprzedniej odpowiedzi.
+
+**Jak to działa:**
+1.  Metoda publiczna na agregacie reprezentuje **komendę biznesową** (np. `aktywujObrazek`, `zmieńAdres`, `dodajProduktDoKoszyka`).
+2.  Ta metoda zawiera logikę walidacji (sprawdza, czy można wykonać operację na obecnym stanie).
+3.  Jeśli walidacja przejdzie, metoda **bezpośrednio zmienia stan** obiektu (np. `this.status = AKTYWNY;`).
+4.  Po zmianie stanu, metoda może (i często powinna) **opublikować zdarzenie domenowe**, aby poinformować inne części systemu o tym, co się stało.
+
+**Kluczowa idea:** Metoda przyjmuje proste typy lub obiekty wartości jako argumenty (dane potrzebne do wykonania komendy), a **generuje event jako swój rezultat/efekt uboczny**.
+
+**Przykład (ponownie `ImageAsset`):**
+
+```java
+public class ImageAsset {
+
+    private ImageAssetStatus status;
+    private StorageKey storageKey;
+    // ... inne pola
+
+    // Metoda jest KOMENDĄ BIZNESOWĄ
+    public void markAsActive(StorageKey newStorageKey) { // Przyjmuje dane, nie event!
+        // 1. Walidacja
+        if (this.status != ImageAssetStatus.UPLOADING) {
+            throw new IllegalStateException("Asset can be marked as active only from UPLOADING state.");
+        }
+        if (newStorageKey == null) {
+            throw new IllegalArgumentException("Storage key cannot be null.");
+        }
+
+        // 2. Zmiana stanu
+        this.status = ImageAssetStatus.ACTIVE;
+        this.storageKey = newStorageKey;
+
+        // 3. (Opcjonalnie) Publikacja zdarzenia
+        // Zdarzenie jest REZULTATEM, a nie wejściem.
+        // Zazwyczaj to framework lub serwis aplikacyjny zbiera i publikuje te zdarzenia.
+        this.registerEvent(new ImageAssetActivatedEvent(this.id, this.storageKey));
+    }
+}
+```
+
+W tym podejściu event (`ImageAssetActivatedEvent`) jest **produktem ubocznym** operacji, a nie jej **daną wejściową**.
+
+---
+
+### Podejście 2: Agregat oparty na Event Sourcing
+
+To jest dokładnie wzorzec, o który pytasz. Jest to bardziej zaawansowana technika.
+
+**Jak to działa:**
+1.  **Stan agregatu nie jest bezpośrednio przechowywany.** Zamiast tego, w bazie danych (zwanej *Event Store*) przechowujemy **sekwencję zdarzeń**, które zaszły w agregacie.
+2.  Aktualny stan agregatu jest **rekonstruowany w pamięci** poprzez odtworzenie (ang. *replaying*) wszystkich jego historycznych zdarzeń.
+3.  Metoda publiczna (komenda) waliduje, czy operacja jest możliwa.
+4.  Jeśli tak, **tworzy nowy obiekt zdarzenia** i wywołuje na samej sobie wewnętrzną metodę `apply(event)`.
+5.  Metoda `apply(event)` jest jedynym miejscem, które faktycznie **mutuje stan obiektu w pamięci**. Jest ona używana zarówno do zastosowania nowych zmian, jak i do odtwarzania stanu z historii.
+
+**Przykład (agregat `ImageAsset` w stylu Event Sourcing):**
+
+```java
+public class EventSourcedImageAsset {
+
+    private ImageAssetId id;
+    private ImageAssetStatus status;
+    private StorageKey storageKey;
+
+    private final List<Object> uncommittedEvents = new ArrayList<>();
+
+    // Prywatny konstruktor
+    private EventSourcedImageAsset() {}
+
+    // Metoda publiczna (KOMENDA)
+    public void markAsActive(StorageKey newStorageKey) {
+        // 1. Walidacja
+        if (this.status != ImageAssetStatus.UPLOADING) {
+            throw new IllegalStateException("Asset can be marked as active only from UPLOADING state.");
+        }
+        if (newStorageKey == null) {
+            throw new IllegalArgumentException("Storage key cannot be null.");
+        }
+
+        // 2. Stworzenie zdarzenia i wywołanie apply
+        // Metoda nie zmienia stanu bezpośrednio!
+        ImageAssetActivatedEvent event = new ImageAssetActivatedEvent(this.id, newStorageKey);
+        this.apply(event);
+        this.uncommittedEvents.add(event); // Dodaj do listy do zapisu
+    }
+
+    // Prywatna metoda mutująca stan - tu przyjmujemy event jako argument!
+    private void apply(ImageAssetActivatedEvent event) {
+        this.status = ImageAssetStatus.ACTIVE;
+        this.storageKey = event.storageKey(); // Dane bierzemy z eventu
+    }
+
+    // Inne metody apply dla innych typów zdarzeń...
+    // np. private void apply(ImageAssetCreatedEvent event) { ... }
+
+    // Metoda fabryczna do odtworzenia agregatu z historii
+    public static EventSourcedImageAsset rehydrateFrom(List<Object> history) {
+        EventSourcedImageAsset asset = new EventSourcedImageAsset();
+        for (Object event : history) {
+            if (event instanceof ImageAssetActivatedEvent) {
+                asset.apply((ImageAssetActivatedEvent) event);
+            }
+            // ... inne ify dla innych zdarzeń
+        }
+        return asset;
+    }
+}
+```
+
+**Kluczowa idea:** Metoda biznesowa `markAsActive` tworzy zdarzenie, a wewnętrzna, przeciążona metoda `apply` **przyjmuje to zdarzenie jako argument** i na jego podstawie modyfikuje stan. To jest dokładnie scenariusz, o który pytałeś.
+
+### Podsumowanie i Rekomendacja
+
+| Cecha                                | Klasyczny Agregat (State-Stored)                                | Agregat z Event Sourcing                                           |
+| ------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Metoda biznesowa**                 | Wykonuje komendę, zmienia stan, **generuje** event.              | Wykonuje komendę, **tworzy** event, woła `apply(event)`.           |
+| **Argumenty metody**                 | Dane potrzebne do wykonania komendy (np. `StorageKey`).         | Dane potrzebne do wykonania komendy (np. `StorageKey`).            |
+| **Kto mutuje stan?**                 | Metoda biznesowa (np. `markAsActive`).                          | Wewnętrzna metoda `apply(event)`.                                  |
+| **Czy metoda przyjmuje event?**      | **Nie.**                                                        | **Tak**, ale jest to wewnętrzna metoda `apply`.                    |
+| **Co jest przechowywane w DB?**      | **Aktualny stan** obiektu (jedna linia w tabeli).                 | **Pełna historia zdarzeń** (wiele linii w tabeli zdarzeń).         |
+| **Złożoność**                        | Niższa, łatwiejsza do wdrożenia.                                | Wyższa, wymaga specjalnej infrastruktury (Event Store, projekcje). |
+| **Kiedy używać?**                    | W większości przypadków. To standardowe, solidne podejście.     | Gdy historia zmian jest kluczową częścią domeny (audyt, finanse).   |
+
+**Wniosek:**
+
+Praktyka, o którą pytasz, **istnieje i jest fundamentalną częścią wzorca Event Sourcing**.
+
+Jednakże **nie jest to standardowa praktyka dla "zwykłych" agregatów DDD**. Jeśli dopiero zaczynasz lub jeśli twoja domena nie wymaga pełnego śladu audytowego każdej zmiany, trzymaj się **podejścia klasycznego**. Jest ono znacznie prostsze w implementacji i zrozumieniu. Twoje metody biznesowe powinny reprezentować komendy i generować zdarzenia jako swój wynik.
+
