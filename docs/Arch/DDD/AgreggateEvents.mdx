@@ -1,0 +1,241 @@
+---
+sidebar_label: 'Aggregate Events'
+---
+
+# Should Aggregate keep domain event list or return from methods that modify aggreggate
+
+Świetne pytanie! To jest kluczowa kwestia architektoniczna, która ma swoje konsekwencje. Rozważmy oba podejścia:
+
+1.  **Agregat przechowuje listę zdarzeń (podejście preferowane).**
+2.  **Metoda agregatu zwraca zdarzenie (podejście alternatywne).**
+
+### Podejście 1: Agregat przechowuje listę zdarzeń (mechanizm Spring Data / wewnętrzna kolekcja)
+
+To jest podejście, które opisałem wcześniej. Agregat ma wewnętrzną, nietrwałą (transient) listę zdarzeń, które generuje.
+
+```java
+public abstract class Asset {
+    @Transient
+    private final List<Object> domainEvents = new ArrayList<>();
+
+    public void confirmCloudStorage(final AssetStorageId newStorageId) {
+        // ... logika walidacji ...
+        this.status = AssetStatus.ACTIVE;
+        this.storageId = newStorageId;
+        this.registerEvent(new AssetStoredInCloudEvent(this.id, this.storageId)); // Dodaje do listy
+    }
+
+    // Spring Data lub własny mechanizm pobiera i czyści tę listę
+    @DomainEvents
+    public Collection<Object> getDomainEvents() { /* ... */ }
+
+    @AfterDomainEventPublication
+    public void clearDomainEvents() { /* ... */ }
+}
+
+// Użycie w Serwisie Aplikacyjnym
+@Transactional
+public void confirmAssetStorage(AssetId assetId, AssetStorageId storageId) {
+    Asset asset = assetRepository.findById(assetId).orElseThrow();
+    asset.confirmCloudStorage(storageId);
+    assetRepository.save(asset); // Zapis i publikacja zdarzeń dzieją się "automagicznie"
+}
+```
+
+**Zalety tego podejścia:**
+
+1.  **Czysty Serwis Aplikacyjny:** Serwis Aplikacyjny jest bardzo prosty. Jego jedynym zadaniem jest orkiestracja: wczytaj, wykonaj, zapisz. Nie musi martwić się o przechwytywanie i przekazywanie zdarzeń. Cała odpowiedzialność za publikację jest delegowana do warstwy infrastruktury (np. Spring Data JPA).
+2.  **Obsługa wielu zdarzeń:** Jedna operacja biznesowa może wygenerować wiele zdarzeń (np. `ProduktDodanyDoKoszyka`, `CenaKoszykaZaktualizowana`). Zwracanie pojedynczego zdarzenia komplikuje sprawę (musiałbyś zwracać listę). Wewnętrzna kolekcja radzi sobie z tym naturalnie.
+3.  **Spójność Transakcyjna:** Zdarzenia są publikowane dopiero po pomyślnym zapisie agregatu w bazie danych (np. dzięki `@TransactionalEventListener` w Springu). To gwarantuje, że listenery nie zareagują na zmianę, która ostatecznie została wycofana (rollback). Mechanizmy oparte na zwracaniu zdarzenia z metody mogą łatwiej doprowadzić do błędu, gdzie zdarzenie jest publikowane przed commitem transakcji.
+4.  **Separacja Odpowiedzialności (Separation of Concerns):** Agregat jest odpowiedzialny za *tworzenie* zdarzeń. Infrastruktura (repozytorium, dispatcher) jest odpowiedzialna za ich *publikowanie*. To czysty podział. Serwis Aplikacyjny pozostaje prostym koordynatorem.
+
+**Wady:**
+
+1.  **"Magia":** Dla kogoś, kto nie zna mechanizmu (np. adnotacji `@DomainEvents`), może być niejasne, skąd biorą się zdarzenia. Trzeba znać framework lub konwencję.
+
+---
+
+### Podejście 2: Metoda agregatu zwraca zdarzenie
+
+W tym podejściu metoda biznesowa bezpośrednio zwraca wygenerowane zdarzenie (lub listę zdarzeń).
+
+```java
+public abstract class Asset {
+    // Brak wewnętrznej listy zdarzeń
+
+    public AssetStoredInCloudEvent confirmCloudStorage(final AssetStorageId newStorageId) {
+        // ... logika walidacji ...
+        this.status = AssetStatus.ACTIVE;
+        this.storageId = newStorageId;
+        return new AssetStoredInCloudEvent(this.id, this.storageId); // Zwróć zdarzenie
+    }
+}
+
+// Użycie w Serwisie Aplikacyjnym - staje się bardziej skomplikowane
+@Transactional
+public void confirmAssetStorage(AssetId assetId, AssetStorageId storageId) {
+    Asset asset = assetRepository.findById(assetId).orElseThrow();
+
+    // 1. Wywołaj metodę i przechwyć zdarzenie
+    AssetStoredInCloudEvent event = asset.confirmCloudStorage(storageId);
+
+    // 2. Zapisz agregat
+    assetRepository.save(asset);
+
+    // 3. Ręcznie opublikuj zdarzenie
+    eventPublisher.publish(event); // Musisz wstrzyknąć publisher
+}
+```
+
+**Zalety tego podejścia:**
+
+1.  **Jawność (Explicitness):** Kod jest bardzo czytelny. Od razu widać, że metoda `confirmCloudStorage` zwraca zdarzenie, a serwis aplikacyjny jest odpowiedzialny za jego publikację. Nie ma "magii".
+2.  **Brak zależności od frameworka:** Nie musisz polegać na specjalnych adnotacjach Spring Data. Możesz to zaimplementować w dowolnym środowisku.
+
+**Wady:**
+
+1.  **Bardziej skomplikowany Serwis Aplikacyjny:** Serwis Aplikacyjny ma teraz więcej odpowiedzialności. Musi nie tylko zarządzać agregatem, ale także przechwytywać i publikować zdarzenia. To "przeciekanie" odpowiedzialności.
+2.  **Ryzyko niespójności:** Jeśli programista zapomni opublikować zdarzenie (`eventPublisher.publish(event)`), system będzie w niespójnym stanie (agregat zmieniony, ale nikt o tym nie wie). Podejście z kolekcją i automatyzacją jest bezpieczniejsze.
+3.  **Problemy z transakcyjnością:** Jak wspomniano, proste wywołanie `eventPublisher.publish(event)` może opublikować zdarzenie *zanim* transakcja zostanie zatwierdzona. To poważny problem. Trzeba by było budować skomplikowane mechanizmy, które kolejkują zdarzenia i publikują je dopiero po commicie – czyli w praktyce reimplementować to, co Spring Data daje za darmo.
+4.  **Obsługa wielu zdarzeń jest niewygodna:** Metoda musiałaby zwracać `List<Object>`, co jest mniej eleganckie i wymaga dodatkowej obsługi w serwisie.
+
+### Wniosek i Rekomendacja
+
+**Tak, technicznie możesz zwracać zdarzenia z metod agregatu.** Czasami w bardzo prostych scenariuszach lub w środowiskach bez wsparcia dla automatycznej publikacji zdarzeń, może to być rozsądne wyjście.
+
+**Jednak w ekosystemie Java/Spring, podejście z wewnętrzną kolekcją zdarzeń i automatyczną publikacją jest zdecydowanie lepsze, bardziej solidne i zgodne z duchem DDD.**
+
+**Rekomendacja:** Trzymaj się podejścia numer 1 (wewnętrzna kolekcja zdarzeń).
+
+*   **Zachowuje czystość warstw:** Agregat tworzy zdarzenia, Serwis Aplikacyjny orkiestruje, Infrastruktura publikuje. Każdy ma swoje jasno zdefiniowane zadanie.
+*   **Jest bezpieczniejsze:** Zapewnia spójność transakcyjną, chroniąc przed publikowaniem zdarzeń z transakcji, które zostały wycofane.
+*   **Jest bardziej skalowalne:** Łatwo obsługuje przypadki, w których jedna akcja generuje wiele zdarzeń.
+
+Chociaż podejście ze zwracaniem zdarzeń wydaje się na pierwszy rzut oka prostsze i bardziej jawne, w praktyce prowadzi do bardziej skomplikowanego kodu w warstwie aplikacji i otwiera drzwi do trudnych do wyśledzenia błędów związanych ze spójnością. Lepiej polegać na sprawdzonych mechanizmach, które rozwiązują te problemy za nas.
+
+
+# Ok but isn't better to use outbox pattern and return events from Aggregate and persist them in db (outbox) + send event? Spring event can be lost if not handled in transaction
+
+Doskonały wniosek! Masz absolutną rację. Wchodzimy teraz na wyższy poziom niezawodności systemu, a Twoje pytanie jest w sedno problemu.
+
+To, co opisałeś – ryzyko utraty zdarzeń w przypadku restartu lub błędu po commicie transakcji, a przed wysłaniem zdarzenia – jest realnym i poważnym problemem w systemach rozproszonych. Proste, wewnątrzprocesowe zdarzenia Springa (`ApplicationEventPublisher`) **nie gwarantują dostarczenia**.
+
+Rozwiązaniem, które sam zaproponowałeś, jest właśnie wzorzec **Transactional Outbox**. Jest to standardowy i najlepszy sposób na zapewnienie niezawodnej komunikacji opartej na zdarzeniach (at-least-once delivery) z systemu opartego na relacyjnej bazie danych.
+
+Przeanalizujmy, jak to zmienia nasz model myślenia i kod.
+
+### Problem: Dlaczego proste zdarzenia mogą zawieść?
+
+Wyobraźmy sobie taki scenariusz:
+1.  `@Transactional` metoda w `AssetApplicationService` się rozpoczyna.
+2.  Agregat `Asset` zmienia stan.
+3.  Agregat jest zapisywany w bazie danych.
+4.  **Transakcja jest zatwierdzana (commit).** Zmiany w tabeli `assets` są już trwałe.
+5.  Spring próbuje opublikować zdarzenie do listenera.
+6.  **KRASH!** Serwer się restartuje, aplikacja pada, połączenie z brokerem wiadomości (np. RabbitMQ) jest zerwane.
+
+**Rezultat:** Zmiana w bazie danych została zapisana, ale zdarzenie nigdy nie dotarło do odbiorców. System jest w niespójnym stanie.
+
+### Rozwiązanie: Transactional Outbox Pattern
+
+Wzorzec ten rozwiązuje problem poprzez zagwarantowanie, że zapis stanu biznesowego ORAZ zapis samego zdarzenia odbywają się **atomowo, w tej samej lokalnej transakcji bazodanowej.**
+
+**Jak to działa krok po kroku:**
+
+1.  **Jedna Atomowa Transakcja:** W tej samej transakcji, w której modyfikujesz swój agregat (`Asset`), tworzysz również rekord w specjalnej tabeli `outbox_events`.
+2.  **Tabela `outbox_events`:** To prosta tabela, która przechowuje zdarzenia do wysłania. Ma kolumny takie jak:
+*   `id` (UUID)
+*   `aggregate_id` (ID agregatu, którego dotyczy zdarzenie)
+*   `event_type` (np. "AssetStoredInCloud")
+*   `payload` (ciało zdarzenia, najczęściej w formacie JSON)
+*   `created_at`
+*   `processed_at` (początkowo `NULL`)
+3.  **Oddzielny Proces (Relay):** Niezależny, asynchroniczny proces (tzw. "relay" lub "publisher") regularnie odpytuje tabelę `outbox_events` o nieprzetworzone rekordy (`WHERE processed_at IS NULL`).
+4.  **Publikacja:** Gdy relay znajdzie nowe zdarzenia, próbuje je opublikować do właściwego brokera wiadomości (Kafka, RabbitMQ, SQS).
+5.  **Oznaczenie jako Przetworzone:** Dopiero po otrzymaniu potwierdzenia od brokera, że wiadomość została przyjęta, relay oznacza rekord w tabeli `outbox_events` jako przetworzony (ustawia `processed_at`).
+
+Dzięki temu, jeśli system padnie w dowolnym momencie, po restarcie proces relay po prostu wznowi pracę, znajdzie nieprzetworzone zdarzenia w tabeli outbox i spróbuje je wysłać ponownie. Gwarantuje to dostarczenie "co najmniej raz" (at-least-once).
+
+### Jak to zaimplementować? Twój pomysł jest słuszny!
+
+Teraz Twoja propozycja, aby **metoda agregatu zwracała event, ma głęboki sens!** Serwis Aplikacyjny musi bowiem przejąć ten event, aby zapisać go w tabeli outbox.
+
+Oto jak wyglądałby kod zaimplementowany zgodnie z tym wzorcem.
+
+#### 1. Agregat zwracający zdarzenie (bez zmian w stosunku do poprzedniej dyskusji)
+
+```java
+public abstract class Asset {
+    public AssetStoredInCloudEvent confirmCloudStorage(final AssetStorageId newStorageId) {
+        // ... logika walidacji ...
+        this.status = AssetStatus.ACTIVE;
+        this.storageId = newStorageId;
+        return new AssetStoredInCloudEvent(this.id, this.storageId); // Zwróć zdarzenie
+    }
+}
+```
+
+#### 2. Nowy byt i repozytorium dla Outbox
+
+```java
+// W warstwie infrastruktury
+@Entity
+@Table(name = "outbox_events")
+public class OutboxEvent {
+    // pola: id, aggregateId, eventType, payload, createdAt...
+}
+
+public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> {}
+```
+
+#### 3. Zmodyfikowany Serwis Aplikacyjny
+
+Serwis aplikacyjny staje się teraz centralnym punktem gwarantującym atomowość.
+
+```java
+// W warstwie aplikacji (application layer)
+
+@Service
+@RequiredArgsConstructor
+public class AssetApplicationService {
+
+    private final AssetRepository assetRepository;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper; // Do serializacji eventu do JSON
+
+    @Transactional
+    public void confirmAssetStorage(AssetId assetId, AssetStorageId storageId) {
+        // 1. Wczytaj agregat
+        Asset asset = assetRepository.findById(assetId)
+                .orElseThrow(() -> new AssetNotFoundException(assetId));
+
+        // 2. Wywołaj logikę biznesową i przechwyć zdarzenie
+        AssetStoredInCloudEvent event = asset.confirmCloudStorage(storageId);
+
+        // 3. Zapisz agregat biznesowy
+        assetRepository.save(asset);
+
+        // 4. Stwórz i zapisz zdarzenie w outboxie
+        // KROKI 3 i 4 SĄ W TEJ SAMEJ TRANSAKCJI!
+        OutboxEvent outboxEvent = createOutboxEventFrom(event);
+        outboxEventRepository.save(outboxEvent);
+    }
+
+    private OutboxEvent createOutboxEventFrom(AssetStoredInCloudEvent domainEvent) {
+        try {
+            String payload = objectMapper.writeValueAsString(domainEvent);
+            // ... stwórz i zwróć obiekt OutboxEvent
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize event payload", e);
+        }
+    }
+}
+```
+
+### Podsumowanie: Twoja intuicja była w 100% trafna
+
+*   **Tak, proste zdarzenia Springa mogą się zgubić.** Są świetne do komunikacji wewnątrz jednego monolitu, ale nie do krytycznych operacji, które muszą przetrwać restarty.
+*   **Tak, wzorzec Outbox jest właściwym rozwiązaniem** tego problemu.
+*   **Tak, w kontekście wzorca Outbox, zwracanie zdarzenia z metody agregatu jest bardzo dobrym i czystym podejściem.** Daje to Serwisowi Aplikacyjnemu jawny obiekt, który może następnie przekształcić i zapisać w tabeli outbox.
+
+To jest dojrzałe i solidne podejście do projektowania niezawodnych systemów. Gratuluję świetnego toku myślenia
