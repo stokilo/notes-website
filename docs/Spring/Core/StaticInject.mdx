@@ -1,0 +1,73 @@
+---
+sidebar_label: 'Static Inject'
+---
+
+# Spring static injections
+
+```java
+@Component
+public class SerializerAccessor {
+    private static JsonSerializer jsonSerializer;
+
+    public SerializerAccessor(JsonSerializer jsonPayloadSerializer) {
+        SerializerAccessor.jsonSerializer = jsonPayloadSerializer;
+    }
+
+    public static JsonSerializer get() {
+        if (jsonSerializer == null) {
+            throw new IllegalStateException("JsonSerializer has not been initialized by Spring.");
+        }
+        return jsonSerializer;
+    }
+}
+```
+
+Tak, to absolutnie zadziała w kontekście Springa, i jest to bardzo sprytny i popularny wzorzec do rozwiązania tego konkretnego problemu.
+
+Twoje pytanie jest bardzo trafne, ponieważ na pierwszy rzut oka mieszanie `static` ze wstrzykiwaniem zależności przez Springa może wydawać się sprzeczne. Kluczem do zrozumienia jest **kolejność i sposób działania Springa podczas uruchamiania aplikacji**.
+
+Oto dokładny, krok-po-kroku opis tego, co się dzieje, gdy Spring startuje:
+
+### Jak to Działa: Cykl Życia Beana `SerializerAccessor`
+
+1.  **Skanowanie Komponentów:**
+*   Spring, podczas uruchamiania, skanuje pakiety zdefiniowane w `scanBasePackages` (lub domyślne).
+*   Znajduje klasę `SerializerAccessor` i dzięki adnotacji `@Component` wie, że musi utworzyć z niej beana i zarządzać jego cyklem życia.
+
+2.  **Tworzenie Instancji i Wstrzykiwanie Zależności:**
+*   Spring postanawia utworzyć instancję `SerializerAccessor`. Patrzy na jej konstruktor: `public SerializerAccessor(JsonPayloadSerializer jsonPayloadSerializer)`.
+*   Widzi, że do stworzenia obiektu `SerializerAccessor` potrzebuje beana typu `JsonPayloadSerializer`.
+*   Spring przeszukuje swój kontener (kontekst) w poszukiwaniu beana `JsonPayloadSerializer` (który również został znaleziony i stworzony, bo ma adnotację `@Component`).
+*   Gdy go znajduje, wstrzykuje go jako argument do konstruktora, wywołując:
+`new SerializerAccessor(instancja_beana_JsonPayloadSerializer);`
+
+3.  **Moment "Magii" - Wypełnienie Pola Statycznego:**
+*   Teraz wykonywany jest kod wewnątrz konstruktora `SerializerAccessor`:
+`SerializerAccessor.jsonPayloadSerializer = jsonPayloadSerializer;`
+*   W tym momencie **pole statyczne** `private static JsonPayloadSerializer jsonPayloadSerializer` zostaje zainicjowane przez **instancję beana**, którą Spring podał do konstruktora.
+*   Mamy teraz "most" pomiędzy światem statycznym (dostępnym zewsząd) a światem instancji zarządzanych przez Springa.
+
+4.  **Dostęp z Dowolnego Miejsca:**
+*   Aplikacja jest już uruchomiona. Wszystkie beany są stworzone, a pole statyczne w `SerializerAccessor` jest wypełnione.
+*   Teraz, gdy w dowolnym miejscu w kodzie (np. wewnątrz konstruktora encji `OrderCreatedEvent`, która **nie jest beanem Springa**) wywołasz `SerializerAccessor.get()`, ta metoda po prostu zwróci referencję do w pełni funkcjonalnego, zarządzanego przez Springa beana `JsonPayloadSerializer`.
+
+### Dlaczego ten wzorzec jest potrzebny? (Kontekst)
+
+Problem, który rozwiązuje ten wzorzec, polega na tym, że **obiekty encji JPA nie są beanami Springa**.
+*   Są one tworzone albo przez Ciebie za pomocą `new OrderCreatedEvent(...)`.
+*   Albo przez dostawcę JPA (np. Hibernate), gdy odczytuje dane z bazy.
+W żadnym z tych przypadków kontener Springa nie bierze udziału w ich tworzeniu, więc nie możesz użyć `@Autowired` wewnątrz encji.
+
+`SerializerAccessor` to implementacja wzorca **Service Locator**, która pozwala obiektom niezarządzanym przez Springa "sięgnąć" do kontenera Springa i pobrać potrzebny serwis.
+
+### Czy są jakieś wady? (Uczciwa ocena)
+
+Tak, jak każdy wzorzec, ten również ma swoje kompromisy, o których warto wiedzieć:
+
+1.  **Ukryta Zależność:** Kod, który używa `SerializerAccessor.get()`, ma ukrytą zależność od frameworka Spring. Nie widać jej jawnie w sygnaturach metod, co może utrudnić zrozumienie na pierwszy rzut oka.
+2.  **Utrudnione Testy Jednostkowe:** Testowanie w izolacji klasy, która używa `SerializerAccessor.get()` jest trudniejsze. Nie możesz po prostu wstrzyknąć mocka `JsonPayloadSerializer`. Musiałbyś użyć narzędzi takich jak PowerMock do mockowania metod statycznych lub ręcznie ustawiać statyczne pole przed każdym testem.
+3.  **Globalny Stan:** Wprowadza pewną formę globalnego stanu (pole statyczne), co puryści architektoniczni często krytykują.
+
+**Jednakże, w tym konkretnym przypadku (dostęp do serwisów z encji JPA), korzyści w postaci czystości i elegancji kodu w klasach zdarzeń często przeważają nad wadami.** Jest to powszechnie akceptowane i pragmatyczne rozwiązanie problemu.
+
+**Podsumowując: Twoje obawy są słuszne, ale mechanizm Springa jest zaprojektowany tak, by to zadziałało. `SerializerAccessor` zostanie poprawnie zainicjowany przez kontekst Springa, a Ty będziesz mógł bezpiecznie korzystać z jego statycznej metody `get()` w całym projekcie.**
