@@ -114,3 +114,110 @@ Adnotacja `@EntityListeners(AuditingEntityListener.class)` mówi JPA, aby przed 
 8.  Problem `PropertyValueException` znika, ponieważ pole nie jest już `null`.
 
 Po wprowadzeniu tych dwóch zmian, wszystko powinno działać zgodnie z oczekiwaniami. Daj znać, czy pomogło
+
+
+# But I get errors like my db type for created and updated at fields is wrong.
+
+Doskonały trop! Ten błąd jest bardzo konkretny i pokazuje nam dokładnie, gdzie leży problem.
+
+To nie jest błąd w Twojej logice, tylko w konfiguracji mechanizmu audytu w Spring Data.
+
+### Na czym polega problem?
+
+Stack trace mówi nam: `Cannot convert unsupported date type java.time.LocalDateTime to java.time.OffsetDateTime`.
+
+Oznacza to, że:
+
+1.  Mechanizm audytu Springa został poprawnie uruchomiony (dzięki `@EnableJpaAuditing`).
+2.  Domyślnie, gdy Spring chce wstawić "aktualny czas", generuje obiekt typu `java.time.LocalDateTime`.
+3.  Następnie próbuje przypisać ten `LocalDateTime` do Twojego pola `createdAt`, które ma typ `java.time.OffsetDateTime`.
+4.  Spring nie wie, jak automatycznie przekonwertować `LocalDateTime` (który nie ma informacji o strefie czasowej/przesunięciu) na `OffsetDateTime` (który takiej informacji wymaga). W związku z tym rzuca wyjątkiem.
+
+Lista wspieranych typów, którą podaje w błędzie, wyraźnie pokazuje, że `OffsetDateTime` nie jest domyślnie obsługiwany przez dostawcę czasu w Spring Data Auditing.
+
+### Rozwiązanie (Zalecane i "Poprawne")
+
+Musimy "nauczyć" Springa, jak generować `OffsetDateTime` zamiast `LocalDateTime`. Robi się to, tworząc własnego dostawcę czasu (`DateTimeProvider`) i podpinając go do mechanizmu audytu.
+
+Jest to bardzo proste i składa się z dwóch kroków:
+
+#### Krok 1: Stwórz własną implementację `DateTimeProvider`
+
+Stwórz nową klasę w dowolnym pakiecie konfiguracyjnym. Ta klasa będzie odpowiedzialna za dostarczanie aktualnego czasu w formacie, jakiego potrzebujesz.
+
+```java
+package org.sstec.marketplace.config; // lub inny pakiet konfiguracyjny
+
+import org.springframework.data.auditing.DateTimeProvider;
+import org.springframework.stereotype.Component;
+
+import java.time.OffsetDateTime;
+import java.time.temporal.TemporalAccessor;
+import java.util.Optional;
+
+// Zarejestruj tę klasę jako bean, aby Spring mógł ją znaleźć.
+// Nazwa beana "auditingDateTimeProvider" jest ważna, użyjemy jej w następnym kroku.
+@Component("auditingDateTimeProvider")
+public class AuditingDateTimeProvider implements DateTimeProvider {
+
+    @Override
+    public Optional<TemporalAccessor> getNow() {
+        // Zwracaj aktualny czas jako OffsetDateTime z przesunięciem systemowym
+        return Optional.of(OffsetDateTime.now());
+    }
+}
+```
+
+#### Krok 2: Zaktualizuj adnotację `@EnableJpaAuditing`
+
+Teraz w Twojej głównej klasie aplikacji musisz wskazać Springowi, że ma używać Twojego nowego dostawcy czasu. Robi się to za pomocą atrybutu `dateTimeProviderRef`.
+
+```java
+package org.sstec.marketplace;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
+@SpringBootApplication
+// Wskaż Springowi, aby używał beana o nazwie "auditingDateTimeProvider"
+@EnableJpaAuditing(dateTimeProviderRef = "auditingDateTimeProvider")
+public class MarketplaceApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(MarketplaceApplication.class, args);
+    }
+}
+```
+
+Nazwa w `dateTimeProviderRef` (`"auditingDateTimeProvider"`) musi być taka sama jak nazwa beana, którą zdefiniowałeś w adnotacji `@Component` w kroku 1.
+
+I to wszystko! Po ponownym uruchomieniu aplikacji:
+1.  Spring Auditing nadal będzie się uruchamiał automatycznie.
+2.  Jednak zamiast swojego domyślnego dostawcy czasu, użyje Twojej klasy `AuditingDateTimeProvider`.
+3.  Twoja klasa zwróci `OffsetDateTime.now()`.
+4.  Ten typ będzie idealnie pasował do pól `createdAt` i `updatedAt` w Twojej encji. Problem z konwersją zniknie.
+
+---
+
+### Alternatywne rozwiązanie (Prostsze, ale ze skutkami ubocznymi)
+
+Jeśli nie zależy Ci na przechowywaniu informacji o przesunięciu czasowym (offset) w bazie danych, możesz po prostu zmienić typ pól w encji na `LocalDateTime`.
+
+```java
+// W klasie AssetEntity
+// ...
+
+@CreatedDate
+@Column(name = "created_at", nullable = false, updatable = false)
+private LocalDateTime createdAt; // <--- ZMIANA
+
+@LastModifiedDate
+@Column(name = "updated_at", nullable = false)
+private LocalDateTime updatedAt; // <--- ZMIANA
+```
+
+**Kiedy wybrać to rozwiązanie?**
+Jeśli Twoja aplikacja zawsze będzie działać na serwerach w tej samej strefie czasowej i nie ma wymogu obsługi klientów/danych z różnych części świata. `OffsetDateTime` (lub `ZonedDateTime`) jest uważany za lepszą praktykę w systemach rozproszonych, ponieważ jednoznacznie określa punkt w czasie, niezależnie od strefy czasowej serwera czy klienta.
+
+Podsumowując, jeśli `OffsetDateTime` jest świadomym wyborem projektowym (co jest bardzo dobrą praktyką!), zdecydowanie polecam **pierwsze rozwiązanie**. Jest to czyste, zgodne z duchem Springa i rozwiązuje problem u jego źródła, nie zmuszając Cię do kompromisów w modelu danych.
