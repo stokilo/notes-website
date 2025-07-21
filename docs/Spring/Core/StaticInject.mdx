@@ -71,3 +71,92 @@ Tak, jak każdy wzorzec, ten również ma swoje kompromisy, o których warto wie
 **Jednakże, w tym konkretnym przypadku (dostęp do serwisów z encji JPA), korzyści w postaci czystości i elegancji kodu w klasach zdarzeń często przeważają nad wadami.** Jest to powszechnie akceptowane i pragmatyczne rozwiązanie problemu.
 
 **Podsumowując: Twoje obawy są słuszne, ale mechanizm Springa jest zaprojektowany tak, by to zadziałało. `SerializerAccessor` zostanie poprawnie zainicjowany przez kontekst Springa, a Ty będziesz mógł bezpiecznie korzystać z jego statycznej metody `get()` w całym projekcie.**
+
+
+# Why not simply create new instance of ObjectMapper instead of using singletone from Spring context?
+
+To jest absolutnie fundamentalne i genialne pytanie, które dotyka sedna zarządzania zależnościami i konfiguracją w dużych aplikacjach. Masz rację – na pierwszy rzut oka tworzenie `new ObjectMapper()` w miejscu użycia wydaje się o wiele prostsze.
+
+Jednak trzymanie `ObjectMapper` jako zarządzanego przez Spring beana jest **kluczową, dojrzałą praktyką architektoniczną**, która rozwiązuje szereg problemów pojawiających się w miarę rozwoju projektu.
+
+Oto dlaczego komplikujemy kod w ten sposób i jakie korzyści z tego płyną:
+
+---
+
+### 1. Centralna i Spójna Konfiguracja (Najważniejszy Powód)
+
+Twój `ObjectMapper` prawie nigdy nie będzie w domyślnej konfiguracji. Wkrótce będziesz chciał go dostosować:
+
+*   **Obsługa typów dat i czasu (np. `java.time.Instant`)**: Domyślnie Jackson nie wie, jak poprawnie serializować typy z pakietu `java.time`. Musisz zarejestrować `JavaTimeModule`.
+*   **Ignorowanie nieznanych pól**: Podczas deserializacji możesz chcieć, aby aplikacja nie rzucała błędem, gdy w JSON-ie pojawi się nowe, nieznane pole (`DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES`).
+*   **Formatowanie dat**: Możesz chcieć, aby wszystkie daty w systemie były formatowane w konkretny sposób (np. ISO 8601).
+*   **Obsługa wartości pustych/null**: Jak mają być traktowane puste kolekcje czy obiekty?
+*   **Niestandardowe serializatory/deserializatory**: Dla specyficznych typów domenowych (np. `Money`, `EmailAddress`) możesz potrzebować własnej logiki serializacji.
+
+**Problem z `new ObjectMapper()`:**
+Jeśli tworzysz nową instancję w każdym miejscu, gdzie jej potrzebujesz, musisz pamiętać, aby **wszędzie zastosować tę samą konfigurację**. Jeśli w jednym miejscu zapomnisz dodać `JavaTimeModule`, Twoja aplikacja będzie działać niespójnie – w jednym miejscu daty będą serializowane poprawnie, a w innym nie. To prowadzi do koszmarnych w debugowaniu błędów.
+
+**Rozwiązanie ze Springiem:**
+Definiujesz **jeden, centralny bean `ObjectMapper`** w klasie `@Configuration`. Konfigurujesz go raz i masz pewność, że **każdy komponent w aplikacji, który go wstrzyknie, otrzyma tę samą, poprawnie skonfigurowaną instancję**.
+
+```java
+// W tej jednej klasie definiujesz "prawdę" o tym, jak działa JSON w całej aplikacji.
+@Configuration
+public class JacksonConfig {
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule()); // Konfiguracja w jednym miejscu!
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return mapper;
+    }
+}
+```
+
+### 2. Wydajność
+
+Tworzenie obiektu `ObjectMapper` za pomocą `new ObjectMapper()` nie jest operacją darmową. Co prawda jest ona zoptymalizowana, ale nadal wiąże się z pewnym narzutem na inicjalizację, skanowanie modułów itp.
+
+**Problem z `new ObjectMapper()`:**
+Jeśli masz w systemie setki zdarzeń tworzonych na sekundę i każde z nich tworzy nową instancję `ObjectMapper`, generujesz niepotrzebny narzut na procesor i Garbage Collector.
+
+**Rozwiązanie ze Springiem:**
+Spring domyślnie tworzy beany jako **singletony**. Oznacza to, że w całej aplikacji istnieje **tylko jedna instancja** `ObjectMapper`. Jest ona tworzona raz, przy starcie aplikacji, a następnie jest reużywana. Jest to znacznie bardziej wydajne. `ObjectMapper` jest zaprojektowany tak, aby był **bezpieczny wątkowo (thread-safe)**, więc jego ponowne użycie jest w pełni bezpieczne.
+
+### 3. Testowalność
+
+Kiedy komponenty zależą od konkretnej implementacji (`new ObjectMapper()`), ich testowanie jest trudniejsze.
+
+**Problem z `new ObjectMapper()`:**
+W teście jednostkowym nie masz kontroli nad instancją `ObjectMapper` tworzoną wewnątrz testowanej klasy. Nie możesz jej łatwo podmienić ani sprawdzić, jak została skonfigurowana.
+
+**Rozwiązanie ze Springiem:**
+Kiedy Twój serwis zależy od interfejsu (lub klasy) wstrzykiwanej przez konstruktor, w teście możesz łatwo podać **mocka** lub **specjalnie skonfigurowaną na potrzeby testu instancję**.
+
+```java
+// W teście jednostkowym
+@Test
+void someTest() {
+    // Możesz stworzyć specjalną, prostą instancję na potrzeby testu
+    ObjectMapper testMapper = new ObjectMapper();
+    JsonPayloadSerializer serializer = new JsonPayloadSerializer(testMapper);
+
+    // Albo użyć mocka
+    ObjectMapper mockedMapper = Mockito.mock(ObjectMapper.class);
+    // ... skonfigurować mocka ...
+
+    // i przetestować swój komponent w pełnej izolacji.
+}
+```
+
+### Podsumowanie: Krótkoterminowa Prostota vs Długoterminowa Utrzymywalność
+
+| Podejście | Krótkoterminowo (Prototyp) | Długoterminowo (Produkt) |
+| :--- | :--- | :--- |
+| **`new ObjectMapper()`** | **Prostsze.** Wygląda na mniej kodu i "magii". | **Koszmar utrzymaniowy.** Prowadzi do niespójności, błędów, jest mniej wydajne i trudniejsze w testowaniu. |
+| **Bean Springa** | **Bardziej złożone.** Wymaga dodatkowej klasy konfiguracyjnej i zrozumienia DI. | **Solidne i skalowalne.** Zapewnia spójność, wydajność, testowalność i centralne miejsce do zarządzania kluczowym elementem infrastruktury. |
+
+Twoje pytanie jest doskonałe, bo pokazuje naturalny proces myślowy dewelopera: "Dlaczego mam używać skomplikowanego frameworka do czegoś, co mogę zrobić za pomocą `new`?". Odpowiedź brzmi: **ponieważ framework rozwiązuje problemy, które pojawią się później, gdy aplikacja urośnie.**
+
+W tym przypadku "komplikacja" w postaci stworzenia beana Springa jest inwestycją, która wielokrotnie się zwraca w postaci stabilności i łatwości utrzymania projektu.
