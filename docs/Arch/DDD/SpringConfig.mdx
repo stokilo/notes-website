@@ -1,0 +1,78 @@
+---
+sidebar_label: 'Spring Config in DDD'
+---
+
+# Should I enable some Spring features directly in starter application or ?
+
+Tak, absolutnie! To jest świetne pytanie i prowadzi nas do wzorcowego sposobu konfigurowania modułów w architekturze opartej o DDD i Spring Boot.
+
+Nie musisz (i nie powinieneś) mieć adnotacji `@SpringBootApplication` w module adaptera. Zamiast tego, tworzysz w nim dedykowaną klasę konfiguracyjną.
+
+### Rozwiązanie: Dedykowana klasa `@Configuration` w module adaptera
+
+W module adaptera persystencji (`infrastructure/persistence`) tworzysz nową klasę, która będzie odpowiedzialna wyłącznie za konfigurację związaną z JPA.
+
+**Krok 1: Przenieś konfigurację do modułu adaptera**
+
+1.  Usuń adnotację `@EnableJpaAuditing` z głównej klasy `MarketplaceApplication`.
+2.  W module adaptera persystencji, w pakiecie konfiguracyjnym (np. `org.sstec.marketplace.assets.config`), stwórz nową klasę:
+
+**Plik: `infrastructure/persistence/src/main/java/org/sstec/marketplace/assets/config/JpaAuditingConfig.java`**
+
+```java
+package org.sstec.marketplace.assets.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.auditing.DateTimeProvider;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
+import java.time.OffsetDateTime;
+import java.util.Optional;
+
+@Configuration // Oznacza tę klasę jako źródło konfiguracji dla Springa
+@EnableJpaAuditing(dateTimeProviderRef = "auditingDateTimeProvider") // Aktywuje audyt TUTAJ
+public class JpaAuditingConfig {
+
+    // Definiujemy beana z naszym dostawcą czasu bezpośrednio w tej klasie konfiguracyjnej.
+    // To nawet lepsze rozwiązanie niż osobna klasa z @Component,
+    // bo cała logika audytu jest zamknięta w jednym miejscu.
+    @Bean(name = "auditingDateTimeProvider")
+    public DateTimeProvider dateTimeProvider() {
+        return () -> Optional.of(OffsetDateTime.now());
+    }
+}
+```
+
+### Jak to działa? Magia Spring Boota.
+
+Teraz pewnie zastanawiasz się: "Skoro ta konfiguracja jest w innym module, to skąd główna aplikacja wie, że ma ją załadować?"
+
+Odpowiedzią jest **skanowanie komponentów (component scanning)**.
+
+Adnotacja `@SpringBootApplication` w Twojej głównej klasie to tak naprawdę alias dla trzech innych adnotacji, w tym:
+*   `@EnableAutoConfiguration`: Włącza "magię" Spring Boota.
+*   **`@ComponentScan`**: Mówi Springowi, aby **skanował komponenty (w tym klasy z `@Configuration`) w bieżącym pakiecie i wszystkich jego podpakietach**.
+
+Załóżmy, że Twoja struktura pakietów wygląda tak:
+
+```
+// Główny moduł startowy
+org.sstec.marketplace
+    └── MarketplaceApplication.java (@SpringBootApplication)
+
+// Moduł adaptera persystencji
+org.sstec.marketplace.assets.config
+    └── JpaAuditingConfig.java (@Configuration)
+```
+
+Ponieważ pakiet `org.sstec.marketplace.assets.config` jest podpakietem `org.sstec.marketplace`, Spring podczas startu aplikacji automatycznie go znajdzie, zobaczy klasę `JpaAuditingConfig` z adnotacją `@Configuration` i załaduje ją tak, jakby była zdefiniowana w głównym module.
+
+### Co zyskujesz dzięki takiemu podejściu?
+
+1.  **Idealne dopasowanie do DDD/Czystej Architektury:** Konfiguracja specyficzna dla danej technologii (JPA Auditing) żyje razem z jej implementacją (adapter persystencji). Główny moduł nie musi znać tych detali.
+2.  **Modularność:** Gdybyś chciał kiedyś wyłączyć persystencję JPA i zastąpić ją inną, po prostu usuwasz zależność do tego modułu z pliku `pom.xml` lub `build.gradle`. Konfiguracja zniknie razem z nim.
+3.  **Hermetyzacja:** Adapter persystencji jest samowystarczalny. Zawiera nie tylko implementacje repozytoriów, ale też całą potrzebną konfigurację do swojego działania.
+4.  **Czystość:** Główna klasa aplikacji (`MarketplaceApplication`) pozostaje czysta i służy tylko do uruchomienia aplikacji i ewentualnie bardzo globalnej konfiguracji, a nie do włączania funkcji poszczególnych modułów.
+
+**Podsumowując:** Twoje przeczucie jest jak najbardziej słuszne. Stworzenie dedykowanej klasy `@Configuration` w module adaptera jest nie tylko możliwe, ale jest to **rekomendowany i najbardziej elegancki architektonicznie sposób** na rozwiązanie tego problemu.
