@@ -1,0 +1,116 @@
+---
+sidebar_label: 'Auditing'
+---
+
+# I annotated fields for created and updated at behavior, but is not working.
+
+
+Cześć!
+
+Rozumiem problem. Błąd `PropertyValueException` dla pola `createdAt` pojawia się, ponieważ adnotacje `@CreatedDate` i `@LastModifiedDate` nie działają "same z siebie". Są to adnotacje ze Spring Data JPA i wymagają włączenia specjalnego mechanizmu zwanego **Auditingiem (inspekcją)**.
+
+Hibernate/JPA, widząc w Twojej encji `nullable = false`, próbuje zapisać encję do bazy danych z wartością `null` dla `createdAt`, ponieważ nikt tej wartości nie ustawił. Mechanizm Springa, który powinien to zrobić, nie jest jeszcze aktywny.
+
+### Jak to naprawić?
+
+Musisz zrobić dwie rzeczy:
+
+1.  Włączyć JPA Auditing w Twojej aplikacji Spring Boot.
+2.  Dodać odpowiedniego "słuchacza" (`EntityListener`) do Twojej encji.
+
+---
+
+### Krok 1: Włączenie Auditingu JPA w konfiguracji Springa
+
+W głównej klasie Twojej aplikacji (tej z adnotacją `@SpringBootApplication`) dodaj adnotację `@EnableJpaAuditing`.
+
+**Przykład:**
+
+```java
+package org.sstec.marketplace;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing; // <--- IMPORT
+
+@SpringBootApplication
+@EnableJpaAuditing // <--- DODAJ TĘ ADNOTACJĘ
+public class MarketplaceApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(MarketplaceApplication.class, args);
+    }
+}
+```
+
+Ta adnotacja aktywuje mechanizm inspekcji w całym kontekście Springa.
+
+---
+
+### Krok 2: Dodanie `EntityListeners` do Twojej encji
+
+Teraz musisz poinformować swoją encję `AssetEntity`, że powinna korzystać z tego mechanizmu. Robi się to przez dodanie adnotacji `@EntityListeners` nad definicją klasy.
+
+**Twoja poprawiona klasa `AssetEntity`:**
+
+```java
+package org.sstec.marketplace.assets.entities;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener; // <--- IMPORT
+import org.sstec.marketplace.assets.domain.core.AssetStatus;
+import org.sstec.marketplace.assets.domain.core.AssetType;
+
+import java.io.Serializable;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+@AllArgsConstructor
+@Builder
+@NoArgsConstructor
+@Getter
+@Setter
+@Entity
+@Table(name = "assets", schema = "assets")
+@EntityListeners(AuditingEntityListener.class) // <--- DODAJ TĘ ADNOTACJĘ
+public class AssetEntity implements Serializable {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private AssetType assetType;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private AssetStatus status;
+
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
+
+    @LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
+}
+```
+
+Adnotacja `@EntityListeners(AuditingEntityListener.class)` mówi JPA, aby przed operacjami zapisu/aktualizacji tej encji uruchomić logikę z klasy `AuditingEntityListener`. To właśnie ta klasa jest odpowiedzialna za sprawdzenie adnotacji `@CreatedDate` i `@LastModifiedDate` i wstawienie aktualnego czasu.
+
+### Podsumowując, co się dzieje po zmianach:
+
+1.  Wywołujesz `repository.save(newAsset)`.
+2.  Dzięki `@EnableJpaAuditing` mechanizm inspekcji jest aktywny.
+3.  Dzięki `@EntityListeners` Twoja encja `AssetEntity` "słucha" zdarzeń zapisu.
+4.  `AuditingEntityListener` jest uruchamiany przed operacją zapisu.
+5.  Widzi pole `createdAt` z adnotacją `@CreatedDate` i ustawia mu aktualną datę i czas.
+6.  Widzi pole `updatedAt` z adnotacją `@LastModifiedDate` i również ustawia mu aktualną datę i czas.
+7.  Encja z już uzupełnionymi polami `createdAt` i `updatedAt` jest przekazywana do Hibernate w celu zapisania w bazie danych.
+8.  Problem `PropertyValueException` znika, ponieważ pole nie jest już `null`.
+
+Po wprowadzeniu tych dwóch zmian, wszystko powinno działać zgodnie z oczekiwaniami. Daj znać, czy pomogło
