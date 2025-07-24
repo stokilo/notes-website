@@ -1,0 +1,121 @@
+---
+sidebar_label: 'Constructor vs Factory Method'
+---
+
+# Builder and public all arg constructor exposes aggregate internals. What is advantage of static factory method and not to use constructor?
+
+Of course. This is one of the most subtle but powerful concepts in DDD, and it's fantastic that you're digging into it. The difference isn't just technical; it's about **intent, semantics, and protecting your business rules.**
+
+Let's use an analogy.
+
+*   A **`public static create(...)`** method is like a **Car Factory Assembly Line**.
+*   A **`public static load(...)`** method is like a **Mechanic's Repair Bay**.
+
+---
+
+### The Car Factory (`public static create(...)`)
+
+When you use a method like `Asset.onAssetCreated(...)`, you are telling the system: "**I am manufacturing a brand new asset that has never existed before.**"
+
+The assembly line has very strict rules for this process:
+
+1.  **It assigns a *new* Vehicle Identification Number (VIN)**. You can't bring your own. The factory generates it (`new AssetId(UUID.randomUUID())`).
+2.  **It starts in a *specific, initial state*.** A new car always comes off the line with 0 miles on the odometer and a "new" status. Your asset is created with the status `STORED_IN_TEMP_LOCATION`.
+3.  **It triggers other business processes.** When a new car is built, the factory notifies the sales, inventory, and marketing departments. Your `onAssetCreated` method **fires a `NewAssetEvent`**. This is a critical business fact that other parts of your system need to know about.
+4.  **It validates the raw materials.** The factory checks if the parts are valid for building this model. Your method validates the inputs to ensure a valid asset can be created.
+
+### The Mechanic's Repair Bay (`public static load(...)`)
+
+When your repository fetches data from the database and uses `Asset.load(...)`, you are telling the system: "**I am re-assembling an existing asset that we already know about.**"
+
+The mechanic in the repair bay has a different set of tasks:
+
+1.  **It works with an *existing* VIN.** The car already has an ID. The `load` method receives an existing `AssetId` from the database. It does *not* create a new one.
+2.  **It restores the car to its *last known state*.** If the car had 50,000 miles and a "Used" status when it was brought in, the mechanic restores it to that state. Your `load` method takes the status, type, and other details directly from the database and trusts they are correct because they were valid when last saved.
+3.  **It does *not* announce a new car has been built.** The mechanic simply finishes the job. Your `load` method **must not fire a `NewAssetEvent`**. If it did, every time you loaded an asset from the database, you would trigger the "new asset" workflow again (e.g., send a welcome notification, start a processing job, etc.), which would be a catastrophic bug.
+4.  **It trusts the car was built correctly the first time.** The mechanic isn't re-validating the original factory specifications; they are just putting the pieces back together.
+
+---
+
+### The Real Benefit: Preventing Misuse and Bugs
+
+Now, let's see what happens if you just use a single `public` constructor instead of these two distinct factory methods.
+
+**The "Bad" Scenario: A Single Public Constructor**
+
+```java
+// In your Asset aggregate
+public Asset(AssetId assetId, AssetType assetType, AssetStatus assetStatus, AssetDetails details) {
+    // What logic goes here?!
+    // Do I fire an event? Only if it's new? How do I know?
+    // Do I assign a default status? Or trust the one passed in?
+    // This constructor is now confused about its purpose.
+    this.assetId = assetId;
+    this.assetType = assetType;
+    this.assetStatus = assetStatus;
+    this.assetDetails = details;
+    // Maybe I fire an event here? BAD IDEA!
+    // registerEvent(new NewAssetEvent(...));
+}
+```
+
+Now, a developer in the application service wants to create a new asset. They might do this:
+
+```java
+// In Application Service (creating a NEW asset)
+// PROBLEM 1: The developer has to know to generate a new ID themselves.
+AssetId newId = new AssetId(UUID.randomUUID());
+
+// PROBLEM 2: The developer can create an asset in an invalid initial state.
+// This should be forbidden! An asset can't be created as "DELETED".
+AssetStatus invalidInitialStatus = AssetStatus.DELETED;
+
+// PROBLEM 3: No NewAssetEvent is fired! The rest of the system is blind to this new asset.
+Asset newAsset = new Asset(newId, AssetType.IMAGE, invalidInitialStatus, details);
+
+assetRepository.save(newAsset); // The system now contains a broken, silent asset.
+```
+
+The public constructor completely **destroyed the aggregate's ability to protect itself**. It puts the responsibility of enforcing rules onto the developer, which is the exact opposite of what an Aggregate Root is for.
+
+### The "Good" Scenario: `create()` and `load()`
+
+```java
+public class Asset {
+    // Constructor is PRIVATE! No one can call it directly except the class itself.
+    private Asset(...) { ... }
+
+    // INTENT: Make a new one.
+    public static Asset onAssetCreated(...) {
+        // Enforces ALL rules for creation.
+        // Generates new ID.
+        // Sets initial status.
+        // Fires NewAssetEvent.
+        return new Asset(...);
+    }
+
+    // INTENT: Rebuild an existing one.
+    public static Asset load(AssetId id, AssetStatus status, ...) {
+        // Bypasses initial creation rules.
+        // Does NOT fire an event.
+        return new Asset(id, status, ...);
+    }
+}
+```
+
+Now, the developer has no choice but to do the right thing:
+
+*   **To create an asset:** They *must* call `Asset.onAssetCreated(...)`. It's impossible to create an invalid asset or forget the event.
+*   **To load an asset:** The repository/mapper is the *only* part of the code that should call `Asset.load(...)`. It's clear that this is a technical reconstitution, not a business operation.
+
+### Summary of Benefits
+
+| Feature | `public static create()` (The Factory) | `public static load()` (The Mechanic) | `public Constructor` (The Problem) |
+| :--- | :--- | :--- | :--- |
+| **Intent** | Create a new business object | Rebuild an existing object from storage | Ambiguous; can be used for both, poorly |
+| **ID Generation** | **Creates** a new ID | **Receives** an existing ID | Developer must remember to create one |
+| **Initial State** | **Enforces** a valid, default state | **Trusts** the state from the database | Developer can set any state, even invalid ones |
+| **Domain Events** | **Must fire** `...CreatedEvent` | **Must NOT fire** `...CreatedEvent` | Easy to forget to fire the event |
+| **Encapsulation** | **Excellent.** The aggregate protects its rules. | **Excellent.** The aggregate controls its lifecycle. | **Terrible.** All rules can be bypassed. |
+
+The real benefit is **making your domain model robust, expressive, and bug-resistant.** You are using the type system to enforce a clear separation between the business act of *creation* and the technical act of *reconstitution*.
