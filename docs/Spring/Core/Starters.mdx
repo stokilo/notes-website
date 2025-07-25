@@ -1,0 +1,78 @@
+---
+sidebar_label: 'Starters'
+---
+
+# Spring starters, how they work? I don't see class files in dependencies fetched from them
+
+Doskonałe pytanie! To jest kolejny kluczowy element układanki, który doskonale pokazuje, jak działają "startery" w Spring Boot.
+
+Krótka odpowiedź brzmi: **Ponieważ w tym konkretnym pliku `.jar` nie ma żadnych klas!**
+
+Brzmi dziwnie, prawda? Pozwól, że wyjaśnię to szczegółowo.
+
+### Metafora: Pudełko na zakupy vs. Produkty
+
+Wróćmy do naszej metafory z IKEA.
+*   **`logback-classic.jar`**: To jest konkretny produkt, np. paczka ze śrubkami. Gdy otworzysz pudełko, w środku znajdziesz śrubki (czyli pliki `.class`).
+*   **`spring-boot-starter-logging.jar`**: To nie jest produkt. To jest **lista zakupów** lub **pusty wózek sklepowy z etykietą "Rzeczy do logowania"**. Jego jedynym zadaniem jest powiedzenie Mavenowi: "Do tego projektu potrzebujesz paczki ze śrubkami `logback-classic`, paczki z nakrętkami `log4j-to-slf4j` itd.".
+
+Sam wózek (plik `.jar` startera) jest pusty, oprócz metadanych (jak `MANIFEST.MF`), które mówią, czym on jest.
+
+### Wyjaśnienie techniczne: Rola Starterów
+
+W ekosystemie Spring Boot (i innych nowoczesnych frameworków), zależności typu `starter` pełnią specjalną rolę.
+
+1.  **To są "Deskryptory Zależności" (Dependency Descriptors)**
+Ich głównym i często jedynym celem jest **zadeklarowanie w swoim własnym pliku `pom.xml` listy innych, powiązanych ze sobą zależności**. `spring-boot-starter-logging` nie zawiera żadnego kodu Javy, który implementuje logowanie. Zamiast tego, jego plik `pom.xml` wygląda mniej więcej tak:
+
+```xml
+<!-- To jest POM dla spring-boot-starter-logging -->
+<artifactId>spring-boot-starter-logging</artifactId>
+...
+<dependencies>
+    <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId> <!-- Prawdziwa biblioteka do logowania -->
+    </dependency>
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-to-slf4j</artifactId> <!-- Adapter dla innego frameworka -->
+    </dependency>
+    <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jul-to-slf4j</artifactId> <!-- Kolejny adapter -->
+    </dependency>
+</dependencies>
+```
+
+2.  **Pusty plik `.jar`**
+Ponieważ w projekcie `spring-boot-starter-logging` nie ma żadnych plików z kodem `.java`, to po jego skompilowaniu powstaje plik `.jar`, który zawiera:
+*   Folder `META-INF`.
+*   W nim plik `MANIFEST.MF` (standardowy plik metadanych dla każdego JAR-a).
+*   Czasem pliki licencji (`LICENSE.txt`) lub notatki (`NOTICE.txt`).
+*   **...i to wszystko! Nie ma tam żadnych pakietów `org.springframework...` z plikami `.class`, bo nie było czego kompilować.**
+
+### Gdzie w takim razie są klasy?
+
+Klasy, których szukasz (np. `Logger`, `LoggerFactory`), nie znajdują się w `spring-boot-starter-logging.jar`. Znajdują się w **zależnościach przechodnich**, które ten starter za sobą pociągnął.
+
+**Co musisz zrobić w IntelliJ:**
+
+1.  Nie rozwijaj `spring-boot-starter-logging-3.5.0.jar`, bo tam nic nie znajdziesz.
+2.  Zamiast tego, w panelu `External Libraries` poszukaj zależności, które ten starter dodał. Będą one widoczne jako osobne pozycje na tym samym poziomie, na przykład:
+*   `Maven: ch.qos.logback:logback-classic:1.x.y`
+*   `Maven: ch.qos.logback:logback-core:1.x.y`
+*   `Maven: org.slf4j:slf4j-api:2.x.y`
+*   ...i inne.
+
+3.  **Gdy rozwiniesz plik `logback-classic-1.x.y.jar`**, zobaczysz w nim strukturę pakietów (`ch.qos.logback.classic...`) i wewnątrz nich pliki `.class`, których szukasz. Jeśli masz pobrane źródła, IntelliJ pokaże Ci od razu pliki `.java`.
+
+
+
+### Podsumowanie
+
+*   **IntelliJ pokazuje Ci prawdę:** Plik `spring-boot-starter-logging.jar` jest pusty, jeśli chodzi o klasy.
+*   **To nie jest błąd:** To jest celowe działanie i kluczowa koncepcja "starterów". Starter to agregator zależności, a nie biblioteka z kodem.
+*   **Aby znaleźć klasy:** Musisz patrzeć na **zależności przechodnie** (transitive dependencies), które starter dodał do Twojego projektu. Znajdziesz je jako osobne pozycje w `External Libraries`.
+
+To rozróżnienie jest fundamentalne dla zrozumienia, jak Maven i Spring Boot współpracują, aby uprościć zarządzanie projektem. BOM dba o spójne **wersje**, a startery dbają o spójne **zestawy** bibliotek.
