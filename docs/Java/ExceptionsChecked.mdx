@@ -1,0 +1,177 @@
+---
+sidebar_label: 'Exceptions Checked'
+---
+
+# Why commenting out line to simulate failure don't throw compile error
+
+```java
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class NewAssetEventListener implements DomainEventListener<NewAssetEvent> {
+
+    private final AssetsRepository assetsRepository;
+    private final CloudStorageService cloudStorageService;
+
+    @ApplicationModuleListener
+    @Override
+    public void handleEvent(NewAssetEvent event) {
+        try {
+            log.info("Received AssetCreated event: {}. Starting cloud upload...", event);
+
+            if(1+1==2) {
+                throw new Exception("Simulate failure");
+            }
+
+            Asset asset = assetsRepository.getAsset(event.assetId());
+
+            asset = asset.onAssetUploadedToCloud();
+            cloudStorageService.upload(asset);
+
+            assetsRepository.save(asset);
+        } catch (InvalidAssetStatusException e) {
+            log.error("Asset aggregate already uploaded to the cloud{}", event);
+        } catch (Exception e) {
+            log.error("Unable to persis Asset aggregate after event {}", event);
+            throw e;
+        }
+    }
+}
+```
+
+Jasne, wyjaśnijmy to krok po kroku. To świetne pytanie, które dotyka samego serca obsługi wyjątków w Javie.
+
+### Krótka odpowiedź
+
+Dostajesz ten błąd, ponieważ Twoja metoda `handleEvent` **nie deklaruje**, że może "wyrzucić" na zewnątrz wyjątek typu `Exception`. Kiedy w bloku `catch` ponownie rzucasz ten wyjątek za pomocą `throw e;`, kompilator Javy protestuje, mówiąc: "Hej, chcesz rzucić wyjątek, o którym nie uprzedziłeś w sygnaturze metody! To niedozwolone dla tego typu wyjątku."
+
+---
+
+### Dokładne wyjaśnienie: Wyjątki `checked` vs `unchecked`
+
+W Javie wyjątki dzielą się na dwie główne kategorie, co jest kluczowe do zrozumienia Twojego problemu:
+
+1.  **Wyjątki `checked` (sprawdzane)**
+*   To są wyjątki, które dziedziczą po klasie `Exception`, ale **nie** po `RuntimeException`. Przykłady: `IOException`, `SQLException`.
+*   Kompilator Javy **zmusza Cię** do ich obsługi. Masz dwie opcje:
+*   **Złapać je** w bloku `try...catch`.
+*   **Zadeklarować**, że Twoja metoda może je rzucić, dodając `throws NazwaWyjatku` do sygnatury metody.
+*   Są one przeznaczone do sytuacji, na które programista ma wpływ i które mogą wystąpić nawet w poprawnie działającym programie (np. brak pliku, problem z połączeniem do bazy danych).
+
+2.  **Wyjątki `unchecked` (niesprawdzane)**
+*   To są wyjątki, które dziedziczą po klasie `RuntimeException` (oraz `Error`). Przykłady: `NullPointerException`, `IllegalArgumentException`, `ArrayIndexOutOfBoundsException`.
+*   Kompilator **nie wymaga** od Ciebie ich obsługi. Możesz je łapać, ale nie musisz.
+*   Zazwyczaj sygnalizują błędy programistyczne (np. odwołanie się do obiektu `null`, dzielenie przez zero) lub krytyczne błędy środowiska.
+
+---
+
+### Analiza Twojego kodu krok po kroku
+
+Zobaczmy, co się dzieje, gdy odkomentujesz linię:
+
+1.  **`throw new Exception("Simulate failure");`**
+*   Świadomie rzucasz wyjątek ogólnego typu `java.lang.Exception`.
+*   **To jest wyjątek typu `checked`!**
+
+2.  **`catch (Exception e) { ... }`**
+*   Twój kod poprawnie łapie ten wyjątek. Do tego momentu wszystko jest w porządku. Blok `try...catch` zadziałał.
+
+3.  **`throw e;`**
+*   Wewnątrz bloku `catch` **ponownie rzucasz** ten sam złapany wyjątek.
+*   I tu jest sedno problemu. Rzucasz wyjątek `checked` (`Exception`) z wnętrza metody `handleEvent`.
+
+4.  **`public void handleEvent(NewAssetEvent event)`**
+*   Spójrz na sygnaturę (nagłówek) Twojej metody. Ona **nie deklaruje**, że może rzucić jakikolwiek wyjątek typu `checked`. Wygląda tak, jakby obiecywała, że "połknie" wszystkie problemy i nic nie wydostanie się na zewnątrz.
+
+**Kompilator Javy widzi to tak:**
+> "Metoda `handleEvent` nie ma w swojej sygnaturze klauzuli `throws Exception`, a mimo to próbujesz z niej rzucić wyjątek typu `checked`. To jest niezgodne z zasadami języka. Musisz albo obsłużyć ten wyjątek na miejscu (ale Ty go właśnie rzucasz!), albo zadeklarować, że ta metoda może go rzucić."
+
+Dlatego właśnie dostajesz błąd: `Unhandled exception: java.lang.Exception` (Nieobsłużony wyjątek).
+
+---
+
+# Isn't then catch(Exception e) dead code? why compile don't complain and allow to keep it with throw when it knows it will never will be executed
+
+To jest genialne pytanie! Trafiasz w samo sedno tego, jak działa kompilator Javy i czym różni się "martwy kod" od kodu, który jest po prostu "potencjalnie wykonywalny".
+
+Odpowiedź brzmi: **Nie, ten kod nie jest martwy.** Jest on jak najbardziej "żywy" i kompilator traktuje go bardzo poważnie.
+
+Wyjaśnijmy, dlaczego tak jest i co dokładnie sprawdza kompilator.
+
+### Analogia: Gaśnica w kuchni
+
+Pomyśl o bloku `try...catch` jak o gaśnicy zamontowanej w kuchni.
+
+*   **`try { ... }`**: To jest Twoja kuchnia, gdzie gotujesz. Zazwyczaj wszystko idzie dobrze.
+*   **`catch (Exception e) { ... }`**: To jest Twoja gaśnica. Jest na ścianie na wypadek, gdyby coś się zapaliło (gdyby został rzucony wyjątek).
+
+Czy to, że masz gaśnicę, oznacza, że na 100% będzie pożar? Nie.
+Czy to, że dzisiaj nie było pożaru, oznacza, że gaśnica jest "martwa" i niepotrzebna? Też nie!
+
+Masz ją, **ponieważ istnieje ryzyko pożaru**. Kompilator myśli dokładnie w ten sam sposób.
+
+---
+
+### Co kompilator wie, a czego nie wie?
+
+Kompilator jest mądry, ale nie jest wszechwiedzący. Zobaczmy, co analizuje w Twoim bloku `try`:
+
+```java
+try {
+    log.info("Received AssetCreated event: {}. Starting cloud upload...", event);
+
+    // Ta linia jest zakomentowana, więc kompilator ją ignoruje
+    // if(1+1==2) { throw new Exception("Simulate failure"); }
+
+    Asset asset = assetsRepository.getAsset(event.assetId()); // <-- Punkt 1
+
+    asset = asset.onAssetUploadedToCloud(); // <-- Punkt 2
+    cloudStorageService.upload(asset);      // <-- Punkt 3
+
+    assetsRepository.save(asset);           // <-- Punkt 4
+}
+```
+
+Kompilator patrzy na ten kod i zadaje sobie pytanie: "Czy jakakolwiek z tych operacji **może potencjalnie** rzucić wyjątek typu `Exception` (lub jego podklasę, np. `RuntimeException`)?".
+
+1.  **`assetsRepository.getAsset(...)`**: To jest wywołanie metody. Kompilator nie analizuje jej wewnętrznej logiki, ale wie, że **każda metoda w Javie może rzucić `RuntimeException`** (np. `NullPointerException`, jeśli `assetsRepository` jest `null`). Co więcej, ta metoda może być zadeklarowana jako `throws JakiśWyjątekChecked`.
+2.  **`asset.onAssetUploadedToCloud()`**: To samo. Może rzucić `RuntimeException`.
+3.  **`cloudStorageService.upload(asset)`**: To samo. Ta metoda prawie na pewno może rzucić np. `IOException` (który jest wyjątkiem `checked`), jeśli wystąpi problem z siecią.
+4.  **`assetsRepository.save(asset)`**: To samo. Może rzucić wyjątek związany z bazą danych, np. `DataAccessException` w Springu.
+
+**Wniosek kompilatora:** Ponieważ blok `try` zawiera wywołania metod, które **mogą** rzucić wyjątki łapane przez `catch (Exception e)`, ten blok `catch` **nie jest martwy**. Jest potencjalnie osiągalny. Dlatego nie ma błędu kompilacji.
+
+---
+
+### Kiedy kod w `catch` byłby martwy (Unreachable Code)?
+
+Kompilator zgłosiłby błąd "unreachable catch block" (nieosiągalny blok catch) tylko wtedy, gdyby mógł **udowodnić**, że w bloku `try` **absolutnie nic** nie jest w stanie rzucić wyjątku danego typu.
+
+Zobacz na ten przykład:
+
+```java
+try {
+    int a = 5;
+    int b = 10;
+    int c = a + b;
+    System.out.println("Wynik to: " + c);
+} catch (java.io.IOException e) { // <-- BŁĄD KOMPILACJI!
+    // Ten kod jest martwy (nieosiągalny)
+    System.out.println("To się nigdy nie wykona");
+}
+```
+
+W powyższym przykładzie kompilator widzi, że:
+*   W bloku `try` są tylko proste operacje arytmetyczne i wypisanie na konsolę.
+*   Żadna z tych operacji nie jest w stanie rzucić wyjątku `java.io.IOException` (który jest `checked`).
+*   W związku z tym blok `catch` dla `IOException` jest bezużyteczny i nigdy się nie wykona. Kompilator zgłasza błąd, żeby Cię o tym poinformować i zmusić do usunięcia "martwego kodu".
+
+**Ważna uwaga:** Gdybyś łapał `catch (Exception e)` lub `catch (RuntimeException e)`, błędu by nie było, bo kompilator zakłada, że teoretycznie coś może pójść nie tak (choć w tym prostym przypadku jest to mało prawdopodobne). Ale w przypadku konkretnych wyjątków `checked` jest bardziej rygorystyczny.
+
+### Podsumowanie
+
+1.  **Twój kod nie jest martwy:** Blok `catch (Exception e)` jest dozwolony, ponieważ kod w bloku `try` wywołuje metody, które potencjalnie mogą rzucić wyjątki (zarówno `checked`, jak i `unchecked`), które są łapane przez `Exception`.
+2.  **Kompilator nie jest wszechwiedzący:** Nie analizuje, czy *faktycznie* w danej chwili poleci wyjątek, a jedynie czy *istnieje taka możliwość* zgodnie z regułami języka.
+3.  **Błąd pojawia się dopiero później:** Problem, który opisałeś w pierwszym pytaniu, nie wynika z tego, czy `catch` jest osiągalny, ale z tego, **co robisz w jego wnętrzu**. Kiedy ponownie rzucasz `throw e;`, próbujesz "wypchnąć" problem na zewnątrz, a do tego potrzebujesz już formalnej zgody w postaci `throws Exception` w sygnaturze metody.
+
+Twój blok `catch` jest więc poprawnym zabezpieczeniem na wypadek awarii, a nie "martwym kodem".
