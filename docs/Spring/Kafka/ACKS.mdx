@@ -1,0 +1,171 @@
+---
+sidebar_label: 'ACKS'
+---
+
+# ACKS (acknowledgemenets) summary
+
+Oczywiście! Temat `acks` (od *acknowledgements*, czyli potwierdzenia) jest absolutnie fundamentalny dla zrozumienia gwarancji dostarczenia wiadomości w Kafce. Wyjaśnijmy to dokładnie.
+
+### Co to jest `acks`?
+
+`acks` to konfiguracja **producenta**, która określa, na jak "mocne" potwierdzenie dostarczenia wiadomości czeka producent, zanim uzna ją za wysłaną pomyślnie. Innymi słowy, definiuje ona poziom trwałości (durability) zapisu.
+
+Pomyśl o tym jak o wysyłaniu listu poleconego. Możesz:
+*   Wrzucić list do skrzynki i odejść (nie wiesz, czy dotarł).
+*   Poczekać na potwierdzenie od listonosza, że odebrał list (wiesz, że jest w systemie pocztowym).
+*   Poczekać na zwrotne poświadczenie odbioru podpisane przez adresata (masz pewność, że dotarł do celu).
+
+`acks` w Kafce działa na podobnej zasadzie, ale w kontekście brokera (lidera partycji) i jego replik.
+
+---
+
+### Możliwe wartości `acks` i jak działają
+
+Są trzy główne wartości dla `acks`:
+
+#### 1. `acks=0` (Najszybszy, "Fire and Forget")
+
+*   **Jak działa:** Producent wysyła wiadomość do brokera (lidera partycji) i **nie czeka na żadne potwierdzenie**. Od razu po wysłaniu wiadomości do bufora sieciowego, uznaje ją za dostarczoną.
+*   **Dostarczanie:** To jest najmniej pewny tryb. Wiadomość może zostać utracona, jeśli:
+*   Broker (lider) ulegnie awarii, zanim zdąży zapisać wiadomość.
+*   Wystąpi problem z siecią w trakcie wysyłania.
+*   **Gwarancje:** **"At most once"** (co najwyżej raz). Wiadomości mogą być utracone, ale nie zostaną zduplikowane przez ponowienia (bo ich nie ma).
+*   **Zalety:**
+*   **Ekstremalnie wysoka przepustowość (throughput).**
+*   **Minimalne opóźnienie (latency).**
+*   **Wady:**
+*   **Wysokie ryzyko utraty danych.**
+*   **Kiedy używać?** Gdy utrata pojedynczych wiadomości jest akceptowalna, a liczy się przede wszystkim szybkość. Przykłady: zbieranie metryk, logowanie o niskim priorytecie, śledzenie kliknięć na stronie (gdzie utrata kilku zdarzeń nie jest krytyczna).
+
+---
+
+#### 2. `acks=1` (Domyślny, Zbalansowany)
+
+*   **Jak działa:** Producent wysyła wiadomość i czeka na potwierdzenie **tylko od lidera partycji**. Lider zapisuje wiadomość w swoim logu i odsyła potwierdzenie (`ack`) do producenta. Proces replikacji na pozostałe brokery (followers) odbywa się w tle, a producent na to nie czeka.
+*   **Dostarczanie:** Jest to kompromis między wydajnością a bezpieczeństwem. Wiadomość może zostać utracona w jednym, konkretnym scenariuszu:
+1.  Lider zapisuje wiadomość i wysyła `ack`.
+2.  Producent otrzymuje `ack` i uznaje wiadomość za dostarczoną.
+3.  Lider ulega awarii, **zanim** zdążył zreplikować wiadomość do swoich followerów.
+4.  Nowym liderem zostaje jeden z followerów, który tej wiadomości nie ma. Wiadomość przepada.
+*   **Gwarancje:** **"At least once"** (co najmniej raz), jeśli producent ma włączone ponowienia (`retries`). Jeśli wiadomość zostanie wysłana, ale `ack` nie dotrze do producenta (np. z powodu problemu sieciowego), producent spróbuje wysłać ją ponownie, co może prowadzić do duplikatów.
+*   **Zalety:**
+*   Dobry kompromis między opóźnieniem a trwałością.
+*   Znacznie bezpieczniejszy niż `acks=0`.
+*   **Wady:**
+*   Możliwa (choć rzadka) utrata danych w przypadku awarii lidera.
+*   Możliwe duplikaty przy ponowieniach.
+*   **Kiedy używać?** W większości standardowych przypadków, gdzie niewielkie ryzyko utraty danych jest akceptowalne, a wydajność jest ważna.
+
+---
+
+#### 3. `acks=all` (lub `acks=-1`) (Najbezpieczniejszy, "Zero Data Loss")
+
+*   **Jak działa:** Producent wysyła wiadomość i czeka na potwierdzenie od lidera, ale lider wyśle to potwierdzenie **dopiero wtedy, gdy wiadomość zostanie pomyślnie zreplikowana na minimalną liczbę replik w synchronizacji (In-Sync Replicas - ISR)**.
+*   **Dostarczanie:** To jest najbezpieczniejszy tryb, który gwarantuje, że wiadomość nie zostanie utracona, o ile co najmniej jedna z replik w synchronizacji pozostaje sprawna.
+*   **Gwarancje:** **"At least once"** (z ponowieniami) lub, przy odpowiedniej konfiguracji, **"Exactly once"** (dokładnie raz).
+*   **Zalety:**
+*   **Maksymalna trwałość i gwarancja braku utraty danych.**
+*   **Wady:**
+*   **Największe opóźnienie (latency)**, ponieważ producent musi czekać na cały cykl replikacji.
+*   Niższa przepustowość.
+*   **Kiedy używać?** W systemach krytycznych, gdzie utrata nawet jednej wiadomości jest niedopuszczalna. Przykłady: transakcje finansowe, przetwarzanie zamówień, kluczowe zdarzenia biznesowe.
+
+---
+
+### Kluczowe powiązane konfiguracje
+
+Sam `acks=all` nie wystarczy. Aby osiągnąć prawdziwą trwałość, musisz skonfigurować kilka rzeczy razem:
+
+#### Po stronie Producenta (w `application.properties`/`yml` lub w kodzie):
+
+1.  **`retries`**:
+*   Liczba prób ponownego wysłania wiadomości w przypadku błędu (np. braku `ack`). Dla `acks=1` i `acks=all` powinna być ustawiona na wartość większą od zera (np. `Integer.MAX_VALUE`), aby przetrwać przejściowe problemy z brokerem.
+
+2.  **`enable.idempotence=true`** (Wprowadzone w Kafka 0.11):
+*   **TO JEST NOWOCZESNE I ZALECANE PODEJŚCIE!**
+*   Włączenie tej opcji automatycznie ustawia `acks=all`, `retries` na dużą wartość i `max.in.flight.requests.per.connection=5` (w nowszych wersjach, wcześniej 1).
+*   Gwarantuje, że ponowienia **nie spowodują duplikatów**. Producent przypisuje każdej wiadomości unikalny numer sekwencyjny, a broker śledzi te numery, odrzucając duplikaty. Zapewnia to gwarancję "exactly once" na poziomie partycji.
+*   **Zalecenie:** Jeśli zależy Ci na braku utraty danych i braku duplikatów, **po prostu ustaw `enable.idempotence=true`**.
+
+#### Po stronie Brokera/Topicu (konfiguracja na serwerze Kafki):
+
+1.  **`replication.factor`**:
+*   Ile kopii (lider + followery) każdej partycji ma istnieć w klastrze. Dla środowisk produkcyjnych zaleca się wartość **co najmniej 3**.
+
+2.  **`min.insync.replicas` (min.isr)**:
+*   **To jest partner dla `acks=all`!** Definiuje, ile replik (wliczając lidera) musi być "w synchronizacji" i potwierdzić zapis, aby lider mógł wysłać `ack` do producenta.
+*   **Przykład:** `replication.factor=3`, `min.insync.replicas=2`.
+*   Gdy producent z `acks=all` wysyła wiadomość, lider musi zapisać ją u siebie i poczekać na potwierdzenie od co najmniej jednego followera. Dopiero wtedy wysyła `ack` do producenta.
+*   Jeśli w danym momencie dostępny jest tylko lider (np. dwie pozostałe repliki miały awarię), to liczba ISR spadnie do 1. Ponieważ `1 < min.insync.replicas`, producent otrzyma błąd `NotEnoughReplicasException` i będzie próbował wysłać wiadomość ponownie. To chroni przed scenariuszem opisanym w `acks=1`.
+
+**Złota zasada trwałości:** `acks=all` + `min.insync.replicas > 1` (zazwyczaj `replication.factor - 1`).
+
+---
+
+### Przykłady kodu i konfiguracji (Spring Boot)
+
+#### Konfiguracja w `application.yml`
+
+```yaml
+spring:
+  kafka:
+    producer:
+      # --- Konfiguracja dla MAKSYMALNEJ TRWAŁOŚCI (zalecana) ---
+      acks: all
+      # Włączenie idempotencji upraszcza sprawę. Nie trzeba już ustawiać retries i max.in.flight...
+      properties:
+        enable.idempotence: true
+        # Dla starszych wersji Kafki, lub gdy nie używamy idempotencji:
+        # retries: 5
+        # max.in.flight.requests.per.connection: 1 # Zapobiega zmianie kolejności przy ponowieniach
+
+      # --- Konfiguracja dla MAKSYMALNEJ WYDAJNOŚCI (ryzykowna) ---
+      # acks: 0
+
+      # --- Konfiguracja ZBALANSOWANA (domyślna) ---
+      # acks: 1
+      # retries: 3 # Domyślnie retries jest włączone
+
+      # Wspólne konfiguracje
+      bootstrap-servers: localhost:9092
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+```
+
+#### Konfiguracja w kodzie (jak w Twoim przykładzie z `RoutingKafkaTemplate`)
+
+Jeśli chcesz dynamicznie tworzyć producentów z różnymi ustawieniami `acks`, robisz to dokładnie tak, jak w przykładzie z serializatorami:
+
+```java
+@Bean
+public RoutingKafkaTemplate routingTemplate(GenericApplicationContext context,
+        ProducerFactory<Object, Object> pf) { // pf jest domyślną fabryką
+
+    // Stwórz konfigurację dla producenta o maksymalnej trwałości
+    Map<String, Object> highDurabilityConfigs = new HashMap<>(pf.getConfigurationProperties());
+    highDurabilityConfigs.put(ProducerConfig.ACKS_CONFIG, "all");
+    highDurabilityConfigs.put("enable.idempotence", true); // To jest kluczowe!
+
+    DefaultKafkaProducerFactory<Object, Object> highDurabilityPF = new DefaultKafkaProducerFactory<>(highDurabilityConfigs);
+    context.registerBean("highDurabilityPF", DefaultKafkaProducerFactory.class, () -> highDurabilityPF);
+
+    // Stwórz konfigurację dla "szybkiego" producenta
+    Map<String, Object> fastConfigs = new HashMap<>(pf.getConfigurationProperties());
+    fastConfigs.put(ProducerConfig.ACKS_CONFIG, "0");
+
+    DefaultKafkaProducerFactory<Object, Object> fastPF = new DefaultKafkaProducerFactory<>(fastConfigs);
+    context.registerBean("fastPF", DefaultKafkaProducerFactory.class, () -> fastPF);
+
+    // Mapa routingowa
+    Map<Pattern, ProducerFactory<Object, Object>> map = new LinkedHashMap<>();
+
+    // Reguły:
+    map.put(Pattern.compile("orders-.*"), highDurabilityPF); // Wszystkie topici zamówień - max bezpieczeństwo
+    map.put(Pattern.compile("metrics-.*"), fastPF);           // Wszystkie topici metryk - max szybkość
+    map.put(Pattern.compile(".+"), pf);                       // Reszta - domyślne ustawienia (np. acks=1)
+
+    return new RoutingKafkaTemplate(map);
+}
+```
+W ten sposób jedna aplikacja może wysyłać wiadomości o zamówieniach z gwarancją ich nieutracenia, a jednocześnie wysyłać logi i metryki z maksymalną prędkością, używając do tego jednego, wygodnego `RoutingKafkaTemplate`.
+
