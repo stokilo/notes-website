@@ -1,0 +1,132 @@
+---
+sidebar_label: 'Sneaky Throws'
+---
+
+# What is SneakyThrows?
+Jasne, wytłumaczę Ci, czym jest `@SneakyThrows` z biblioteki Lombok, jak działa i jakie są argumenty za i przeciw jego używaniu.
+
+### Czym jest Lombok `@SneakyThrows`?
+
+`@SneakyThrows` to adnotacja Lomboka, która pozwala "oszukać" kompilator Javy, aby zignorował konieczność obsługi tzw. **wyjątków kontrolowanych** (checked exceptions).
+
+W standardowej Javie, jeśli metoda może rzucić wyjątek kontrolowany (np. `IOException`, `SQLException`, `InterruptedException`), musisz zrobić jedną z dwóch rzeczy:
+
+1.  **Obsłużyć go** w bloku `try-catch`.
+2.  **Zadeklarować go** w sygnaturze metody za pomocą słowa kluczowego `throws`.
+
+`@SneakyThrows` pozwala pominąć oba te kroki.
+
+**Przykład "Przed" (standardowa Java):**
+
+Załóżmy, że chcemy użyć `Thread.sleep()`, które rzuca `InterruptedException`.
+
+```java
+// Sposób 1: Obsługa w try-catch (często prowadzi do "boilerplate")
+public void czekajChwile() {
+    try {
+        Thread.sleep(1000);
+    } catch (InterruptedException e) {
+        // Coś trzeba z tym zrobić... Często opakowuje się w RuntimeException
+        Thread.currentThread().interrupt(); // Dobra praktyka
+        throw new RuntimeException(e);
+    }
+}
+
+// Sposób 2: Deklaracja w metodzie
+public void czekajChwile() throws InterruptedException {
+    Thread.sleep(1000);
+}
+```
+
+**Przykład "Po" (z użyciem `@SneakyThrows`):**
+
+```java
+import lombok.SneakyThrows;
+
+public class Przyklad {
+
+    @SneakyThrows
+    public void czekajChwile() {
+        // Nie ma try-catch, nie ma "throws" w sygnaturze!
+        Thread.sleep(1000);
+    }
+}
+```
+
+Kod jest znacznie czystszy i krótszy. Kompilator nie zgłasza błędu, mimo że `InterruptedException` nie jest ani obsłużony, ani zadeklarowany.
+
+---
+
+### Jak to działa?
+
+To jest najciekawsza część. `@SneakyThrows` **nie opakowuje wyjątku w `RuntimeException`**. To częste nieporozumienie.
+
+Działa to na zasadzie "magicznej sztuczki" na poziomie kodu bajtowego (bytecode), którą Lombok wykonuje za nas:
+
+1.  **Lombok w trakcie kompilacji modyfikuje kod.** Generuje ukryty blok `try-catch` wokół kodu w metodzie.
+2.  Wewnątrz tego bloku `catch` łapie oryginalny wyjątek kontrolowany (np. `InterruptedException`).
+3.  Następnie, zamiast go opakowywać, **rzuca go ponownie w jego oryginalnej formie**.
+4.  Sztuczka polega na tym, że sposób, w jaki Lombok to robi, oszukuje kompilator Javy, sprawiając, że ten "nie widzi", że z bloku `catch` może zostać rzucony wyjątek kontrolowany.
+
+**Wniosek:** Dla kompilatora sygnatura metody jest "czysta". Ale dla Wirtualnej Maszyny Javy (JVM) w czasie wykonania, jeśli `Thread.sleep()` faktycznie rzuci `InterruptedException`, to **dokładnie ten sam `InterruptedException`** zostanie rzucony dalej w górę stosu wywołań.
+
+---
+
+### Czy to dobry pomysł, żeby tego używać?
+
+To zależy. `@SneakyThrows` jest potężnym, ale i kontrowersyjnym narzędziem. Ma swoje wady i zalety.
+
+#### Zalety (Kiedy warto go używać):
+
+1.  **Redukcja kodu "boilerplate"**: Główny powód jego istnienia. Eliminuje powtarzalne i brzydkie bloki `try-catch`, które tylko opakowują wyjątek w `RuntimeException`.
+2.  **Lambdy i interfejsy funkcyjne**: To jest **najlepszy i najczęstszy** przypadek użycia! Wiele interfejsów funkcyjnych (np. `Runnable`, `Consumer`, `Function`) nie pozwala na rzucanie wyjątków kontrolowanych. `@SneakyThrows` jest tu idealnym rozwiązaniem.
+
+```java
+// Bez @SneakyThrows - brzydko i nieczytelnie
+List<String> nazwyPlikow = ...;
+nazwyPlikow.forEach(nazwa -> {
+    try {
+        new FileOutputStream(nazwa);
+    } catch (IOException e) {
+        throw new RuntimeException(e);
+    }
+});
+
+// Z @SneakyThrows - czysto i elegancko
+nazwyPlikow.forEach(this::stworzPlik);
+
+@SneakyThrows
+private void stworzPlik(String nazwa) {
+    new FileOutputStream(nazwa); // IOException jest "ukryty"
+}
+```
+
+3.  **Kiedy wyjątek jest niemożliwy**: Czasami API zmusza nas do obsługi wyjątku, o którym wiemy, że nigdy nie wystąpi.
+`@SneakyThrows`
+`new URI("https://pewny-i-poprawny-url.com"); // URISyntaxException nigdy tu nie poleci`
+4.  **W testach**: Aby kod testowy był krótszy i bardziej czytelny.
+
+#### Wady i Ryzyka (Kiedy należy go unikać):
+
+1.  **Łamanie kontraktu metody (NAJWIĘKSZA WADA)**: Sygnatura metody jest umową z jej "klientem" (kodem, który ją wywołuje). Mówi, jakie argumenty przyjmuje, co zwraca i **jakie wyjątki może rzucić**. `@SneakyThrows` ukrywa tę informację. Ktoś, kto używa Twojej metody `czekajChwile()`, nie ma pojęcia, że może z niej "wyskoczyć" `InterruptedException`.
+2.  **Utrudnione debugowanie**: Gdy aplikacja się wywali z powodu nieobsłużonego wyjątku, programista patrzący na kod wywołujący nie będzie wiedział, dlaczego. Musi wejść głębiej do implementacji, żeby odkryć "ukryty" wyjątek.
+3.  **Ryzyko nadużywania**: Łatwo jest wpaść w pułapkę i używać `@SneakyThrows` wszędzie, zamiast zastanowić się nad prawidłową strategią obsługi błędów.
+4.  **"Magia"**: To nie jest standardowa funkcja Javy. Polega na narzędziu, które modyfikuje kod w locie, co może być mylące dla osób nieznających Lomboka.
+
+### Podsumowanie i rekomendacja
+
+`@SneakyThrows` to narzędzie, które należy **używać świadomie i z umiarem**.
+
+*   **TAK, używaj śmiało**:
+*   Wewnątrz lambd i strumieni (`stream`).
+*   W prywatnych metodach pomocniczych, gdzie masz pełną kontrolę.
+*   W kodzie testowym.
+*   Gdy jesteś w 100% pewien, że wyjątek jest niemożliwy do wystąpienia.
+*   Gdy jedyne, co byś zrobił, to i tak opakował wyjątek w `RuntimeException`.
+
+*   **NIE, lepiej unikać**:
+*   W **publicznych metodach API** biblioteki lub modułu. Klienci Twojego kodu muszą wiedzieć, jakie wyjątki obsłużyć.
+*   Gdy wyjątek jest **możliwy do odzyskania** (np. `FileNotFoundException` – może użytkownik powinien mieć szansę podać inną ścieżkę?).
+*   Z lenistwa, jako zamiennik przemyślanej obsługi błędów.
+
+To potężne narzędzie do czyszczenia kodu, ale jego niewłaściwe użycie może prowadzić do trudnych do zdiagnozowania problemów. Traktuj je jak ostre narzędzie: bardzo przydatne w rękach eksperta, ale niebezpieczne, gdy jest używane bezmyślnie.
