@@ -1,0 +1,166 @@
+---
+sidebar_label: 'When'
+---
+
+# When
+
+Znakomicie. Wyrażenie `when` to jedna z najbardziej elastycznych i potężnych konstrukcji w Kotlinie. Dla programisty Javy jest to jak `switch` na sterydach – robi wszystko, co `switch`, i o wiele, wiele więcej.
+
+### 4. Wyrażenie `when` (jako ulepszony `switch`)
+
+`when` zastępuje instrukcję `switch` z Javy, ale jest od niej znacznie bardziej wyraziste i wszechstronne.
+
+---
+
+#### 1. Podstawowe użycie (bezpośredni zamiennik `switch`)
+
+W najprostszej formie `when` działa jak `switch`.
+
+**W Javie:**
+```java
+int day = 2;
+String dayName;
+switch (day) {
+    case 1:
+        dayName = "Poniedziałek";
+        break;
+    case 2:
+        dayName = "Wtorek";
+        break;
+    default:
+        dayName = "Inny dzień";
+        break;
+}
+```
+
+**W Kotlinie:**
+```kotlin
+val day = 2
+val dayName = when (day) {
+    1 -> "Poniedziałek"
+    2 -> "Wtorek"
+    else -> "Inny dzień"
+}
+println(dayName) // Wyświetli: Wtorek
+```
+
+**Kluczowe różnice już na tym etapie:**
+*   **`when` jest wyrażeniem:** Może zwracać wartość, co pozwala na przypisanie wyniku bezpośrednio do zmiennej (`val dayName = ...`). To promuje niezmienność (`val`) i eliminuje potrzebę tworzenia modyfikowalnej zmiennej (`var dayName;`).
+*   **Brak `break`:** W Kotlinie wykonany zostanie tylko kod dla pierwszego pasującego warunku. Nie ma "przechodzenia dalej" (`fall-through`), co jest częstym źródłem błędów w Javie.
+*   **`default` to `else`:** Gałąź domyślna jest oznaczona słowem kluczowym `else`.
+
+---
+
+#### 2. Ulepszenia i supermoce `when`
+
+Tutaj `when` pokazuje swoją prawdziwą siłę, wykraczając daleko poza możliwości `switch`.
+
+**a) Łączenie wielu wartości w jednym warunku**
+
+Możesz sprawdzić kilka wartości w jednej gałęzi, oddzielając je przecinkami.
+
+```kotlin
+val code = 200
+val message = when (code) {
+    200, 201, 204 -> "Success"
+    400, 401, 403 -> "Client Error"
+    500, 503 -> "Server Error"
+    else -> "Unknown code"
+}
+```
+To znacznie czystsza alternatywa dla `case 200: case 201: ...` z Javy.
+
+**b) Używanie dowolnych wyrażeń jako warunków**
+
+W przeciwieństwie do Javy, gdzie `case` musi być stałą, w Kotlinie gałęzie `when` mogą zawierać dowolne wyrażenia, które zwracają `true`/`false`.
+
+```kotlin
+val x: Any = "Kotlin" // Może być cokolwiek
+when (x) {
+    1 -> println("To jest liczba 1")
+    "Kotlin" -> println("To jest string 'Kotlin'")
+    is Long -> println("To jest Long") // Sprawdzanie typu (i smart cast!)
+    !is String -> println("To nie jest String")
+    else -> println("Coś innego")
+}
+```
+
+**c) Sprawdzanie zakresów (`in`)**
+
+Możesz łatwo sprawdzić, czy wartość mieści się w zakresie.
+
+```kotlin
+val httpCode = 404
+when (httpCode) {
+    in 200..299 -> println("Success")
+    in 400..499 -> println("Client Error") // Ten warunek zostanie dopasowany
+    in 500..599 -> println("Server Error")
+    else -> println("Unknown range")
+}
+```
+
+**d) `when` bez argumentu (jako czytelniejszy `if-else if-else`)**
+
+Jeśli nie podasz argumentu do `when`, każda gałąź staje się po prostu warunkiem logicznym. `when` zadziała jak czystszy łańcuch `if-else if`.
+
+```kotlin
+val text = "Start"
+when {
+    text.startsWith("Start") -> println("Zaczyna się od 'Start'")
+    text.contains("middle") -> println("Zawiera 'middle'")
+    text.endsWith("End") -> println("Kończy się na 'End'")
+    else -> println("Nie pasuje do niczego")
+}
+```
+
+---
+
+#### 3. Wymóg kompletności (`Exhaustiveness`)
+
+To bardzo ważna cecha bezpieczeństwa. Jeśli używasz `when` jako **wyrażenia** (czyli przypisujesz jego wynik do zmiennej), kompilator **musi** mieć pewność, że wszystkie możliwe przypadki zostały obsłużone. Wymusza to dodanie gałęzi `else`.
+
+```kotlin
+val number = 5
+val description = when (number) {
+    0 -> "Zero"
+    // BŁĄD KOMPILACJI: 'when' expression must be exhaustive.
+    // Add necessary 'else' branch.
+}
+```
+**Poprawnie:**
+```kotlin
+val description = when (number) {
+    0 -> "Zero"
+    else -> "Nie zero"
+}
+```
+**Wyjątek:** Gałąź `else` nie jest wymagana, jeśli kompilator sam potrafi stwierdzić, że wszystkie przypadki są obsłużone. Dzieje się tak przy typach wyliczeniowych (`enum`) i klasach zapieczętowanych (`sealed class`).
+
+```kotlin
+enum class Color { RED, GREEN, BLUE }
+
+fun getColorName(color: Color): String {
+    return when (color) {
+        Color.RED -> "Czerwony"
+        Color.GREEN -> "Zielony"
+        Color.BLUE -> "Niebieski"
+        // Nie potrzeba `else`! Kompilator wie, że to wszystkie opcje.
+        // Jeśli dodasz nowy kolor do enum, ten kod przestanie się kompilować,
+        // zmuszając Cię do obsługi nowego przypadku. To świetne!
+    }
+}
+```
+
+### Podsumowanie dla programisty Javy
+
+| Cecha | Java `switch` | Kotlin `when` |
+| :--- | :--- | :--- |
+| **Zwracanie wartości** | Nie (przed Java 14) | **Tak (jest wyrażeniem)** |
+| **Argument** | Zmienna (int, enum, String) | Dowolny obiekt |
+| **Warunki `case`** | Tylko stałe | **Dowolne wyrażenia, typy, zakresy** |
+| **`break`** | Wymagany, by uniknąć `fall-through`| **Niepotrzebny** |
+| **Domyślna gałąź** | `default:` | `else ->` |
+| **Kompletność** | Niewymuszana | **Wymuszana, gdy jest wyrażeniem** |
+| **Użycie bez argumentu** | Niemożliwe | Tak (jako czytelniejszy `if-else`) |
+
+`when` to jedno z najbardziej użytecznych narzędzi w arsenale Kotlina, które czyni kod bezpieczniejszym, krótszym i o wiele bardziej czytelnym.

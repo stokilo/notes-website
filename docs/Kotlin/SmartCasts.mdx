@@ -1,0 +1,147 @@
+---
+sidebar_label: 'SmartCasts'
+---
+
+# Smart Casts
+
+Jasne, przejdźmy do kolejnej cechy, która znacznie upraszcza kod i czyni go bardziej czytelnym.
+
+### 3. Inteligentne rzutowanie (`Smart Casts`)
+
+Inteligentne rzutowanie to mechanizm, w którym kompilator Kotlina jest na tyle "inteligentny", że potrafi automatycznie rzutować zmienną na bardziej specyficzny typ po tym, jak sprawdzisz jej typ. Eliminuje to potrzebę jawnego, ręcznego rzutowania, które jest konieczne w Javie.
+
+---
+
+#### Problem w Javie
+
+W Javie, nawet po sprawdzeniu typu obiektu za pomocą `instanceof`, nadal musisz go ręcznie zrzutować, aby móc wywołać metody specyficzne dla tego typu.
+
+**Przykład w Javie:**
+```java
+public void process(Object animal) {
+    if (animal instanceof Dog) {
+        // Mimo że wiemy, że to Pies, musimy go zrzutować
+        Dog dog = (Dog) animal;
+        dog.bark(); // Dopiero teraz możemy wywołać .bark()
+    } else if (animal instanceof Cat) {
+        Cat cat = (Cat) animal;
+        cat.meow();
+    }
+}
+```
+Ten dodatkowy krok z tworzeniem nowej zmiennej i rzutowaniem jest powtarzalny i zaśmieca kod.
+
+---
+
+#### Rozwiązanie w Kotlinie: `is` i automatyczne rzutowanie
+
+Kotlin upraszcza ten proces do granic możliwości. Używamy operatora `is` (odpowiednika `instanceof` w Javie), a kompilator resztę robi za nas.
+
+**Ten sam przykład w Kotlinie:**
+```kotlin
+fun process(animal: Any) { // Any to odpowiednik Object w Javie
+    if (animal is Dog) {
+        // SMART CAST! Kompilator wie, że w tym bloku `animal` jest Psem.
+        // Nie trzeba rzutować.
+        animal.bark()
+    } else if (animal is Cat) {
+        // Tutaj `animal` jest automatycznie traktowany jako Kot.
+        animal.meow()
+    }
+}
+```
+
+Jak widzisz, kod jest znacznie krótszy i bardziej intuicyjny. Kompilator wewnątrz bloku `if` "pamięta", że typ został sprawdzony, i pozwala na bezpośrednie wywoływanie metod tego typu na oryginalnej zmiennej.
+
+#### Jak to działa i gdzie można tego używać?
+
+Inteligentne rzutowanie działa w różnych kontekstach, gdzie kompilator może jednoznacznie stwierdzić, że typ się nie zmieni.
+
+**1. W warunkach `if`:**
+```kotlin
+fun handleText(text: Any) {
+    if (text is String) {
+        // `text` jest teraz traktowany jako String
+        println("Długość tekstu to ${text.length}")
+    }
+}
+```
+
+**2. W warunkach z negacją `!is`:**
+Inteligentne rzutowanie działa również po "wyjściu" z warunku, jeśli ten warunek kończy działanie funkcji.
+```kotlin
+fun handleTextOnly(text: Any) {
+    if (text !is String) {
+        // Jeśli to nie jest String, zakończ funkcję
+        return
+    }
+    // SMART CAST!
+    // Kompilator wie, że skoro doszliśmy tutaj, `text` MUSI być Stringiem.
+    println("Długość tekstu to ${text.length}")
+}
+```
+
+**3. W wyrażeniach `when` (ulepszony `switch`):**
+`when` to idealne miejsce dla inteligentnego rzutowania.
+```kotlin
+fun processWithType(animal: Any) {
+    when (animal) {
+        is Dog -> animal.bark() // Smart cast do Dog
+        is Cat -> animal.meow() // Smart cast do Cat
+        is String -> println("To jest tekst o długości ${animal.length}") // Smart cast do String
+        else -> println("Nieznany typ")
+    }
+}
+```
+
+**4. Po prawej stronie operatorów `&&` (AND) i `||` (OR):**
+```kotlin
+fun check(obj: Any) {
+    // Smart cast działa po prawej stronie `&&`
+    if (obj is String && obj.length > 5) {
+        println("Długi string")
+    }
+}
+```
+
+---
+
+#### Ograniczenia: Kiedy inteligentne rzutowanie nie zadziała?
+
+Kompilator musi mieć gwarancję, że zmienna nie mogła zostać zmodyfikowana pomiędzy sprawdzeniem typu a jej użyciem. Dlatego inteligentne rzutowanie **nie działa** na:
+
+*   **Zmiennych `var`, które mogą być modyfikowane z innego miejsca.** Jeśli masz właściwość klasy (`var`), która jest widoczna publicznie, inny wątek mógłby zmienić jej wartość. Kompilator nie podejmie ryzyka.
+
+```kotlin
+class MyClass {
+    var myProperty: Any = "Hello"
+
+    fun checkProperty() {
+        if (myProperty is String) {
+            // BŁĄD KOMPILACJI: Smart cast to 'String' is impossible,
+            // because 'myProperty' is a mutable property that could have been changed by this time.
+            // println(myProperty.length)
+        }
+    }
+}
+    ```
+**Rozwiązanie:** Stworzyć lokalną, niezmienną kopię (`val`).
+```kotlin
+fun checkProperty() {
+    val localProp = myProperty
+    if (localProp is String) {
+        // Teraz działa, bo `localProp` jest lokalne i niezmienne (val).
+        println(localProp.length)
+    }
+}
+    ```
+*   **Właściwościach z niestandardowym getterem,** ponieważ każde odwołanie do nich może zwrócić inną wartość.
+
+### Podsumowanie dla programisty Javy
+
+| Koncepcja w Javie | Odpowiednik w Kotlinie | Kluczowa korzyść |
+| :--- | :--- | :--- |
+| `obj instanceof MyType` | `obj is MyType` | Składnia jest nieco krótsza i bardziej czytelna. |
+| `if (obj instanceof MyType) { MyType v = (MyType) obj; v.doSth(); }` | `if (obj is MyType) { obj.doSth(); }` | **Brak potrzeby ręcznego rzutowania.** Kompilator robi to za Ciebie, co upraszcza kod i eliminuje zbędne zmienne. |
+
+Inteligentne rzutowanie to pozornie mała rzecz, ale w codziennej pracy oszczędza mnóstwo pisania i sprawia, że kod staje się znacznie czystszy. To kolejny przykład filozofii Kotlina: "jeśli kompilator może coś wywnioskować, nie zmuszaj programisty do pisania tego wprost".

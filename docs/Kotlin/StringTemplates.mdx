@@ -1,0 +1,100 @@
+---
+sidebar_label: 'StringTemplates'
+---
+
+# String Templates
+
+Oczywiście. Przechodzimy do kolejnego tematu, który jest małą, ale niezwykle przyjemną i często używaną funkcją w codziennym programowaniu.
+
+### 5. Szablony stringów (`String Templates`)
+
+Szablony stringów (zwane też interpolacją stringów) to prosty i czytelny sposób na wstawianie wartości zmiennych i wyrażeń bezpośrednio do literału stringowego. To ogromne ułatwienie w porównaniu do standardowej konkatenacji (`+`) lub `String.format()` w Javie.
+
+---
+
+#### Problem w Javie
+
+W Javie, aby zbudować string z dynamicznymi danymi, najczęściej używasz jednej z tych metod:
+
+**1. Konkatenacja za pomocą `+`:**
+Jest to bardzo rozwlekłe i podatne na błędy (np. zapomnienie spacji).
+```java
+String name = "Ania";
+int score = 95;
+String message = "Użytkownik " + name + " zdobył(a) " + score + " punktów.";
+// Wynik: "Użytkownik Ania zdobył(a) 95 punktów."
+```
+
+**2. `String.format()`:**
+Jest bardziej czytelne, ale wymaga pamiętania o specyfikatorach formatu (`%s`, `%d`) i utrzymywania oddzielnej listy argumentów.
+```java
+String name = "Ania";
+int score = 95;
+String message = String.format("Użytkownik %s zdobył(a) %d punktów.", name, score);
+```
+
+---
+
+#### Rozwiązanie w Kotlinie: `$` i `${}`
+
+Kotlin upraszcza to do granic możliwości, używając znaku dolara (`$`) do osadzania wyrażeń w stringach.
+
+**1. Wstawianie prostej zmiennej: `$`**
+
+Jeśli chcesz wstawić wartość prostej zmiennej, po prostu poprzedź jej nazwę znakiem `$`.
+
+```kotlin
+val name = "Ania"
+val score = 95
+val message = "Użytkownik $name zdobył(a) $score punktów."
+// Wynik: "Użytkownik Ania zdobył(a) 95 punktów."
+```
+Kod jest znacznie krótszy i o wiele bardziej czytelny. Od razu widać, jak będzie wyglądał finalny string.
+
+**2. Wstawianie złożonego wyrażenia: `${}`**
+
+Jeśli chcesz wstawić coś więcej niż tylko nazwę zmiennej – na przykład wywołanie metody, dostęp do właściwości obiektu, czy operację arytmetyczną – umieść całe wyrażenie wewnątrz nawiasów klamrowych `${...}`.
+
+```kotlin
+data class User(val name: String, val posts: List<String>)
+
+val user = User("Jan", listOf("Post 1", "Post 2"))
+
+// Dostęp do właściwości obiektu i wywołanie metody .size
+val summary = "Użytkownik ${user.name.uppercase()} ma ${user.posts.size} postów."
+// Wynik: "Użytkownik JAN ma 2 postów."
+
+val x = 10
+val y = 20
+val calculation = "Suma $x i $y to ${x + y}."
+// Wynik: "Suma 10 i 20 to 30."
+```
+
+#### Szablony w stringach wieloliniowych
+
+Szablony działają również doskonale ze stringami wieloliniowymi (otoczonymi potrójnym cudzysłowem `"""`), co jest niezwykle przydatne przy generowaniu np. JSON-ów, zapytań SQL czy formatowaniu wiadomości.
+
+```kotlin
+val user = User("Maria", listOf())
+val emailBody = """
+    Witaj, ${user.name}!
+
+    Dziękujemy za rejestrację w naszym serwisie.
+    Cieszymy się, że jesteś z nami.
+
+    Zespół Aplikacji
+""".trimIndent() // .trimIndent() usuwa wspólne wcięcie z każdej linii.
+```
+
+### Podsumowanie dla programisty Javy
+
+To jedna z tych "małych" rzeczy, które pokochasz od pierwszego użycia. Znacznie poprawia komfort pracy i czytelność kodu.
+
+| Zadanie | Sposób w Javie | Sposób w Kotlinie |
+| :--- | :--- | :--- |
+| **Prosta zmienna** | `"Imię: " + name` | `"Imię: $name"` |
+| **Wyrażenie / metoda** | `"Posty: " + user.getPosts().size()` | `"Posty: ${user.posts.size}"` |
+| **Formatowanie** | `String.format("User: %s", name)` | `"User: $name"` |
+| **Czytelność** | Niska (ciągłe przełączanie między `"` a `+`)| **Wysoka** (string wygląda jak wynik) |
+
+Po przyzwyczajeniu się do szablonów stringów w Kotlinie, powrót do konkatenacji w Javie jest naprawdę bolesny.
