@@ -1,0 +1,142 @@
+---
+sidebar_label: 'ArgumentsNamedDefault'
+---
+
+# Function arguments: named and default
+
+Jasne, przechodzimy do kolejnego tematu, który drastycznie redukuje ilość powtarzalnego kodu (boilerplate) i znacząco poprawia czytelność wywołań funkcji.
+
+### 8. Funkcje: argumenty domyślne i nazwane
+
+Te dwie cechy działają najlepiej w połączeniu, rozwiązując klasyczny problem z Javy znany jako "wzorce teleskopowe" (telescoping constructors/methods).
+
+---
+
+#### Problem w Javie: Przeciążanie metod (Method Overloading)
+
+W Javie, jeśli chcesz zaoferować różne sposoby wywołania metody – niektóre z domyślnymi wartościami – musisz tworzyć wiele przeciążonych wersji tej samej metody.
+
+**Przykład w Javie: funkcja do tworzenia połączenia sieciowego.**
+```java
+public class Connector {
+    // Pełna wersja
+    public void connect(String host, int port, int timeout, boolean useSsl) {
+        System.out.println("Connecting to " + host + ":" + port +
+                           " (timeout=" + timeout + ", ssl=" + useSsl + ")");
+        // ... logika połączenia
+    }
+
+    // Wersje przeciążone dla wygody
+    public void connect(String host, int port, int timeout) {
+        connect(host, port, timeout, false); // SSL domyślnie na false
+    }
+
+    public void connect(String host, int port) {
+        connect(host, port, 1000); // Domyślny timeout 1000ms
+    }
+
+    public void connect(String host) {
+        connect(host, 8080); // Domyślny port 8080
+    }
+}
+```
+
+**Problemy tego podejścia:**
+1.  **Dużo kodu:** Musisz napisać i utrzymywać wiele metod.
+2.  **Słaba czytelność wywołania:** `connector.connect("example.com", 5000, true);` – co oznacza `5000`? Co to jest `true`? Trzeba zajrzeć do definicji metody.
+3.  **Brak elastyczności:** Co jeśli chcesz użyć domyślnego portu i timeoutu, ale włączyć SSL? Musisz stworzyć *kolejną* przeciążoną metodę: `connect(String host, boolean useSsl)`. To bardzo niepraktyczne.
+
+---
+
+#### Rozwiązanie w Kotlinie: Jedna funkcja, maksimum elastyczności
+
+Kotlin rozwiązuje wszystkie te problemy za pomocą dwóch prostych mechanizmów.
+
+#### 1. Argumenty domyślne (`Default Arguments`)
+
+Możesz przypisać domyślną wartość do parametru bezpośrednio w sygnaturze funkcji. Ta wartość zostanie użyta, jeśli argument nie zostanie podany podczas wywołania.
+
+**Ten sam przykład w Kotlinie (z argumentami domyślnymi):**
+```kotlin
+// Jedna, jedyna definicja funkcji!
+fun connect(
+    host: String,
+    port: Int = 8080,          // Domyślny port
+    timeout: Int = 1000,       // Domyślny timeout
+    useSsl: Boolean = false    // Domyślny SSL
+) {
+    println("Connecting to $host:$port (timeout=$timeout, ssl=$useSsl)")
+}
+
+// Możliwe sposoby wywołania:
+connect("example.com")                     // Używa wszystkich wartości domyślnych
+// Wynik: Connecting to example.com:8080 (timeout=1000, ssl=false)
+
+connect("example.com", 9090)               // Nadpisuje port, reszta domyślna
+// Wynik: Connecting to example.com:9090 (timeout=1000, ssl=false)
+
+connect("example.com", 9090, 5000)         // Nadpisuje port i timeout
+// Wynik: Connecting to example.com:9090 (timeout=5000, ssl=false)
+```
+To już jest ogromne uproszczenie – pozbyliśmy się wszystkich przeciążonych metod. Ale nadal mamy problem z elastycznością i czytelnością... i tu wkraczają argumenty nazwane.
+
+#### 2. Argumenty nazwane (`Named Arguments`)
+
+Podczas wywoływania funkcji możesz jawnie nazwać argumenty, które przekazujesz.
+
+**Kluczowe korzyści:**
+*   **Czytelność:** Kod staje się samouczący.
+*   **Dowolna kolejność:** Gdy używasz nazw, kolejność argumentów nie ma znaczenia.
+
+```kotlin
+// Wywołanie z nazwanymi argumentami
+connect(host = "example.com", port = 9090, timeout = 5000, useSsl = true)
+```
+Od razu widać, co oznaczają poszczególne wartości.
+
+#### Połączenie sił: Domyślne + Nazwane = Supermoc
+
+Teraz możemy rozwiązać problem, który był nierozwiązywalny w Javie w sposób elegancki: **"Chcę nadpisać tylko ostatni argument, pozostawiając środkowe jako domyślne."**
+
+```kotlin
+// Chcę użyć domyślnego portu i timeoutu, ale włączyć SSL.
+connect(host = "secure.example.com", useSsl = true)
+// Wynik: Connecting to secure.example.com:8080 (timeout=1000, ssl=true)
+
+// Chcę nadpisać tylko timeout. Kolejność nie ma znaczenia!
+connect(timeout = 3000, host = "slow-service.com")
+// Wynik: Connecting to slow-service.com:8080 (timeout=3000, ssl=false)
+```
+
+#### Jak to działa z Javą? Adnotacja `@JvmOverloads`
+
+Domyślnie, z perspektywy kodu Javy, nasza funkcja `connect` będzie widoczna tylko w swojej pełnej formie: `connect(String, int, int, boolean)`. Java nie rozumie argumentów domyślnych.
+
+Aby to naprawić i wygenerować przeciążone wersje dla Javy, używamy adnotacji `@JvmOverloads`.
+
+```kotlin
+@JvmOverloads // Mówi kompilatorowi, żeby wygenerował przeciążenia dla Javy
+fun connect(
+    host: String,
+    port: Int = 8080,
+    timeout: Int = 1000,
+    useSsl: Boolean = false
+) { /* ... */ }
+```
+Teraz z kodu Javy możesz wywołać:
+```java
+ConnectorKt.connect("example.com");
+ConnectorKt.connect("example.com", 9090);
+ConnectorKt.connect("example.com", 9090, 5000);
+ConnectorKt.connect("example.com", 9090, 5000, true);
+```
+
+### Podsumowanie dla programisty Javy
+
+| Cecha | Podejście w Javie | Podejście w Kotlinie | Korzyść |
+| :--- | :--- | :--- | :--- |
+| **Wartości domyślne** | Przeciążanie metod (dużo kodu) | **Argumenty domyślne** | Jedna funkcja, mniej boilerplate'u |
+| **Czytelność wywołania** | Niska (`myFunc(10, true)`) | **Argumenty nazwane** (`myFunc(retries=10, force=true)`) | Kod jest samo-dokumentujący |
+| **Pominięcie argumentu**| Wymaga osobnego przeciążenia | **Połączenie nazwanych i domyślnych** | Maksymalna elastyczność bez dodatkowego kodu |
+
+Te dwie funkcje razem to fundamentalna zmiana na lepsze. Sprawiają, że API staje się znacznie łatwiejsze w użyciu i utrzymaniu.

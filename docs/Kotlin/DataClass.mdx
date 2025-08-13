@@ -1,0 +1,473 @@
+---
+sidebar_label: 'DataClass'
+---
+
+# Data class
+
+O tak, klasy danych to jedna z tych funkcji, która po prostu "sprzedaje" Kotlina programistom Javy. Rozwiązuje ona ogromny problem z ilością powtarzalnego kodu (boilerplate) potrzebnego do stworzenia prostych klas przechowujących dane (POJO/DTO).
+
+### 10. Klasy Danych (`Data Classes`)
+
+Klasa danych to specjalny rodzaj klasy w Kotlinie, której głównym celem jest **przechowywanie danych**. Deklarując klasę jako `data class`, mówisz kompilatorowi, aby automatycznie wygenerował za Ciebie masę użytecznych metod, które w Javie musiałbyś pisać ręcznie.
+
+---
+
+#### Problem w Javie: Ręczne tworzenie POJO (Plain Old Java Object)
+
+Wyobraź sobie prostą klasę `User` z dwoma polami: `name` i `age`. Aby była ona w pełni użyteczna, powinieneś zaimplementować:
+
+1.  Konstruktor
+2.  Gettery (i ewentualnie settery)
+3.  `equals()`
+4.  `hashCode()`
+5.  `toString()`
+
+**Przykład w Javie:**
+```java
+// User.java
+import java.util.Objects;
+
+public class User {
+    private final String name;
+    private final int age;
+
+    public User(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return age == user.age && Objects.equals(name, user.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, age);
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                '}';
+    }
+}
+```
+To jest **ponad 30 linii kodu** dla prostej, dwupolowej klasy! To masa powtarzalnej, podatnej na błędy pracy. Jeśli dodasz nowe pole, musisz pamiętać, aby zaktualizować `equals()`, `hashCode()` i `toString()`.
+
+---
+
+#### Rozwiązanie w Kotlinie: Jedna linia kodu
+
+W Kotlinie, dodając słowo kluczowe `data` przed `class`, zlecasz kompilatorowi wygenerowanie tego wszystkiego.
+
+**Ten sam przykład w Kotlinie:**
+```kotlin
+data class User(val name: String, val age: Int)
+```
+**I to wszystko.** Ta jedna linia kodu jest w 100% równoważna tym 30+ liniom w Javie.
+
+#### Co kompilator generuje dla `data class`?
+
+Dla właściwości zadeklarowanych w **konstruktorze głównym** (`name` i `age`), kompilator generuje:
+
+1.  **`equals()` / `hashCode()`:** Implementacja, która porównuje wszystkie właściwości z konstruktora głównego. Dwa obiekty `data class` są równe, jeśli wszystkie ich właściwości są równe.
+2.  **`toString()`:** Przyjazna dla użytkownika reprezentacja stringowa w formacie `User(name=Jan, age=30)`.
+3.  **`componentN()` functions:** Funkcje `component1()`, `component2()` itd. dla każdej właściwości. Pozwalają one na **deklaracje destrukturyzujące** (o tym później).
+4.  **`copy()`:** Niezwykle potężna metoda do tworzenia kopii obiektu z możliwością modyfikacji niektórych właściwości.
+
+---
+
+#### Użycie wygenerowanych metod w praktyce
+
+```kotlin
+val user1 = User("Jan", 30)
+val user2 = User("Jan", 30)
+val user3 = User("Anna", 25)
+
+// 1. toString()
+println(user1) // Wynik: User(name=Jan, age=30)
+
+// 2. equals()
+println(user1 == user2) // Wynik: true (porównanie strukturalne dzięki .equals())
+println(user1 == user3) // Wynik: false
+
+// 3. hashCode() (gwarantuje poprawne działanie w kolekcjach jak HashSet, HashMap)
+val users = hashSetOf(user1)
+println(users.contains(user2)) // Wynik: true
+
+// 4. copy() - tworzenie niezmiennych obiektów w nowy sposób
+// Tworzy kopię user1, zmieniając tylko wiek. To świetne dla niezmienności (immutability).
+val olderUser = user1.copy(age = 31)
+println(olderUser) // Wynik: User(name=Jan, age=31)
+println(user1)     // Oryginał pozostaje nietknięty: User(name=Jan, age=30)
+
+// 5. Destructuring Declarations (dzięki funkcjom componentN())
+val (name, age) = user1 // Przypisuje user1.name do `name` i user1.age do `age`
+println("Użytkownik $name ma $age lat.")
+```
+
+#### Wymagania i zasady dla `data class`
+
+Aby kompilator mógł poprawnie wygenerować metody, klasa danych musi spełniać kilka warunków:
+*   Konstruktor główny musi mieć co najmniej jeden parametr.
+*   Wszystkie parametry konstruktora głównego muszą być oznaczone jako `val` lub `var`.
+*   Klasy danych nie mogą być `abstract`, `open`, `sealed` ani `inner`.
+
+### Podsumowanie dla programisty Javy
+
+| Funkcjonalność | W Javie | W Kotlinie (`data class`) |
+| :--- | :--- | :--- |
+| **Przechowywanie danych** | Długa klasa POJO (30+ linii) | **Jedna linia kodu** |
+| **`equals()` / `hashCode()`** | Ręczna implementacja, podatna na błędy | **Automatycznie wygenerowane** |
+| **`toString()`** | Ręczna, brzydka implementacja | **Automatycznie generowane, czytelne** |
+| **Tworzenie kopii** | Ręczne tworzenie nowego obiektu (`new User(...)`)| **Metoda `copy()` z nazwanymi argumentami** |
+| **Pobieranie wartości** | Gettery (`getName()`, `getAge()`) | Bezpośredni dostęp do właściwości (`name`, `age`) |
+
+Użycie `data class` jest jednym z najszybszych sposobów na docenienie Kotlina. Eliminuje ogromną ilość kodu, który jest nudny, powtarzalny i łatwo w nim o błąd, pozwalając Ci skupić się na właściwej logice biznesowej. To niemal obowiązkowy wybór dla DTO, modeli encji, odpowiedzi z API itp.
+
+
+# What is difference comparing to java record?
+
+Doskonałe pytanie! `record` wprowadzony w Javie 14 (i finalizowany w Javie 16) jest bezpośrednią odpowiedzią świata Javy na `data class` z Kotlina. Oba mechanizmy mają ten sam cel: **drastycznie zredukować ilość kodu potrzebnego do stworzenia prostych klas przechowujących dane**.
+
+Są one bardzo podobne, ale istnieją kluczowe różnice w filozofii i możliwościach.
+
+### Podobieństwa: Co `data class` i `record` robią tak samo?
+
+Oba automatycznie generują:
+1.  **Konstruktor główny** (canonical constructor), który przyjmuje wszystkie zadeklarowane komponenty.
+2.  **Publiczne "akcesory"** (metody dostępu) do każdego komponentu.
+3.  **Implementację `equals()`**, która porównuje wszystkie komponenty.
+4.  **Implementację `hashCode()`** opartą na wszystkich komponentach.
+5.  **Implementację `toString()`**, która w czytelny sposób wyświetla nazwę klasy i jej komponenty.
+
+W obu przypadkach ta prosta deklaracja załatwia sprawę:
+
+**Kotlin `data class`:**
+```kotlin
+data class User(val name: String, val age: Int)
+```
+
+**Java `record`:**
+```java
+public record User(String name, int age) {}
+```
+
+Obie formy zastępują dziesiątki linii kodu i rozwiązują ten sam podstawowy problem.
+
+---
+
+### Kluczowe różnice
+
+#### 1. Niezmienność (Immutability)
+
+*   **Java `record`:** Jest **fundamentalnie niezmienny (immutable)**. Wszystkie jego pola są **domyślnie i nieodwołalnie `final`**. Nie da się stworzyć rekordu z modyfikowalnymi polami. To jest jego podstawowe założenie projektowe.
+```java
+// TO SIĘ NIE SKOMPILUJE. Pola rekordu są zawsze final.
+// public record User(var name: String, int age) {}
+    ```
+
+*   **Kotlin `data class`:** Jest **domyślnie niezmienny, ale elastyczny**. Możesz zadeklarować właściwości jako `val` (read-only, odpowiednik `final`) lub `var` (mutable).
+```kotlin
+// Domyślna, preferowana forma (niezmienna)
+data class User(val name: String, val age: Int)
+
+// Możliwa, ale rzadziej stosowana forma (modyfikowalna)
+data class MutableUser(var name: String, var age: Int)
+    ```
+**Wniosek:** `record` narzuca niezmienność, co jest często pożądane dla klas danych. `data class` daje Ci wybór, co czyni go bardziej elastycznym, ale też wymaga od programisty dyscypliny w preferowaniu `val`.
+
+#### 2. Metoda `copy()`
+
+*   **Java `record`:** **Nie ma** wbudowanej metody `copy()`. Jeśli chcesz stworzyć "zmodyfikowaną kopię" rekordu, musisz ręcznie wywołać jego konstruktor, przekazując wszystkie stare i nowe wartości.
+```java
+User user1 = new User("Jan", 30);
+// Ręczne tworzenie "kopii" ze zmienionym wiekiem
+User user2 = new User(user1.name(), 31);
+    ```
+
+*   **Kotlin `data class`:** Posiada **wbudowaną, niezwykle użyteczną metodę `copy()`**. Pozwala ona na tworzenie kopii obiektu, podając tylko te właściwości, które chcesz zmienić, za pomocą nazwanych argumentów.
+```kotlin
+val user1 = User("Jan", 30)
+// `copy()` załatwia sprawę
+val user2 = user1.copy(age = 31) // name jest kopiowane automatycznie
+    ```
+**Wniosek:** Metoda `copy()` w Kotlinie jest ogromną przewagą w praktyce, zwłaszcza przy pracy z niezmiennymi obiektami. Upraszcza logikę tworzenia nowych stanów na podstawie starych.
+
+#### 3. Właściwości poza konstruktorem głównym
+
+*   **Java `record`:** **Nie może mieć pól instancji (non-static fields)** poza tymi zadeklarowanymi w nagłówku rekordu. Jego celem jest bycie prostym "agregatem" danych. Możesz dodawać tylko pola `static`.
+
+*   **Kotlin `data class`:** **Może mieć dodatkowe właściwości** zadeklarowane w ciele klasy. **Uwaga:** Te dodatkowe właściwości **nie będą** uwzględniane w automatycznie generowanych metodach (`equals`, `hashCode`, `toString`, `copy`).
+```kotlin
+data class Person(val name: String) {
+    var temporaryMood: String = "Happy" // To pole jest ignorowane przez equals/hashCode/toString
+}
+
+val p1 = Person("Jan")
+val p2 = Person("Jan")
+p2.temporaryMood = "Sad"
+
+println(p1 == p2) // Wynik: true (bo temporaryMood jest ignorowane)
+println(p1) // Wynik: Person(name=Jan)
+```
+**Wniosek:** `data class` jest bardziej elastyczna i pozwala na dodawanie stanu, który nie jest częścią "tożsamości" obiektu, co czasem bywa przydatne.
+
+#### 4. Dziedziczenie
+
+*   **Java `record`:** Każdy rekord niejawnie **rozszerza `java.lang.Record`** i jest **`final`**. Nie może rozszerzać żadnej innej klasy, ale **może implementować interfejsy**.
+
+*   **Kotlin `data class`:** Jest **`final`** domyślnie. Nie może być `abstract`, `open` ani `sealed`. Może rozszerzać inną klasę (choć rzadko się to robi) i implementować interfejsy.
+
+**Wniosek:** Oba są bardzo podobne pod tym względem – nie są przeznaczone do tworzenia skomplikowanych hierarchii dziedziczenia.
+
+---
+
+### Tabela porównawcza
+
+| Cecha | Kotlin `data class` | Java `record` | Kto wygrywa? |
+| :--- | :--- | :--- | :--- |
+| **Zmienność** | Elastyczna (`val` lub `var`) | Wymuszona niezmienność (`final`) | **Kotlin** (za elastyczność) / **Java** (za narzucanie dobrych praktyk) |
+| **Metoda `copy()`** | **Tak, wbudowana i potężna** | Nie, trzeba robić ręcznie | **Kotlin** (zdecydowanie) |
+| **Właściwości poza konstruktorem** | Tak, ale ignorowane w metodach | Nie (tylko `static`) | **Kotlin** (za elastyczność) |
+| **Współpraca z Javą** | Doskonała (generuje gettery/settery) | Natywna (generuje akcesory `name()`) | Remis (oba działają świetnie) |
+| **Przeznaczenie** | Ogólne przechowywanie danych | Rygorystyczne, niezmienne przechowywanie danych | Zależy od potrzeby |
+
+### Podsumowanie
+
+Java `record` to fantastyczny dodatek do języka, który w dużej mierze dogania `data class` Kotlina. Jeśli pracujesz w czystym, nowoczesnym projekcie javowym, `record` jest idealnym wyborem.
+
+Jednak **`data class` w Kotlinie pozostaje bardziej elastyczna i potężniejsza** dzięki możliwości użycia `var` (choć rzadko zalecane) oraz, co najważniejsze, dzięki **niezastąpionej metodzie `copy()`**. To właśnie `copy()` sprawia, że praca z niezmiennymi strukturami danych w Kotlinie jest tak prosta i przyjemna.
+
+
+# Are methods allowed?
+
+Tak, zarówno `data class` w Kotlinie, jak i `record` w Javie **mogą mieć dodatkowe metody**.
+
+To bardzo ważna cecha, która odróżnia je od prostych struktur danych (jak `struct` w C). Są one pełnoprawnymi klasami, które po prostu otrzymują od kompilatora darmowy "zestaw startowy" metod. Możesz swobodnie dodawać do nich własną logikę biznesową.
+
+---
+
+### Metody w `data class` (Kotlin)
+
+W `data class` możesz dodawać metody tak, jak w każdej innej klasie.
+
+**Przykład:**
+```kotlin
+data class User(val firstName: String, val lastName: String, val birthYear: Int) {
+
+    // Właściwość wyliczana (wygląda jak pole, ale to funkcja)
+    val fullName: String
+        get() = "$firstName $lastName"
+
+    // Zwykła metoda instancji
+    fun isAdult(currentYear: Int): Boolean {
+        return (currentYear - birthYear) >= 18
+    }
+}
+
+fun main() {
+    val user = User("Jan", "Kowalski", 2000)
+
+    // Użycie dodatkowej właściwości
+    println(user.fullName) // Wyświetli: Jan Kowalski
+
+    // Użycie dodatkowej metody
+    if (user.isAdult(2023)) {
+        println("${user.fullName} jest pełnoletni.")
+    }
+}
+```
+**Ważna uwaga:** Logika zdefiniowana w tych dodatkowych metodach i właściwościach **nie ma wpływu** na automatycznie generowane `equals()`, `hashCode()` i `toString()`. One nadal opierają się wyłącznie na właściwościach z konstruktora głównego (`firstName`, `lastName`, `birthYear`).
+
+---
+
+### Metody w `record` (Java)
+
+Podobnie jest w Javie. Do `record` można dodawać metody instancji, metody statyczne, a nawet implementować metody z interfejsów.
+
+**Przykład:**
+```java
+// Definicja rekordu z dodatkowymi metodami
+public record User(String firstName, String lastName, int birthYear) {
+
+    // Metoda instancji
+    public String fullName() {
+        return firstName + " " + lastName;
+    }
+
+    // Metoda instancji z argumentem
+    public boolean isAdult(int currentYear) {
+        return (currentYear - birthYear) >= 18;
+    }
+
+    // Metoda statyczna (factory method)
+    public static User createGuest() {
+        return new User("Guest", "User", 2000);
+    }
+
+    // Można też nadpisać konstruktor (tzw. compact constructor) dla walidacji
+    public User {
+        if (birthYear < 1900) {
+            throw new IllegalArgumentException("Rok urodzenia jest nieprawidłowy!");
+        }
+    }
+}
+```
+
+**Użycie w kodzie Javy:**
+```java
+public class Main {
+    public static void main(String[] args) {
+        User user = new User("Anna", "Nowak", 1995);
+
+        // Użycie dodatkowej metody
+        System.out.println(user.fullName()); // Wyświetli: Anna Nowak
+
+        if (user.isAdult(2023)) {
+            System.out.println(user.fullName() + " jest pełnoletnia.");
+        }
+
+        // Użycie metody statycznej
+        User guest = User.createGuest();
+        System.out.println(guest.fullName()); // Wyświetli: Guest User
+    }
+}
+```
+Jak widać, `record` również jest bardzo elastyczny pod tym względem i pozwala na enkapsulację logiki związanej z danymi, które przechowuje.
+
+---
+
+### Podsumowanie
+
+**Tak, oba mechanizmy pozwalają na dodawanie własnych metod.**
+
+To kluczowe, ponieważ dzięki temu:
+*   **Zachowują zasady enkapsulacji:** Logika operująca na danych może być trzymana razem z tymi danymi.
+*   **Nie są tylko "głupimi" kontenerami na dane:** Mogą reprezentować bogate obiekty domenowe.
+*   **Mogą implementować interfejsy:** Pozwala to na włączenie ich do systemów opartych na polimorfizmie i programowaniu do interfejsu.
+
+Główną ideą jest to, że kompilator daje Ci solidną, standardową podstawę (`equals`, `hashCode`, `toString` itd.), a Ty możesz ją swobodnie rozbudowywać o logikę specyficzną dla Twojej domeny.
+
+
+# Can data class implement interface?
+
+Tak, oczywiście. **`data class` może implementować jeden lub więcej interfejsów**, tak jak każda inna klasa w Kotlinie.
+
+To bardzo ważna i często wykorzystywana cecha. Pamiętaj, że `data class` to nie jest jakiś ograniczony typ, a po prostu **zwykła klasa, której kompilator dodaje kilka przydatnych metod**. Poza tymi automatycznie wygenerowanymi metodami, zachowuje się jak normalna klasa.
+
+---
+
+### Jak to wygląda w praktyce?
+
+Możesz wymagać, aby Twoje obiekty danych spełniały określony kontrakt zdefiniowany przez interfejs.
+
+**Krok 1: Zdefiniuj interfejs**
+
+Załóżmy, że mamy interfejs, który gwarantuje, że obiekt ma unikalny identyfikator i może być reprezentowany jako wpis w logach.
+
+```kotlin
+interface Loggable {
+    fun toLogMessage(): String
+}
+
+interface Identifiable {
+    val id: String // Właściwość w interfejsie
+}
+```
+
+**Krok 2: Zaimplementuj interfejsy w `data class`**
+
+Teraz tworzymy klasy danych, które implementują te interfejsy. Musimy dostarczyć implementację dla wymaganych metod i właściwości (`override`).
+
+```kotlin
+data class User(
+    override val id: String, // Implementacja właściwości z interfejsu Identifiable
+    val name: String,
+    val email: String
+) : Identifiable, Loggable { // Lista implementowanych interfejsów
+
+    // Implementacja metody z interfejsu Loggable
+    override fun toLogMessage(): String {
+        return "User activity: [id=$id, name=$name]"
+    }
+}
+
+data class Product(
+    override val id: String, // Implementacja właściwości z interfejsu Identifiable
+    val price: Double
+) : Identifiable {
+    // Ta klasa nie musi być Loggable
+}
+```
+
+**Krok 3: Wykorzystaj polimorfizm**
+
+Teraz możesz traktować obiekty `User` i `Product` w sposób polimorficzny, poprzez ich wspólny interfejs.
+
+```kotlin
+fun main() {
+    val user = User(id = "u-123", name = "Anna", email = "anna@example.com")
+    val product = Product(id = "p-987", price = 19.99)
+
+    // Lista obiektów, które mają ID
+    val itemsWithId: List<Identifiable> = listOf(user, product)
+
+    // Możemy iterować po liście, mając pewność, że każdy element ma właściwość `id`
+    for (item in itemsWithId) {
+        println("Found item with ID: ${item.id}")
+    }
+
+    // Możemy wywołać metodę z interfejsu Loggable
+    println(user.toLogMessage())
+    // println(product.toLogMessage()) // BŁĄD KOMPILACJI: Product nie implementuje Loggable
+}
+```
+
+### Dlaczego jest to tak użyteczne?
+
+1.  **Polimorfizm:** Możesz tworzyć funkcje i kolekcje, które operują na abstrakcyjnym typie (interfejsie), nie martwiąc się o konkretną implementację. To podstawa czystego, rozłącznego kodu.
+2.  **Kontrakt API:** Definiujesz, że DTO (Data Transfer Object) zwracane z Twojego API musi spełniać pewien kontrakt (np. `interface ApiResponse`). `data class` jest idealnym kandydatem do implementacji takiego interfejsu.
+3.  **Współdzielenie logiki:** Interfejsy w Kotlinie mogą mieć domyślne implementacje metod. `data class` może je odziedziczyć, co pozwala na współdzielenie logiki bez konieczności dziedziczenia po klasie bazowej.
+
+---
+
+### A jak to wygląda w Java `record`?
+
+Dokładnie tak samo! Java `record` również **może implementować interfejsy**. To kolejna cecha, w której te dwa mechanizmy są do siebie bardzo podobne.
+
+**Przykład w Javie:**
+```java
+// Interfejs w Javie
+interface Identifiable {
+    String id();
+}
+
+// Rekord implementujący interfejs
+public record User(String id, String name) implements Identifiable {
+    // Nie musisz jawnie pisać `override`, ale metoda `id()` z rekordu
+    // automatycznie spełnia kontrakt interfejsu.
+}
+
+public record Product(String id, double price) implements Identifiable {}
+```
+
+### Podsumowanie
+
+Możliwość implementacji interfejsów przez `data class` to kluczowa cecha. Łączy ona w sobie dwie potężne koncepcje:
+*   **Wygodę:** Automatyczne generowanie `equals`, `hashCode`, `toString` itd.
+*   **Elastyczność i architekturę:** Możliwość wpasowania tych obiektów w dobrze zaprojektowane systemy oparte na kontraktach i polimorfizmie.
