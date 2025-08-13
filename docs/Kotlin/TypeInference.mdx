@@ -1,0 +1,128 @@
+---
+sidebar_label: 'TypeInference'
+---
+
+# Type Inference
+
+Świetnie. Inferencja typów to kolejna koncepcja, która istnieje w nowszych wersjach Javy, ale w Kotlinie jest fundamentalną częścią języka od samego początku i jest stosowana znacznie szerzej.
+
+### 6. Inferencja typów
+
+Inferencja typów to zdolność kompilatora do automatycznego **wywnioskowania (wydedukowania) typu** zmiennej, właściwości lub funkcji na podstawie kontekstu, najczęściej na podstawie wartości, która jest do niej przypisywana. W skrócie: **nie musisz pisać typu, jeśli kompilator może go odgadnąć za Ciebie.**
+
+---
+
+#### Znajomy grunt: `var` w Javie (od wersji 10)
+
+Jako doświadczony programista Javy, prawdopodobnie znasz słowo kluczowe `var` wprowadzone w Javie 10. Działa ono na tej samej zasadzie.
+
+**W Javie 10+:**
+```java
+// Kompilator wie, że 'name' jest typu String, bo przypisujesz mu literał stringowy.
+var name = "Java";
+
+// Kompilator wie, że 'numbers' to ArrayList<String>.
+var numbers = new ArrayList<String>();
+```
+`var` w Javie jest jednak ograniczone głównie do zmiennych lokalnych.
+
+---
+
+#### Inferencja w Kotlinie: Standard, nie wyjątek
+
+W Kotlinie inferencja typów jest wszechobecna i jest standardowym, idiomatycznym sposobem pisania kodu. Stosuje się ją zarówno do `val`, jak i `var`.
+
+**Zamiast pisać tak (z jawnym typem):**
+```kotlin
+val name: String = "Kotlin"
+val score: Int = 100
+val active: Boolean = true
+```
+
+**Piszesz tak (z wywnioskowanym typem):**
+```kotlin
+val name = "Kotlin"      // Kompilator wnioskuje: String
+val score = 100         // Kompilator wnioskuje: Int
+val active = true       // Kompilator wnioskuje: Boolean
+val price = 19.99       // Kompilator wnioskuje: Double
+val items = listOf("A", "B") // Kompilator wnioskuje: List<String>
+```
+Kod staje się znacznie czystszy i mniej redundantny. Mniej pisania, ten sam efekt i to samo bezpieczeństwo typów. **Kotlin nadal jest językiem statycznie typowanym** – typ jest określany w czasie kompilacji, a nie w czasie wykonania.
+
+---
+
+#### Gdzie inferencja w Kotlinie idzie dalej niż `var` w Javie?
+
+Kotlin stosuje inferencję w wielu miejscach, nie tylko dla zmiennych lokalnych.
+
+**1. Właściwości klas (pola)**
+Możesz pominąć typ właściwości, jeśli inicjujesz ją od razu w deklaracji.
+```kotlin
+class User {
+    val id = 123                // Inferred as Int
+    var username = "guest"      // Inferred as String
+    val roles = setOf("USER")   // Inferred as Set<String>
+}
+```
+W Javie typ pola w klasie musi być zawsze zadeklarowany jawnie.
+
+**2. Funkcje zwracające wartość (w specyficznej formie)**
+Dla funkcji, które składają się tylko z jednego wyrażenia (tzw. *single-expression functions*), nie musisz deklarować typu zwracanego. Kompilator wywnioskuje go z tego wyrażenia.
+
+```kotlin
+// Zamiast pisać:
+fun double(x: Int): Int {
+    return x * 2
+}
+
+// Możesz napisać tak (typ zwracany Int jest wywnioskowany z `x * 2`):
+fun double(x: Int) = x * 2
+```
+**Uwaga:** Dla funkcji z ciałem w bloku (`{...}`) musisz jawnie zadeklarować typ zwracany (jeśli nie jest to `Unit`, czyli `void`).
+
+---
+
+#### Kiedy **musisz** (lub powinieneś) podać typ jawnie?
+
+Inferencja jest świetna, ale są sytuacje, w których jest niemożliwa lub niewskazana.
+
+**1. Gdy nie ma wartości początkowej**
+Jeśli deklarujesz zmienną bez jej inicjalizacji (co jest możliwe np. dla `var` lub właściwości z `lateinit`), kompilator nie ma z czego wywnioskować typu.
+
+```kotlin
+var name: String // OK, typ jest jawny
+// var name       // BŁĄD KOMPILACJI: Property must be initialized or be abstract
+```
+
+**2. Gdy wartość początkowa to `null`**
+`null` nie ma typu, więc kompilator nie wie, czy chodzi o `String?`, `User?` czy coś innego.
+
+```kotlin
+// val user = null // BŁĄD KOMPILACJI
+val user: User? = null // OK, jawnie podajemy typ nullable
+```
+
+**3. Gdy chcesz użyć typu nadrzędnego (programowanie do interfejsu)**
+Czasami chcesz, aby zmienna miała typ bardziej ogólny (interfejs lub klasa nadrzędna) niż konkretna implementacja, którą tworzysz.
+
+```kotlin
+// Domyślnie typem będzie MutableList<String>
+val names = mutableListOf("Ania", "Piotr")
+
+// Jeśli chcesz, aby zmienna była widoczna jako niemodyfikowalna lista (dobra praktyka):
+val readOnlyNames: List<String> = mutableListOf("Ania", "Piotr")
+```
+
+**4. Dla czytelności w publicznych API**
+W przypadku funkcji lub właściwości, które są częścią publicznego API biblioteki, dobrą praktyką jest jawne podawanie typów (zwłaszcza zwracanych). Dzięki temu kontrakt API jest jasny i czytelny bez potrzeby analizowania implementacji.
+
+### Podsumowanie dla programisty Javy
+
+| Kontekst | Java (od 10+) | Kotlin |
+| :--- | :--- | :--- |
+| **Zmienna lokalna** | `var name = "Joe";` | `val name = "Joe"` (standard) |
+| **Pole / Właściwość klasy**| `private String name = "Joe";` | `val name = "Joe"` (możliwe, jeśli jest inicjalizowana) |
+| **Typ zwracany funkcji** | Zawsze wymagany | Opcjonalny dla funkcji jednolinijkowych |
+| **Filozofia** | Opcjonalna funkcja dla zwięzłości | **Fundamentalna cecha języka** |
+
+Inferencja typów w Kotlinie to nie tylko "lukier składniowy". To kluczowy element, który sprawia, że kod jest zwięzły, a jednocześnie w pełni bezpieczny pod względem typów.

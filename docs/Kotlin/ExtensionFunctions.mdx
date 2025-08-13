@@ -1,0 +1,133 @@
+---
+sidebar_label: 'ExtensionFunctions'
+---
+
+# Extension Functions
+
+Doskonale. Funkcje rozszerzające to jedna z najpotężniejszych i najbardziej lubianych cech Kotlina. To koncepcja, która fundamentalnie zmienia sposób, w jaki myślisz o dodawaniu funkcjonalności do istniejących klas.
+
+### 7. Funkcje rozszerzające (`Extension Functions`)
+
+Funkcje rozszerzające pozwalają "dodać" nową funkcję do klasy, której kodu źródłowego nie możesz (lub nie chcesz) modyfikować. Możesz na przykład dodać własną metodę do klasy `String` z biblioteki standardowej Javy lub do klasy z zewnętrznej biblioteki.
+
+---
+
+#### Problem w Javie: Klasy `*Utils`
+
+Jako programista Javy, na pewno wielokrotnie spotkałeś się z problemem: "Chcę, żeby ta klasa robiła coś jeszcze, ale nie mogę jej zmienić". Jak to rozwiązujesz?
+
+Tworzysz klasę "narzędziową" (utility class) z metodami statycznymi. Na przykład `StringUtils`, `FileUtils`, `Collections`.
+
+**Przykład w Javie:**
+Chcesz dodać metodę, która zamienia pierwszą literę stringa na wielką.
+
+```java
+// Tworzysz specjalną klasę, bo nie możesz zmodyfikować `String`
+public final class StringUtils {
+    private StringUtils() {} // Prywatny konstruktor, żeby nikt nie tworzył instancji
+
+    public static String capitalizeFirstLetter(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        return input.substring(0, 1).toUpperCase() + input.substring(1);
+    }
+}
+```
+
+**Użycie w kodzie:**
+```java
+String original = "hello world";
+String capitalized = StringUtils.capitalizeFirstLetter(original);
+```
+To działa, ale składnia jest nieco toporna. Nie czujesz, że to string "potrafi" coś zrobić, tylko że jakaś zewnętrzna klasa "robi coś na" stringu.
+
+---
+
+#### Rozwiązanie w Kotlinie: `fun ReceiverType.functionName()`
+
+Kotlin pozwala zdefiniować taką funkcję w znacznie bardziej elegancki sposób.
+
+**Składnia:**
+`fun <KlasaDoRozszerzenia>.<NazwaNowejFunkcji>(argumenty): <TypZwracany>`
+
+**Ten sam przykład w Kotlinie:**
+```kotlin
+// Definiujesz funkcję rozszerzającą dla typu String
+fun String.capitalizeFirst(): String {
+    if (this.isEmpty()) {
+        return this
+    }
+    // `this` odnosi się do instancji Stringa, na której funkcja jest wywoływana
+    return this.substring(0, 1).uppercase() + this.substring(1)
+}
+```
+
+**Użycie w kodzie:**
+```kotlin
+val original = "hello world"
+// Wygląda, jakby `capitalizeFirst` było wbudowaną metodą klasy String!
+val capitalized = original.capitalizeFirst()
+
+println(capitalized) // Wyświetli: "Hello world"
+```
+
+**Kluczowe korzyści:**
+1.  **Czytelność:** Kod jest znacznie bardziej czytelny i płynny. `someString.doSomething()` jest bardziej naturalne niż `Utils.doSomething(someString)`.
+2.  **Odkrywalność:** IDE (np. IntelliJ) podpowie Ci Twoje funkcje rozszerzające w menu autouzupełniania po wpisaniu kropki, tak jakby były częścią oryginalnej klasy.
+3.  **Brak potrzeby dziedziczenia:** Nie musisz tworzyć skomplikowanych hierarchii klas (np. `MySpecialString extends String`) tylko po to, by dodać jedną metodę.
+
+---
+
+#### Jak to działa pod spodem? (Ważne dla programisty Javy)
+
+To nie jest żadna magia. **Funkcje rozszerzające to tylko lukier składniowy.** Kompilator Kotlina nie modyfikuje oryginalnej klasy.
+
+Zamiast tego, kompiluje funkcję rozszerzającą do **statycznej metody w Javie**, która jako **pierwszy argument przyjmuje obiekt**, na którym jest wywoływana (tzw. *receiver*).
+
+Nasza funkcja `String.capitalizeFirst()` zostanie skompilowana do czegoś takiego (uproszczenie):
+
+```java
+// To jest to, co "widzi" JVM
+public final class MyFileKt { // Nazwa pliku .kt + "Kt"
+    public static String capitalizeFirst(String $receiver) { // Obiekt `this` staje się pierwszym argumentem
+        if ($receiver.isEmpty()) {
+            return $receiver;
+        }
+        return $receiver.substring(0, 1).toUpperCase() + $receiver.substring(1);
+    }
+}
+```
+A wywołanie `original.capitalizeFirst()` jest kompilowane do `MyFileKt.capitalizeFirst(original)`.
+
+To dokładnie ten sam mechanizm, co w przypadku klas `*Utils`, ale z o wiele lepszą składnią.
+
+---
+
+#### Ważne zasady i ograniczenia
+
+1.  **Brak dostępu do prywatnych składników:** Funkcja rozszerzająca ma dostęp tylko do **publicznych** metod i właściwości klasy, którą rozszerza. Nie może odwoływać się do `private` ani `protected` składników. To logiczne, bo nie jest prawdziwym członkiem tej klasy.
+
+2.  **Rozstrzyganie statyczne:** Funkcje rozszerzające są rozstrzygane w czasie **kompilacji**, a nie w czasie wykonania. Oznacza to, że funkcja, która zostanie wywołana, zależy od **typu zadeklarowanego zmiennej**, a nie od jej rzeczywistego typu w runtime.
+
+```kotlin
+open class Shape
+class Rectangle : Shape()
+
+fun Shape.getName() = "Shape"
+fun Rectangle.getName() = "Rectangle"
+
+fun printName(shape: Shape) {
+    println(shape.getName()) // Zawsze wywoła `Shape.getName()`
+}
+
+printName(Rectangle()) // Wyświetli: "Shape"
+```
+Dzieje się tak, ponieważ `printName` przyjmuje argument typu `Shape` i kompilator na sztywno wiąże wywołanie z `Shape.getName()`. Zwykłe metody klasowe działają polimorficznie (dynamicznie).
+
+3.  **Muszą być importowane:** Aby użyć funkcji rozszerzającej zdefiniowanej w innym pliku lub pakiecie, musisz ją zaimportować, tak jak każdą inną funkcję.
+
+**Typowe zastosowania:**
+*   Dodawanie małych, wygodnych funkcji do typów standardowych (`String`, `List`, `Int`).
+*   Upraszczanie interakcji z API, np. w Androidzie: `fun Context.showToast(...)`.
+*   Tworzenie płynnych API (fluent interfaces) i języków DSL.
