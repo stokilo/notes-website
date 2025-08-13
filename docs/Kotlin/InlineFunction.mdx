@@ -1,0 +1,107 @@
+---
+sidebar_label: 'InlineFunction'
+---
+
+# Inline function
+
+Jasne, przejdźmy do aliasów typów. To jest mała, ale bardzo przydatna funkcja, która potrafi znacząco poprawić czytelność kodu, zwłaszcza przy pracy ze skomplikowanymi lub generycznymi typami.
+
+### 23. Aliasy typów (`Type Aliases`)
+
+Alias typu pozwala na stworzenie **alternatywnej, bardziej opisowej nazwy** dla istniejącego typu. To nie jest tworzenie nowego typu, a jedynie nadanie "pseudonimu" staremu.
+
+**Składnia:**
+`typealias <NowaNazwa> = <IstniejącyTyp>`
+
+---
+
+#### Problem: Długie i nieczytelne typy
+
+W miarę rozwoju aplikacji, typy, z którymi pracujesz, mogą stać się bardzo skomplikowane, zwłaszcza przy użyciu generyków i typów funkcyjnych.
+
+**Przykład 1: Skomplikowany typ generyczny**
+Wyobraź sobie, że często używasz mapy, gdzie kluczem jest identyfikator użytkownika (String), a wartością jest lista jego ról (również String).
+```kotlin
+fun processPermissions(userPermissions: Map<String, List<String>>) { ... }
+
+fun loadUserData(): Map<String, List<String>> { ... }
+
+class UserDataStore(private val permissions: Map<String, List<String>>)
+```
+Wszędzie powtarza się ten sam, długi i mało opisowy typ `Map<String, List<String>>`.
+
+**Przykład 2: Typ funkcyjny (lambda)**
+Masz funkcję, która jako parametr przyjmuje inną funkcję (handler zdarzenia kliknięcia).
+```kotlin
+fun setOnClickListener(listener: (view: View, event: MotionEvent) -> Boolean) { ... }
+```
+Ten typ funkcyjny jest trudny do czytania i powtarzalny, jeśli używasz go w wielu miejscach.
+
+---
+
+#### Rozwiązanie w Kotlinie: `typealias`
+
+`typealias` pozwala nadać tym skomplikowanym typom proste, semantyczne nazwy.
+
+**Rozwiązanie dla Przykładu 1:**
+Definiujemy alias na poziomie pliku.
+```kotlin
+// Plik: model/Permissions.kt
+
+// Nadajemy czytelną nazwę naszemu skomplikowanemu typowi
+typealias UserPermissions = Map<String, List<String>>
+
+// Teraz używamy aliasu. Kod staje się o wiele bardziej czytelny!
+fun processPermissions(userPermissions: UserPermissions) { ... }
+
+fun loadUserData(): UserPermissions { ... }
+
+class UserDataStore(private val permissions: UserPermissions)
+```
+Kod robi dokładnie to samo, ale jego **intencja jest o wiele jaśniejsza**. `UserPermissions` mówi nam znacznie więcej niż generyczna `Map`.
+
+**Rozwiązanie dla Przykładu 2:**
+```kotlin
+// Definiujemy alias dla naszego typu funkcyjnego
+typealias ClickHandler = (view: View, event: MotionEvent) -> Boolean
+
+// Użycie aliasu w sygnaturze funkcji
+fun setOnClickListener(listener: ClickHandler) { ... }
+```
+Teraz każdy, kto czyta kod, od razu wie, że `listener` to `ClickHandler`, bez potrzeby analizowania skomplikowanej sygnatury lambdy.
+
+---
+
+#### Gdzie i jak używać `typealias`?
+
+1.  **Do skracania długich typów generycznych:** `typealias UserMap = Map<UserId, UserProfile>`
+2.  **Do nadawania semantycznego znaczenia typom podstawowym:**
+```kotlin
+typealias UserId = String
+typealias Milliseconds = Long
+
+fun findUserById(id: UserId) { ... }
+fun delayOperation(duration: Milliseconds) { ... }
+    ```
+**Uwaga:** To jest tylko alias! Kompilator nadal traktuje `UserId` jak `String`. `findUserById("jakaś-nazwa-pliku")` nadal się skompiluje. Jeśli potrzebujesz prawdziwego bezpieczeństwa typów, musisz użyć `data class` lub `value class`. `typealias` służy głównie **czytelności**.
+
+3.  **Do upraszczania typów funkcyjnych:** Jak w przykładzie z `ClickHandler`. To bardzo popularne zastosowanie.
+
+4.  **Do ułatwienia refaktoryzacji:** Jeśli w przyszłości zdecydujesz się zmienić `Map<String, List<String>>` na jakąś własną klasę, wystarczy, że zmienisz definicję aliasu w jednym miejscu, a reszta kodu (używająca aliasu) może pozostać bez zmian (o ile API będzie zgodne).
+
+---
+
+#### Ważne cechy:
+
+*   **Brak narzutu wydajnościowego:** Aliasy istnieją tylko w czasie kompilacji. W skompilowanym kodzie (bytecode) są one zastępowane przez oryginalny typ. Nie ma żadnego wpływu na wydajność.
+*   **Nie tworzą nowego typu:** `typealias` to tylko "przezwisko". To nie to samo co `data class UserId(val id: String)`, które tworzy nowy, odrębny typ.
+*   **Mogą być generyczne:** Aliasy same w sobie również mogą przyjmować parametry generyczne.
+```kotlin
+typealias Node<T> = MutableMap<T, Node<T>>
+```
+
+### Podsumowanie dla programisty Javy
+
+Java nie ma bezpośredniego odpowiednika `typealias`. Najbliższą analogią mogłoby być stworzenie interfejsu lub klasy, która dziedziczy po skomplikowanym typie, ale jest to o wiele bardziej skomplikowane i nie zawsze możliwe.
+
+`typealias` w Kotlinie to proste i eleganckie narzędzie, które należy do kategorii "małych rzeczy, które robią dużą różnicę". Używane z umiarem, potrafi znacząco poprawić czytelność i łatwość utrzymania kodu, czyniąc go bardziej samo-dokumentującym.

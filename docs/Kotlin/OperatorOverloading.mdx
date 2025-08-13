@@ -1,0 +1,158 @@
+---
+sidebar_label: 'OperatorOverloading'
+---
+
+# Operator Overloading
+
+
+Jasne. Przeciążanie operatorów to funkcja, która często budzi kontrowersje, ale w Kotlinie została zaimplementowana w sposób bardzo pragmatyczny i bezpieczny. Pozwala ona na używanie standardowych operatorów (jak `+`, `-`, `*`, `[]`) na własnych typach, co może znacznie poprawić czytelność kodu, zwłaszcza w domenach matematycznych, finansowych czy przy pracy z kolekcjami.
+
+### 22. Przeciążanie operatorów (`Operator Overloading`)
+
+Przeciążenie operatora polega na dostarczeniu specjalnej funkcji członkowskiej (lub rozszerzającej) z modyfikatorem `operator`, która odpowiada konkretnemu operatorowi.
+
+---
+
+#### Jak to działa? Konwencja oparta na funkcjach
+
+Kotlin nie pozwala na tworzenie własnych operatorów. Można jedynie dostarczyć implementację dla predefiniowanego zestawu operatorów. Każdy operator jest mapowany na konkretną nazwę funkcji.
+
+**Najważniejsze operatory i odpowiadające im funkcje:**
+
+| Operator | Wyrażenie | Funkcja |
+| :--- | :--- | :--- |
+| **Operatory unarne** | | |
+| `+a`, `-a`, `!a` | `+a` | `a.unaryPlus()` |
+| | `-a` | `a.unaryMinus()` |
+| | `!a` | `a.not()` |
+| **Operatory binarne** | | |
+| `a + b` | `a + b` | `a.plus(b)` |
+| `a - b` | `a - b` | `a.minus(b)` |
+| `a * b` | `a * b` | `a.times(b)` |
+| `a / b` | `a / b` | `a.div(b)` |
+| `a % b` | `a % b` | `a.rem(b)` |
+| `a..b` | `a..b` | `a.rangeTo(b)` |
+| **Operator `in`** | | |
+| `a in b` | `a in b`| `b.contains(a)` |
+| **Operator dostępu (`[]`)** | | |
+| `a[i]` | `a[i]` | `a.get(i)` |
+| `a[i, j]` | `a[i, j]`| `a.get(i, j)` |
+| `a[i] = b` | `a[i] = b`| `a.set(i, b)` |
+| **Operatory porównania**| | |
+| `a == b` | `a == b`| `a.equals(b)` (specjalny przypadek) |
+| `a > b` | `a > b` | `a.compareTo(b) > 0` |
+| `a < b` | `a < b` | `a.compareTo(b) < 0` |
+
+---
+
+#### Przykład praktyczny: Klasa `Vector`
+
+Wyobraź sobie prostą klasę reprezentującą wektor 2D. Chcemy móc dodawać i odejmować wektory w naturalny, matematyczny sposób.
+
+**Bez przeciążania operatorów:**
+```kotlin
+data class Vector(val x: Int, val y: Int) {
+    fun add(other: Vector): Vector {
+        return Vector(this.x + other.x, this.y + other.y)
+    }
+}
+
+val v1 = Vector(2, 3)
+val v2 = Vector(5, 1)
+
+// Użycie jest trochę toporne
+val v3 = v1.add(v2)
+```
+
+**Z przeciążaniem operatorów:**
+Dodajemy funkcję `plus` z modyfikatorem `operator`.
+
+```kotlin
+data class Vector(val x: Int, val y: Int) {
+    // Implementacja dla operatora `+`
+    operator fun plus(other: Vector): Vector {
+        return Vector(x + other.x, y + other.y)
+    }
+
+    // Implementacja dla operatora unarnego `-`
+    operator fun unaryMinus(): Vector {
+        return Vector(-x, -y)
+    }
+}
+
+val v1 = Vector(2, 3)
+val v2 = Vector(5, 1)
+
+// Składnia staje się naturalna i czytelna!
+val v3 = v1 + v2 // Wywołuje v1.plus(v2)
+println(v3)      // Wyświetli: Vector(x=7, y=4)
+
+val v4 = -v1     // Wywołuje v1.unaryMinus()
+println(v4)      // Wyświetli: Vector(x=-2, y=-3)
+```
+
+#### Przeciążanie jako funkcja rozszerzająca
+
+Najlepsze jest to, że nie musisz mieć dostępu do kodu źródłowego klasy, aby przeciążyć dla niej operator! Możesz to zrobić za pomocą **funkcji rozszerzającej**.
+
+Załóżmy, że chcemy dodać możliwość mnożenia naszego wektora przez skalar (liczbę).
+
+```kotlin
+// Funkcja rozszerzająca dla operatora `*`
+operator fun Vector.times(scalar: Int): Vector {
+    return Vector(x * scalar, y * scalar)
+}
+
+val v = Vector(3, 5)
+val scaledV = v * 3 // Działa! Wywołuje funkcję rozszerzającą.
+println(scaledV)    // Wyświetli: Vector(x=9, y=15)
+```
+
+#### Przykład z operatorem dostępu `[]`
+
+Operator dostępu `[]` jest niezwykle przydatny do tworzenia API przypominającego mapy lub listy.
+
+```kotlin
+class SudokuBoard {
+    private val cells = Array(9) { IntArray(9) }
+
+    // Implementacja dla odczytu: board[row, col]
+    operator fun get(row: Int, col: Int): Int {
+        return cells[row][col]
+    }
+
+    // Implementacja dla zapisu: board[row, col] = value
+    operator fun set(row: Int, col: Int, value: Int) {
+        require(value in 1..9) { "Wartość musi być z zakresu 1-9" }
+        cells[row][col] = value
+    }
+}
+
+val board = SudokuBoard()
+
+board[0, 0] = 5 // Wywołuje board.set(0, 0, 5)
+board[8, 8] = 9
+
+val cellValue = board[0, 0] // Wywołuje board.get(0, 0)
+println(cellValue) // Wyświetli: 5
+```
+Kod staje się znacznie bardziej intuicyjny.
+
+---
+
+### Zasady i dobre praktyki
+
+1.  **Nie nadużywaj:** Przeciążaj operatory tylko wtedy, gdy ich znaczenie jest oczywiste i intuicyjne w danej domenie (np. matematyka, kolekcje, praca z czasem `LocalDate + Duration`). `person1 + person2` to prawdopodobnie zły pomysł.
+2.  **Zachowaj spójność:** Jeśli implementujesz `+`, upewnij się, że zachowuje się on tak, jak użytkownicy oczekują (np. jest przemienny, jeśli ma to sens).
+3.  **Pamiętaj o `equals`:** Operator `==` jest specjalny. Jest on tłumaczony na wywołanie `equals()`. Aby przeciążyć `==`, musisz nadpisać metodę `equals()`. To ważna decyzja projektowa, szczególnie w przypadku `data class`.
+
+### Podsumowanie dla programisty Javy
+
+| Koncepcja | Java | Kotlin |
+| :--- | :--- | :--- |
+| **Użycie operatorów na własnych typach** | Niemożliwe (z wyjątkiem `+` dla `String`) | **Tak, poprzez przeciążanie operatorów** |
+| **Mechanizm** | Brak | **Konwencja oparta na funkcjach z modyfikatorem `operator`** |
+| **Czytelność kodu (w domenach mat.)**| Niska (`v1.add(v2).multiply(scalar)`) | **Wysoka** (`(v1 + v2) * scalar`) |
+| **Rozszerzalność** | Niemożliwe dla klas z zewnętrznych bibliotek | **Możliwe dzięki funkcjom rozszerzającym** |
+
+Przeciążanie operatorów w Kotlinie to pragmatyczne narzędzie, które – używane z umiarem i w odpowiednim kontekście – może znacząco poprawić czytelność i ekspresywność kodu, czyniąc go bardziej podobnym do naturalnego języka danej domeny.

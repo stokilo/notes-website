@@ -1,0 +1,154 @@
+---
+sidebar_label: 'Coroutines'
+---
+
+# Coroutines
+
+Doskonale. Wchodzimy w jeden z najważniejszych i najbardziej transformujących tematów w Kotlinie. Korutyny to podejście Kotlina do programowania asynchronicznego, które jest znacznie prostsze, bezpieczniejsze i bardziej czytelne niż tradycyjne wątki, `Future` czy callbacki w Javie.
+
+### 19. Współbieżność: Korutyny (`Coroutines`)
+
+Dla programisty Javy, najprostszy sposób myślenia o korutynach to **"bardzo, bardzo lekkie wątki"**, którymi zarządza sam Kotlin, a nie system operacyjny.
+
+---
+
+#### Problem: Blokowanie wątków i "Callback Hell"
+
+W tradycyjnym modelu, gdy wykonujesz długą operację (np. zapytanie sieciowe, odczyt z bazy danych), blokujesz wątek, na którym pracujesz.
+
+**Problem w Javie (np. w aplikacji z UI):**
+```java
+// To jest KATASTROFA w aplikacji z UI
+// Blokuje główny wątek, zamrażając całą aplikację
+String data = networkClient.fetchDataBlocking(); // Czeka 2 sekundy
+ui.showData(data);
+```
+
+**Standardowe rozwiązanie w Javie:** Użycie `ExecutorService` i `CompletableFuture`.
+```java
+ExecutorService executor = Executors.newSingleThreadExecutor();
+executor.submit(() -> {
+    try {
+        String data = networkClient.fetchDataBlocking();
+        // Jak wrócić do wątku UI? Musisz użyć SwingUtilities.invokeLater lub runOnUiThread
+        runOnUiThread(() -> ui.showData(data));
+    } catch (Exception e) {
+        // Obsługa błędów...
+    }
+});
+```
+To działa, ale jest skomplikowane, rozwlekłe i prowadzi do tzw. "callback hell", gdy operacji jest więcej. Kod staje się trudny do czytania.
+
+---
+
+#### Rozwiązanie w Kotlinie: Kod asynchroniczny, który wygląda jak synchroniczny
+
+Korutyny pozwalają pisać kod asynchroniczny w sposób sekwencyjny.
+
+```kotlin
+// Wątek główny NIE JEST BLOKOWANY
+// To jest kod asynchroniczny!
+GlobalScope.launch(Dispatchers.Main) { // Uruchom korutynę w głównym wątku (UI)
+    val data = fetchDataNonBlocking() // Ta funkcja ZAWIESI korutynę, a nie zablokuje wątek
+    ui.showData(data)                 // Ten kod wykona się, gdy dane wrócą, wciąż w wątku głównym
+}
+```
+Kod jest czysty, liniowy i łatwy do zrozumienia. Cała magia dzieje się za pomocą trzech kluczowych filarów.
+
+---
+
+### Filar 1: `suspend` - Funkcje, które można wstrzymać
+
+`suspend` to słowo kluczowe, które modyfikuje funkcję. Oznacza ono: **"Ta funkcja wykonuje długotrwałą operację i może zostać wstrzymana (zawieszona), a następnie wznowiona w przyszłości."**
+
+```kotlin
+// To jest funkcja zawieszająca
+suspend fun fetchDataNonBlocking(): String {
+    // `delay` to odpowiednik `Thread.sleep`, ale nie blokuje wątku.
+    // Zamiast tego, zawiesza korutynę.
+    delay(2000L)
+    return "Dane z sieci"
+}
+```
+**Najważniejsza zasada:**
+> Funkcję `suspend` można wywołać **tylko** z innej funkcji `suspend` lub z wnętrza korutyny (za pomocą "budowniczego korutyn" jak `launch` czy `async`).
+
+Gdy korutyna wywołuje funkcję `suspend`, nie blokuje ona wątku, na którym działa. Zamiast tego, "schodzi" z wątku, uwalniając go do innych zadań. Gdy operacja się zakończy, korutyna jest wznawiana i kontynuuje swoje działanie na dostępnym wątku.
+
+---
+
+### Filar 2: `launch` - Uruchom i zapomnij ("Fire and Forget")
+
+`launch` to **budowniczy korutyn (coroutine builder)**. To jest most, który pozwala wejść ze "świata normalnego" do "świata korutyn".
+
+Służy do uruchamiania korutyny, która nie zwraca żadnego wyniku. Jest idealny do zadań w tle, np. aktualizacji UI, zapisu danych do bazy bez czekania na potwierdzenie.
+
+```kotlin
+fun onButtonClicked() {
+    // Uruchamiamy nową korutynę
+    // Nie blokuje to `onButtonClicked` - funkcja od razu się kończy.
+    CoroutineScope(Dispatchers.IO).launch { // IO - pula wątków zoptymalizowana pod operacje we/wy
+        // Ten kod wykona się w tle
+        val data = fetchDataNonBlocking()
+        saveToDatabase(data)
+
+        // Jeśli chcemy wrócić do wątku UI
+        withContext(Dispatchers.Main) {
+            ui.showSaveConfirmation()
+        }
+    }
+}
+```
+`launch` zwraca obiekt typu `Job`, który reprezentuje korutynę i pozwala na jej kontrolowanie (np. `job.cancel()` do anulowania).
+
+---
+
+### Filar 3: `async` - Uruchom i oczekuj na wynik
+
+`async` to drugi główny budowniczy korutyn. Jest bardzo podobny do `launch`, ale z jedną kluczową różnicą: **zwraca wynik**.
+
+`async` jest używany, gdy uruchamiasz operację w tle i będziesz potrzebować jej wyniku w przyszłości. Zwraca obiekt typu `Deferred<T>`, który jest odpowiednikiem `CompletableFuture<T>` w Javie. `Deferred` to obietnica, że kiedyś pojawi się wynik typu `T`.
+
+Aby uzyskać wynik z `Deferred`, wywołujesz na nim metodę **`.await()`**. Co ważne, `.await()` jest funkcją typu `suspend`!
+
+**Typowy przypadek użycia: Równoległe wykonywanie zadań**
+
+Chcemy pobrać dane o użytkowniku i jego znajomych z dwóch różnych endpointów API jednocześnie.
+
+```kotlin
+CoroutineScope(Dispatchers.IO).launch {
+    // Uruchamiamy OBA zadania równolegle. Nie czekamy na zakończenie pierwszego.
+    val userDeferred = async { fetchUser() }       // Zwraca Deferred<User>
+    val friendsDeferred = async { fetchFriends() } // Zwraca Deferred<List<Friend>>
+
+    // Teraz czekamy na zakończenie obu zadań.
+    // await() zawiesza korutynę, dopóki wynik nie będzie gotowy.
+    val user = userDeferred.await()
+    val friends = friendsDeferred.await()
+
+    // Gdy oba wyniki są gotowe, możemy je przetworzyć
+    showUserWithFriends(user, friends)
+}
+```
+Ten kod jest znacznie czytelniejszy niż łączenie dwóch `CompletableFuture` za pomocą `thenCombine`.
+
+---
+
+### Podsumowanie i Strukturalna Współbieżność
+
+*   **`suspend`:** Oznacza funkcję jako "wstrzymywalną". To serce nieblokującego kodu.
+*   **`launch`:** Uruchamia korutynę, gdy nie potrzebujesz wyniku ("fire and forget"). Zwraca `Job`.
+*   **`async`:** Uruchamia korutynę, gdy potrzebujesz wyniku. Zwraca `Deferred<T>`. Wynik pobierasz za pomocą `await()`.
+
+**Strukturalna Współbieżność (Structured Concurrency):**
+Korutyny są uruchamiane wewnątrz `CoroutineScope`. Jeśli ten zakres (scope) zostanie anulowany (np. użytkownik zamknie ekran w aplikacji), wszystkie korutyny uruchomione w tym zakresie są **automatycznie anulowane**. To eliminuje ogromną klasę problemów z "wyciekami" zadań w tle, które są powszechne przy ręcznym zarządzaniu wątkami.
+
+| Koncepcja w Javie | Odpowiednik w Kotlinie |
+| :--- | :--- |
+| `Thread`, `Runnable` | Korutyna |
+| `ExecutorService.submit()` | `launch { ... }` (bez wyniku), `async { ... }` (z wynikiem) |
+| `Future<T>` / `CompletableFuture<T>` | `Deferred<T>` |
+| `future.get()` (blokujące) | `deferred.await()` (**nieblokujące**, zawieszające) |
+| `Thread.sleep()` (blokujące) | `delay()` (**nieblokujące**, zawieszające) |
+
+Korutyny to potężny model, który wymaga zmiany myślenia, ale jest jednym z największych atutów Kotlina. Sprawia, że skomplikowany kod asynchroniczny staje się prosty i bezpieczny.

@@ -1,0 +1,200 @@
+---
+sidebar_label: 'ClassDelegation'
+---
+
+# Class Delegation
+
+Oczywiście. Delegowanie to potężny wzorzec projektowy wbudowany bezpośrednio w składnię Kotlina. Pozwala on na "zlecenie" wykonania pewnych operacji innemu, pomocniczemu obiektowi. Zamiast pisać powtarzalny kod samemu, używasz gotowych (lub własnych) "delegatów".
+
+### 20. Delegowanie: klas i właściwości (`by lazy`, `by Delegates`)
+
+Kotlin oferuje dwa główne rodzaje delegowania: **delegowanie klas** i **delegowanie właściwości**.
+
+---
+
+#### 1. Delegowanie Klas (Wzorzec Dekorator "za darmo")
+
+Delegowanie klas pozwala na zaimplementowanie interfejsu poprzez "przekazanie" wszystkich jego metod do innego obiektu, który już ten interfejs implementuje. To jest wbudowana w język, bezpieczna alternatywa dla dziedziczenia i niezwykle zwięzły sposób na implementację wzorca **Dekorator**.
+
+**Problem w Javie (Wzorzec Dekorator):**
+Chcesz stworzyć klasę `CountingSet`, która zachowuje się jak `HashSet`, ale dodatkowo liczy, ile razy próbowano dodać element.
+
+```java
+// Musisz ręcznie zaimplementować KAŻDĄ metodę z interfejsu Set
+// i przekazać wywołanie do wewnętrznego obiektu `innerSet`.
+public class CountingSet<T> implements Set<T> {
+    private final Set<T> innerSet = new HashSet<>();
+    private int addAttempts = 0;
+
+    @Override
+    public boolean add(T element) {
+        addAttempts++;
+        return innerSet.add(element);
+    }
+
+    // A teraz wyobraź sobie pisanie tego dla wszystkich pozostałych metod...
+    @Override public int size() { return innerSet.size(); }
+    @Override public boolean isEmpty() { return innerSet.isEmpty(); }
+    @Override public boolean contains(Object o) { return innerSet.contains(o); }
+    // ... i tak dalej dla `iterator()`, `toArray()`, `remove()`, `clear()`... KOSZMAR!
+}
+```
+
+**Rozwiązanie w Kotlinie: `by`**
+Słowo kluczowe `by` mówi kompilatorowi: "Zaimplementuj interfejs `MutableSet<T>`, ale wszystkie metody, których jawnie nie nadpiszę, przekaż do obiektu `innerSet`".
+
+```kotlin
+class CountingSet<T>(
+    // `innerSet` to nasz delegat
+    private val innerSet: MutableSet<T> = mutableSetOf()
+) : MutableSet<T> by innerSet { // Magia dzieje się tutaj!
+
+    var addAttempts = 0
+
+    // Nadpisujemy tylko tę metodę, która nas interesuje
+    override fun add(element: T): Boolean {
+        addAttempts++
+        return innerSet.add(element) // Musimy jawnie wywołać metodę na delegacie
+    }
+}
+
+fun main() {
+    val countingSet = CountingSet<String>()
+    countingSet.add("A")
+    countingSet.add("B")
+    countingSet.add("A")
+
+    println("Rozmiar: ${countingSet.size}") // `size` jest delegowane do innerSet
+    println("Próby dodania: ${countingSet.addAttempts}") // To nasza własna logika
+}
+```
+**Wynik:**
+```
+Rozmiar: 2
+Próby dodania: 3
+```
+Kompilator wygenerował za nas cały ten powtarzalny kod. To niezwykle potężne do tworzenia wrapperów, dekoratorów i bezpiecznego rozszerzania funkcjonalności bez dziedziczenia.
+
+---
+
+#### 2. Delegowanie Właściwości
+
+Delegowanie właściwości pozwala na "zlecenie" logiki gettera i settera właściwości zewnętrznemu obiektowi (delegatowi). Jest to sposób na reużywanie powszechnej logiki związanej z właściwościami.
+
+**Składnia:** `val/var <nazwaWłaściwości>: <Typ> by <delegat>`
+
+Delegat musi dostarczyć metody `getValue()` (dla `val` i `var`) i `setValue()` (tylko dla `var`).
+
+Kotlin dostarcza kilka wbudowanych, niezwykle użytecznych delegatów.
+
+**a) `by lazy` - Leniwa inicjalizacja**
+
+To najpopularniejszy delegat. Wartość właściwości zostanie obliczona i zainicjowana **przy pierwszym dostępie do niej**, a nie podczas tworzenia obiektu. Jest to idealne dla "ciężkich" obiektów, których inicjalizacja jest kosztowna, a które mogą nie być w ogóle potrzebne.
+
+```kotlin
+class MyScreen {
+    // `heavyObject` zostanie stworzony dopiero, gdy ktoś go pierwszy raz użyje.
+    // Jest to również bezpieczne wątkowo.
+    private val heavyObject: HeavyData by lazy {
+        println("Inicjalizuję ciężki obiekt...")
+        // ... skomplikowane i długotrwałe obliczenia
+        HeavyData("Załadowane dane")
+    }
+
+    fun show() {
+        println("Ekran jest pokazywany.")
+    }
+
+    fun useHeavyObject() {
+        println("Teraz potrzebuję ciężkiego obiektu.")
+        println(heavyObject.data) // Inicjalizacja nastąpi TUTAJ
+    }
+}
+
+fun main() {
+    val screen = MyScreen()
+    screen.show()
+    println("---")
+    screen.useHeavyObject()
+    println("---")
+    screen.useHeavyObject() // Drugie wywołanie - nie ma ponownej inicjalizacji
+}
+```
+**Wynik:**
+```
+Ekran jest pokazywany.
+---
+Teraz potrzebuję ciężkiego obiektu.
+Inicjalizuję ciężki obiekt...
+Załadowane dane
+---
+Teraz potrzebuję ciężkiego obiektu.
+Załadowane dane
+```
+
+**b) `Delegates.observable` - Reagowanie na zmiany**
+
+Ten delegat pozwala na wykonanie bloku kodu za każdym razem, gdy wartość właściwości jest zmieniana.
+
+```kotlin
+import kotlin.properties.Delegates
+
+class User {
+    // `onChange` zostanie wywołane PO ustawieniu nowej wartości.
+    var name: String by Delegates.observable("<bez imienia>") { prop, oldValue, newValue ->
+        println("Właściwość '${prop.name}' zmieniła się z '$oldValue' na '$newValue'")
+    }
+}
+
+val user = User()
+user.name = "Jan"
+user.name = "Piotr"
+```
+**Wynik:**
+```
+Właściwość 'name' zmieniła się z '<bez imienia>' na 'Jan'
+Właściwość 'name' zmieniła się z 'Jan' na 'Piotr'
+```
+Jest to idealne do implementacji wzorca Obserwator, np. do aktualizacji UI, gdy dane w modelu się zmieniają.
+
+**c) `Delegates.vetoable` - Warunkowa zmiana**
+
+Podobne do `observable`, ale pozwala **zawetować (zablokować)** zmianę, jeśli nie spełnia ona określonego warunku.
+
+```kotlin
+var positiveNumber: Int by Delegates.vetoable(0) { prop, oldValue, newValue ->
+    // Lambda musi zwrócić `true`, aby zaakceptować zmianę, lub `false`, aby ją odrzucić.
+    newValue >= 0
+}
+
+positiveNumber = 10  // OK
+println(positiveNumber) // 10
+
+positiveNumber = -5  // Ta zmiana zostanie odrzucona
+println(positiveNumber) // Nadal 10
+```
+
+**d) Przechowywanie właściwości w mapie**
+
+Możesz delegować właściwości do mapy, co jest przydatne do dynamicznego parsowania danych, np. z JSON-a.
+```kotlin
+class Config(val map: Map<String, Any?>) {
+    val name: String by map
+    val version: Int by map
+}
+
+val config = Config(mapOf("name" to "Moja Aplikacja", "version" to 2))
+println(config.name)    // Moja Aplikacja
+println(config.version) // 2
+```
+
+### Podsumowanie dla programisty Javy
+
+| Koncepcja | Podejście w Javie | Odpowiednik w Kotlinie |
+| :--- | :--- | :--- |
+| **Wzorzec Dekorator** | Ręczna implementacja wszystkich metod interfejsu | **Delegowanie klas (`by`)** |
+| **Leniwa inicjalizacja** | Ręczna implementacja z podwójnym sprawdzeniem (`double-checked locking`) | **`by lazy`** |
+| **Obserwowanie zmian** | Wzorzec Obserwator, `PropertyChangeSupport` | **`by Delegates.observable`** |
+| **Własna logika właściwości**| Rozbudowane gettery/settery | **Tworzenie własnych delegatów właściwości** |
+
+Delegowanie w Kotlinie to niezwykle potężna funkcja, która promuje kompozycję nad dziedziczeniem i pozwala na tworzenie czystego, reużywalnego kodu poprzez abstrakcję powtarzalnych wzorców.

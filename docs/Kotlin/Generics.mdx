@@ -1,0 +1,151 @@
+---
+sidebar_label: 'Generics'
+---
+
+# Generics
+
+Znakomicie. Wchodzimy w zaawansowany, ale niezwykle ważny temat, który rozwiązuje jeden z największych bólów głowy związanych z generykami w Javie. Jeśli zrozumiesz `in` i `out`, zrozumiesz, dlaczego kolekcje w Kotlinie są tak bezpieczne i elastyczne.
+
+### 21. Generyki: `in` i `out` (Wariancja na poziomie deklaracji)
+
+Wariancja określa, jak typy generyczne (np. `List<String>`) odnoszą się do siebie w hierarchii dziedziczenia (np. w stosunku do `List<Any>`). Kotlin i Java podchodzą do tego problemu w fundamentalnie różny sposób.
+
+---
+
+#### Problem w Javie: Wariancja na poziomie użycia (`wildcards`)
+
+W Javie typy generyczne są **inwariantne**. Oznacza to, że `List<String>` **nie jest** podtypem `List<Object>`, mimo że `String` jest podtypem `Object`.
+
+```java
+// TO SIĘ NIE SKOMPILUJE!
+// Incompatible types. Found: 'java.util.ArrayList<java.lang.String>', required: 'java.util.List<java.lang.Object>'
+// List<Object> list = new ArrayList<String>();
+```
+Dlaczego? Bo gdyby to było dozwolone, moglibyśmy zepsuć listę:
+```java
+// Gdyby powyższa linia była dozwolona...
+// list.add(123); // ...moglibyśmy dodać Integera do listy Stringów!
+```
+Aby to obejść, Java wprowadziła **wildcards (`? extends`, `? super`)**, czyli **wariancję na poziomie użycia (use-site variance)**. Musisz określać wariancję za każdym razem, gdy używasz typu generycznego jako parametru.
+
+To prowadzi do słynnej i skomplikowanej zasady **PECS (Producer Extends, Consumer Super)**.
+
+```java
+// Producer: Ta funkcja tylko PRODUKUJE (czyta) obiekty z listy.
+// Możesz jej przekazać List<String>, List<Integer> itd.
+void printList(List<? extends Object> list) {
+    for (Object obj : list) {
+        System.out.println(obj);
+        // list.add(...); // BŁĄD KOMPILACJI: Nie można nic dodać do listy `? extends`
+    }
+}
+
+// Consumer: Ta funkcja tylko KONSUMUJE (zapisuje) obiekty do listy.
+void addStrings(List<? super String> list) {
+    list.add("Hello");
+    // Object obj = list.get(0); // Zwraca tylko Object, nie wiadomo co jest w środku
+}
+```
+Jest to potężne, ale bardzo skomplikowane i rozwlekłe. Musisz o tym pamiętać przy każdej sygnaturze metody.
+
+---
+
+#### Rozwiązanie w Kotlinie: Wariancja na poziomie deklaracji (`in`, `out`)
+
+Kotlin upraszcza to, pozwalając na zdefiniowanie wariancji **raz, w momencie deklaracji klasy lub interfejsu generycznego**. To jest **wariancja na poziomie deklaracji (declaration-site variance)**.
+
+Do tego służą dwa słowa kluczowe: `out` (dla kowariancji) i `in` (dla kontrawariancji).
+
+#### 1. `out` - Kowariancja (Producer)
+
+Słowo kluczowe `out` przed parametrem generycznym (`<out T>`) oznacza, że ta klasa/interfejs jest **kowariantna** względem typu `T`.
+
+Oznacza to, że:
+1.  **`MyClass<String>` jest podtypem `MyClass<Any>`**.
+2.  Typ `T` może być używany tylko w pozycji **wyjściowej (`out`)**, czyli jako **typ zwracany** przez metody.
+3.  **Nie można** używać `T` jako typu parametru metody (pozycja `in`).
+
+W skrócie: `out` T = **Producer** T (klasa, która tylko "produkuje" / zwraca T).
+
+**Przykład: Interfejs `List` w Kotlinie**
+Oto uproszczona definicja `List` z biblioteki standardowej Kotlina:
+```kotlin
+interface List<out E> : Collection<E> {
+    // ...
+    // E jest używane tylko w pozycji `out` (jako typ zwracany)
+    fun get(index: Int): E
+    // ... inne metody odczytu
+
+    // fun add(element: E) // BŁĄD KOMPILACJI: Typ `E` jest `out`, nie może być parametrem.
+}
+```
+Dzięki temu, że `List` jest zadeklarowany jako `List<out E>`, ten kod w Kotlinie działa bez problemu:
+```kotlin
+val strings: List<String> = listOf("a", "b")
+val anys: List<Any> = strings // To jest w 100% bezpieczne i legalne!
+
+// Możemy bezpiecznie czytać z listy `anys`, bo wiemy, że dostaniemy co najmniej `Any`.
+println(anys.get(0))
+
+// Nie możemy nic dodać, bo `List` nie ma metody `add()`.
+// Kompilator nas chroni.
+```
+
+#### 2. `in` - Kontrawariancja (Consumer)
+
+Słowo kluczowe `in` (`<in T>`) oznacza, że klasa jest **kontrawariantna** względem `T`.
+
+Oznacza to, że:
+1.  **`MyClass<Any>` jest podtypem `MyClass<String>`**. (Hierarchia jest odwrócona!)
+2.  Typ `T` może być używany tylko w pozycji **wejściowej (`in`)**, czyli jako **typ parametru** metody.
+3.  **Nie można** używać `T` jako typu zwracanego.
+
+W skrócie: `in` T = **Consumer** T (klasa, która tylko "konsumuje" / przyjmuje T).
+
+**Przykład: Interfejs `Comparable`**
+Wyobraźmy sobie interfejs do porównywania:
+```kotlin
+interface MyComparable<in T> {
+    fun compareTo(other: T): Int
+    // fun get(): T // BŁĄD KOMPILACJI: Typ `T` jest `in`, nie może być zwracany.
+}
+
+fun demo(comparer: MyComparable<String>) {
+    comparer.compareTo("test")
+}
+
+// Możemy przekazać komparator, który umie porównywać cokolwiek (`Any` lub `CharSequence`),
+// bo na pewno poradzi sobie też ze `String`.
+val anyComparer: MyComparable<Any> = ...
+demo(anyComparer) // Działa! Bo MyComparable<Any> jest podtypem MyComparable<String>.
+```
+
+#### 3. Inwariancja (Brak `in` / `out`)
+
+Jeśli nie użyjesz ani `in`, ani `out`, typ generyczny jest **inwariantny**, tak jak w Javie domyślnie. Oznacza to, że może on zarówno przyjmować, jak i zwracać typ `T`.
+
+**Przykład: `MutableList<T>`**
+`MutableList` musi być inwariantna, bo ma zarówno metody "produkujące" `T` (`get`), jak i "konsumujące" `T` (`add`).
+```kotlin
+interface MutableList<E> : List<E>, MutableCollection<E> {
+    // Konsumuje E
+    override fun add(element: E): Boolean
+    // Produkuje E
+    override fun get(index: Int): E
+}
+
+val strings: MutableList<String> = mutableListOf("a")
+// val anys: MutableList<Any> = strings // BŁĄD KOMPILACJI, bo MutableList jest inwariantna.
+```
+
+### Podsumowanie dla programisty Javy
+
+| Koncepcja | Java (`wildcards`) | Kotlin (`in`/`out`) |
+| :--- | :--- | :--- |
+| **Gdzie definiowana jest wariancja?** | Na **poziomie użycia** (`List<? extends T>`) | Na **poziomie deklaracji** (`interface List<out T>`) |
+| **Kowariancja (Producer)** | `? extends T` | `out T` |
+| **Kontrawariancja (Consumer)** | `? super T` | `in T` |
+| **Złożoność** | Wysoka (zasada PECS, trzeba pamiętać przy każdej metodzie) | **Niska** (definiujesz raz, kompilator pilnuje reszty) |
+| **Czytelność** | Niska (`List<? super MyType>`) | **Wysoka** (`List<MyType>`) |
+
+Wariancja na poziomie deklaracji w Kotlinie to gigantyczny krok naprzód. Przenosi ona skomplikowaną logikę z programisty na kompilator. W 95% przypadków, pracując z kolekcjami, nie musisz w ogóle myśleć o wariancji, bo twórcy biblioteki standardowej zrobili to za Ciebie, a Ty dostajesz prosty i bezpieczny kod.

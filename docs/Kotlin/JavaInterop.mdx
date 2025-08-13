@@ -1,0 +1,169 @@
+---
+sidebar_label: 'JavaInterop'
+---
+
+# Java Interopability
+
+
+Doskonale. To ostatni, ale niezwykle ważny temat, który sprawia, że Kotlin jest tak atrakcyjny w ekosystemie Javy. Kotlin od samego początku był projektowany z myślą o 100% interoperacyjności z Javą, co pozwala na stopniową migrację i bezproblemowe współistnienie obu języków w jednym projekcie.
+
+### 25. Interoperacyjność z Javą (Adnotacje `@Jvm*`)
+
+Kompilator Kotlina generuje standardowy bytecode dla JVM, który Java rozumie. Jednak czasami, aby wygenerowany kod był bardziej "naturalny" i "przyjazny" dla Javy, potrzebujemy dać kompilatorowi dodatkowe wskazówki. Do tego służą specjalne adnotacje z pakietu `kotlin.jvm`.
+
+---
+
+#### Problem: Cechy Kotlina, których Java nie rozumie
+
+Java nie ma pojęcia o niektórych potężnych, idiomatycznych cechach Kotlina, takich jak:
+*   Funkcje najwyższego poziomu (top-level functions)
+*   Funkcje rozszerzające (extension functions)
+*   Argumenty domyślne
+*   Obiekty towarzyszące (`companion object`)
+*   Właściwości (properties)
+
+Gdy wywołujesz taki kod z Javy, domyślnie generowany bytecode może być niewygodny w użyciu. Adnotacje `@Jvm*` pozwalają to "naprawić".
+
+---
+
+### Kluczowe adnotacje i ich zastosowanie
+
+#### 1. `@JvmStatic`
+
+**Problem:** Składowe `companion object` i funkcje najwyższego poziomu są kompilowane do metod statycznych w specjalnej klasie (np. `MyClass.Companion.myMethod()` lub `MyFileUtilsKt.myUtilFunction()`).
+
+**Rozwiązanie:** `@JvmStatic` mówi kompilatorowi, aby wygenerował **prawdziwą, statyczną metodę Javy** w otaczającej klasie.
+
+**Przykład (`companion object`):**
+```kotlin
+class User {
+    companion object {
+        @JvmStatic
+        fun createGuest(): User {
+            return User("Guest")
+        }
+    }
+}
+```
+**Wywołanie z Javy:**
+```java
+// Bez @JvmStatic:
+// User guest = User.Companion.createGuest();
+
+// Z @JvmStatic:
+User guest = User.createGuest(); // Naturalne i czyste!
+```
+
+**Przykład (funkcja najwyższego poziomu):**
+```kotlin
+// Plik: StringUtils.kt
+@file:JvmName("MyStringUtils") // Zmieniamy nazwę klasy dla Javy
+
+@JvmStatic
+fun isNullOrEmpty(s: String?): Boolean {
+    return s == null || s.isEmpty()
+}
+```
+**Wywołanie z Javy:**
+```java
+// Z @JvmName i @JvmStatic:
+boolean empty = MyStringUtils.isNullOrEmpty("");
+```
+
+---
+
+#### 2. `@JvmOverloads`
+
+**Problem:** Java nie rozumie argumentów domyślnych. Jeśli masz funkcję Kotlina z domyślnymi parametrami, z perspektywy Javy widoczna jest tylko jej "pełna" wersja.
+
+**Rozwiązanie:** `@JvmOverloads` instruuje kompilator, aby wygenerował **przeciążone wersje (overloads)** metody dla Javy, pomijając kolejne argumenty domyślne od prawej do lewej.
+
+**Przykład:**
+```kotlin
+class UiElement {
+    @JvmOverloads
+    fun draw(x: Int, y: Int, color: String = "black", bold: Boolean = false) {
+        // ...
+    }
+}
+```
+**Dostępne wersje z Javy:**
+```java
+UiElement element = new UiElement();
+element.draw(10, 20); // Użyje draw(10, 20, "black", false)
+element.draw(10, 20, "red"); // Użyje draw(10, 20, "red", false)
+element.draw(10, 20, "red", true);
+```
+Jest to absolutnie kluczowe przy pisaniu widoków dla Androida lub bibliotek, które mają być używane z Javy.
+
+---
+
+#### 3. `@JvmField`
+
+**Problem:** Właściwości Kotlina (`val`/`var`) są kompilowane do prywatnego pola i publicznego gettera/settera. W Javie musisz używać `getName()`, a nie `name`.
+
+**Rozwiązanie:** `@JvmField` mówi kompilatorowi: "**Nie generuj gettera i settera. Zamiast tego, wystaw tę właściwość jako publiczne pole Javy.**"
+
+**Kiedy używać?**
+*   Gdy integrujesz się z biblioteką Javy, która wymaga bezpośredniego dostępu do pól (np. niektóre frameworki do serializacji).
+*   Dla stałych (`const val`), aby były widoczne jako `public static final` w Javie.
+
+**Przykład:**
+```kotlin
+class AppConfig {
+    @JvmField
+    val API_ENDPOINT = "https://api.example.com" // Widoczne jako publiczne pole
+
+    const val TIMEOUT_MS = 5000 // `const val` jest domyślnie jak `public static final`
+}
+```
+**Wywołanie z Javy:**
+```java
+AppConfig config = new AppConfig();
+String endpoint = config.API_ENDPOINT; // Bezpośredni dostęp, bez getAPI_ENDPOINT()
+
+int timeout = AppConfig.TIMEOUT_MS;
+```
+**Uwaga:** Używaj ostrożnie! Rezygnujesz z enkapsulacji, jaką dają gettery/settery.
+
+---
+
+#### 4. `@JvmName`
+
+**Problem:** Domyślne nazwy generowane dla Javy mogą być niewygodne lub kolidować z istniejącymi.
+*   Plik `Utils.kt` staje się klasą `UtilsKt`.
+*   Getter dla właściwości `isReady` staje się `isReady()`, co jest niezgodne z konwencją Javy `getIsReady()`.
+
+**Rozwiązanie:** `@JvmName` pozwala na **zmianę nazwy** wygenerowanego elementu (klasy, metody) w bytecode.
+
+**Przykład (zmiana nazwy pliku):**
+```kotlin
+// Plik: MyUtils.kt
+@file:JvmName("AwesomeUtils") // Zmień nazwę generowanej klasy dla Javy
+
+fun utilityFunction() { ... }
+```
+**Z Javy:** `AwesomeUtils.utilityFunction();`
+
+**Przykład (zmiana nazwy gettera):**
+```kotlin
+data class Task(val isReady: Boolean) {
+    @get:JvmName("getIsTaskReady") // Zmiana nazwy gettera
+    val isTaskReady: Boolean
+        get() = isReady
+}
+```
+
+---
+
+#### Tabela podsumowująca
+
+| Adnotacja | Problem w Kotlinie | Rozwiązanie dla Javy |
+| :--- | :--- | :--- |
+| **`@JvmStatic`** | Metody w `companion object`, funkcje top-level | Generuje prawdziwą metodę `static` Javy. |
+| **`@JvmOverloads`** | Argumenty domyślne | Generuje przeciążone metody (overloads). |
+| **`@JvmField`** | Właściwości (property) z getterem/setterem | Wystawia właściwość jako publiczne pole Javy. |
+| **`@JvmName`** | Niewygodne lub niekonwencjonalne nazwy generowane | Pozwala nadać niestandardową nazwę dla klasy/metody. |
+| **`@Throws`** | Sprawdzane wyjątki (checked exceptions) w Kotlinie nie istnieją | Informuje Javę, że metoda może rzucić sprawdzany wyjątek, wymuszając `try-catch`. |
+
+Znajomość tych adnotacji jest kluczowa, gdy piszesz kod w Kotlinie, który ma być publicznym API dla konsumentów piszących w Javie, lub gdy migrujesz istniejący projekt z Javy na Kotlina i chcesz zachować wsteczną kompatybilność.
