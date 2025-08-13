@@ -1,0 +1,155 @@
+---
+sidebar_label: 'LambdaAndHOF'
+---
+
+# Lambda and Higher Order Functions
+
+
+Doskonale. Wchodzimy w sam rdzeń programowania funkcyjnego w Kotlinie. To jeden z najważniejszych tematów, który odróżnia idiomatyczny kod w Kotlinie od kodu, który jest "Javą napisaną w Kotlinie".
+
+### 11. Wyrażenia Lambda i funkcje wyższego rzędu
+
+Te dwa pojęcia są ze sobą nierozerwalnie związane.
+
+*   **Wyrażenie Lambda:** To anonimowa funkcja, którą można traktować jak wartość – przypisać do zmiennej, przekazać jako argument, czy zwrócić z innej funkcji.
+*   **Funkcja Wyższego Rzędu (Higher-Order Function - HOF):** To funkcja, która przyjmuje inną funkcję jako argument lub zwraca funkcję.
+
+Jako programista Javy znasz już ten koncept z `Stream API` lub interfejsów funkcyjnych.
+
+**Znajomy grunt w Javie (od 8):**
+```java
+List<String> names = List.of("Anna", "Piotr", "Zofia");
+names.forEach(name -> System.out.println(name));
+```
+`forEach` to funkcja wyższego rzędu, a `name -> System.out.println(name)` to wyrażenie lambda.
+
+---
+
+#### 1. Składnia Lambd w Kotlinie
+
+Składnia w Kotlinie jest bardzo zwięzła i konsekwentna. Lambda jest zawsze otoczona nawiasami klamrowymi `{}`.
+
+**Podstawowa struktura:** `{ argumenty -> ciało }`
+
+```kotlin
+val sum: (Int, Int) -> Int = { a: Int, b: Int -> a + b }
+//  |       |        |      | |    parametry    |ciało (ostatnie wyrażenie jest zwracane)
+//  |       |        |      |
+//  nazwa   | typ argumentów | typ zwracany
+//          |
+//       typ funkcyjny
+
+// Wywołanie lambdy
+val result = sum(5, 10) // result = 15
+```
+
+**Kluczowe cechy składni:**
+1.  **Nawiasy klamrowe `{}`:** Zawsze otaczają lambdę.
+2.  **Strzałka `->`:** Oddziela listę parametrów od ciała lambdy.
+3.  **Inferencja typów:** Kompilator często potrafi wywnioskować typy, więc nie trzeba ich pisać.
+4.  **Implicit Return:** Ostatnie wyrażenie w ciele lambdy jest automatycznie zwracane. Słowo kluczowe `return` nie jest potrzebne (i jest zwykle zabronione, chyba że używamy etykiety).
+
+**Przykład z kolekcją (odpowiednik Javy):**
+```kotlin
+val names = listOf("Anna", "Piotr", "Zofia")
+names.forEach({ name: String -> println(name) })
+```
+
+---
+
+#### 2. Złota trójka uproszczeń składniowych
+
+Kotlin wprowadza trzy potężne uproszczenia, które sprawiają, że kod staje się niezwykle czytelny.
+
+**a) Trailing Lambda (Lambda na końcu)**
+
+> Jeśli lambda jest **ostatnim** argumentem funkcji, można ją wynieść **poza** nawiasy `()`.
+
+```kotlin
+// Zamiast pisać tak:
+names.forEach({ name -> println(name) })
+
+// Piszemy tak (bardziej idiomatycznie):
+names.forEach() { name -> println(name) }
+```
+
+**b) Usunięcie pustych nawiasów**
+
+> Jeśli po wyniesieniu lambdy nawiasy `()` zostają puste (bo lambda była jedynym argumentem), można je **całkowicie pominąć**.
+
+```kotlin
+// Zamiast pisać tak:
+names.forEach() { name -> println(name) }
+
+// Piszemy tak (najbardziej idiomatycznie):
+names.forEach { name -> println(name) }
+```
+To właśnie ten styl zobaczysz w 99% kodu w Kotlinie.
+
+**c) Konwencja `it`**
+
+> Jeśli lambda ma **tylko jeden** parametr, nie musisz go nazywać. Możesz odwołać się do niego za pomocą domyślnej nazwy `it`.
+
+```kotlin
+// Zamiast pisać tak:
+names.forEach { name -> println(name) }
+
+// Piszemy tak (krócej i bardzo często spotykane):
+names.forEach { println(it) }
+
+// Inny przykład: filtrowanie listy
+val longNames = names.filter { it.length > 4 } // Zwróci ["Piotr", "Zofia"]
+// `it` w tym kontekście to każdy kolejny element listy (String)
+```
+`it` jest niezwykle wygodne, ale przy bardziej skomplikowanych lambdach warto nadać parametrowi własną, opisową nazwę dla czytelności.
+
+---
+
+#### 3. Tworzenie własnych funkcji wyższego rzędu
+
+To jest prawdziwa moc. Możesz tworzyć własne funkcje, które przyjmują logikę jako parametr.
+
+**Problem:** Chcemy zmierzyć czas wykonania dowolnego bloku kodu.
+
+**Rozwiązanie w Kotlinie:** Stwórzmy funkcję `measureTime`, która przyjmuje lambdę.
+
+```kotlin
+// Definicja funkcji wyższego rzędu
+// Parametr `block` to funkcja, która nie przyjmuje argumentów i nic nie zwraca (Unit to odpowiednik `void`).
+inline fun measureTime(block: () -> Unit) {
+    val start = System.currentTimeMillis()
+    block() // Wywołujemy przekazaną lambdę
+    val end = System.currentTimeMillis()
+    println("Execution time: ${end - start} ms")
+}
+```
+*Słowo `inline` to optymalizacja, która "wkleja" kod lambdy w miejsce wywołania, eliminując narzut tworzenia obiektu funkcji. Na razie traktuj to jako standard przy prostych HOF.*
+
+**Użycie naszej funkcji:**
+```kotlin
+measureTime {
+    // To jest nasza lambda, przekazana jako argument `block`
+    println("Wykonuję skomplikowane obliczenia...")
+    Thread.sleep(1000)
+    println("...zakończone!")
+}
+```
+**Wynik:**
+```
+Wykonuję skomplikowane obliczenia...
+...zakończone!
+Execution time: 1003 ms
+```
+Stworzyliśmy potężne, reużywalne narzędzie, które pozwala opakować dowolny kod dodatkową logiką. To fundamentalny wzorzec w Kotlinie, używany do obsługi transakcji, logowania, uprawnień, konfiguracji (DSL) i wielu innych.
+
+### Podsumowanie dla programisty Javy
+
+| Koncepcja | Java (od 8) | Kotlin |
+| :--- | :--- | :--- |
+| **Definicja lambdy** | `(params) -> { body; return ...; }` | `{ params -> body }` |
+| **Użycie z kolekcją**| `list.forEach(item -> ...)` | `list.forEach { item -> ... }` |
+| **Lambda z 1 arg.**| `item -> ...` | `{ println(it) }` (konwencja `it`) |
+| **Przekazanie lambdy**| `myFunc(() -> ...)` | `myFunc { ... }` (trailing lambda) |
+| **Typ funkcyjny** | Interfejs funkcyjny (`Predicate<T>`, `Runnable`) | Typy funkcyjne (`(T) -> Boolean`, `() -> Unit`) |
+
+Przejście na myślenie funkcyjne i opanowanie składni lambd w Kotlinie jest kluczowe dla pisania zwięzłego, czytelnego i nowoczesnego kodu. Standardowa biblioteka Kotlina jest pełna funkcji wyższego rzędu (`filter`, `map`, `forEach`, `groupBy`, `let`, `run` itd.), które czekają na użycie.

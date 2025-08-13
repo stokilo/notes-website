@@ -1,0 +1,129 @@
+---
+sidebar_label: 'CollectionMutability'
+---
+
+# Collection mutable vs immutable
+
+Świetnie. To bardzo ważny temat, który jest bezpośrednio związany z filozofią Kotlina promującą niezmienność (`immutability`) i bezpieczeństwo.
+
+### 13. Kolekcje: rozróżnienie na modyfikowalne i niemodyfikowalne interfejsy
+
+W Javie, gdy pracujesz z kolekcjami, interfejsy takie jak `java.util.List` czy `java.util.Map` zawierają zarówno metody do odczytu (`get`, `size`), jak i metody do modyfikacji (`add`, `remove`, `clear`). To, czy dana kolekcja jest faktycznie modyfikowalna, zależy od konkretnej implementacji, która została użyta do jej stworzenia.
+
+**Problem w Javie:**
+```java
+List<String> names = List.of("Ania", "Piotr"); // Zwraca niemodyfikowalną listę
+// names.add("Kasia"); // Rzuca UnsupportedOperationException w czasie działania!
+
+List<String> otherNames = new ArrayList<>();
+otherNames.add("Zosia"); // To działa bez problemu.
+```
+Problem polega na tym, że na poziomie typu (`List<String>`) nie wiesz, czy możesz bezpiecznie wywołać metodę `add()`. Dowiesz się o tym dopiero w momencie, gdy program się wywali z wyjątkiem. **Kontrakt jest słaby i nie jest egzekwowany przez kompilator.**
+
+---
+
+#### Rozwiązanie w Kotlinie: Podział na dwa interfejsy
+
+Kotlin rozwiązuje ten problem, wprowadzając na poziomie systemu typów jasny podział na interfejsy tylko do odczytu i interfejsy modyfikowalne.
+
+Dla każdego głównego typu kolekcji istnieją dwa warianty:
+
+| Interfejs tylko do odczytu | Modyfikowalny odpowiednik | Opis |
+| :--- | :--- | :--- |
+| **`List<T>`** | `MutableList<T>` | Uporządkowana kolekcja. `List` ma tylko metody jak `get()`, `size()`, `isEmpty()`. |
+| **`Set<T>`** | `MutableSet<T>` | Zbiór unikalnych elementów. `Set` nie ma metody `add()`. |
+| **`Map<K, V>`**| `MutableMap<K, V>`| Kolekcja par klucz-wartość. `Map` nie ma metody `put()` czy `remove()`. |
+
+**Jak to działa w praktyce?**
+
+**1. Interfejs tylko do odczytu (`List`, `Set`, `Map`)**
+
+Deklarując kolekcję jako `List`, dajesz **gwarancję na poziomie kompilacji**, że nikt nie będzie próbował jej modyfikować.
+
+```kotlin
+// listOf() tworzy niemodyfikowalną listę
+val names: List<String> = listOf("Ania", "Piotr")
+
+// Metody do odczytu działają
+println(names.size)     // OK
+println(names[0])       // OK
+
+// Próba modyfikacji kończy się BŁĘDEM KOMPILACJI!
+// names.add("Kasia") // BŁĄD: Unresolved reference: add
+```
+Kompilator chroni Cię przed błędem, który w Javie pojawiłby się dopiero w runtime.
+
+**2. Interfejs modyfikowalny (`MutableList`, `MutableSet`, `MutableMap`)**
+
+Jeśli jawnie potrzebujesz modyfikować kolekcję, musisz użyć jej "mutowalnego" wariantu.
+
+```kotlin
+// mutableListOf() tworzy modyfikowalną listę (odpowiednik ArrayList)
+val mutableNames: MutableList<String> = mutableListOf("Ania", "Piotr")
+
+// Odczyt działa
+println(mutableNames.size)
+
+// Modyfikacja też działa!
+mutableNames.add("Kasia")
+mutableNames.removeAt(0)
+
+println(mutableNames) // Wyświetli: [Piotr, Kasia]
+```
+
+---
+
+#### Złota zasada i programowanie do interfejsu
+
+> **"Akceptuj typy tylko do odczytu, zwracaj typy tylko do odczytu"**
+
+To jest kluczowa zasada projektowania API w Kotlinie.
+
+**Przykład:** Funkcja, która przetwarza listę użytkowników.
+```kotlin
+// ŹLE (zbyt permisywne)
+fun processUsers(users: MutableList<User>) {
+    // Ta funkcja nie powinna modyfikować oryginalnej listy,
+    // ale typ `MutableList` jej na to pozwala. To niebezpieczne.
+    for (user in users) {
+        // ...
+    }
+}
+
+// DOBRZE (bezpieczny kontrakt)
+fun processUsers(users: List<User>) {
+    // Teraz mamy gwarancję, że ta funkcja nie zmodyfikuje
+    // listy przekazanej z zewnątrz.
+    for (user in users) {
+        // ...
+    }
+}
+```
+Jeśli funkcja potrzebuje zwrócić kolekcję, również powinna zwracać typ tylko do odczytu (`List`, `Set`, `Map`), chyba że jej głównym celem jest dostarczenie modyfikowalnej kolekcji.
+
+#### Relacja `List` i `MutableList`
+
+`MutableList<T>` jest podtypem `List<T>`. Oznacza to, że wszędzie tam, gdzie oczekiwana jest `List<T>`, możesz przekazać `MutableList<T>`.
+
+```kotlin
+val modifiableList: MutableList<String> = mutableListOf("A", "B")
+
+// Można przekazać MutableList do funkcji oczekującej List
+fun printList(list: List<String>) {
+    println(list)
+}
+
+printList(modifiableList) // To jest w porządku
+```
+Wewnątrz funkcji `printList` ta lista będzie widziana jako niemodyfikowalna, co chroni ją przed przypadkowymi zmianami.
+
+### Podsumowanie dla programisty Javy
+
+| Cecha | Podejście w Javie | Podejście w Kotlinie | Kluczowa korzyść |
+| :--- | :--- | :--- | :--- |
+| **Kontrakt modyfikowalności**| Słaby, na poziomie implementacji | **Silny, na poziomie interfejsu/typu** | **Bezpieczeństwo w czasie kompilacji** |
+| **Niemodyfikowalna lista** | `List.of()` lub `Collections.unmodifiableList()` (rzuca wyjątek w runtime) | `List<T>` (błąd kompilacji przy próbie modyfikacji) | Wykrywanie błędów na wczesnym etapie |
+| **Modyfikowalna lista** | `new ArrayList()` | `MutableList<T>` | Jawna intencja w kodzie |
+| **Projektowanie API** | Programowanie do `List` jest standardem, ale nie daje gwarancji | Programowanie do `List` (read-only) daje **gwarancję niezmienności** | Bezpieczniejsze i bardziej przewidywalne API |
+
+To rozróżnienie jest fundamentalne dla pisania bezpiecznego i idiomatycznego kodu w Kotlinie. Zmusza programistę do świadomego decydowania, czy dana część kodu ma prawo modyfikować kolekcję, czy tylko ją odczytywać.

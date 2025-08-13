@@ -1,0 +1,161 @@
+---
+sidebar_label: 'ScopeFunctions'
+---
+
+# Scope Functions
+
+Świetnie, przechodzimy do jednego z najbardziej charakterystycznych i potężnych, ale na początku często mylących, zestawów narzędzi w Kotlinie.
+
+### 12. Funkcje zakresu (`Scope Functions`): `let`, `run`, `with`, `apply`, `also`
+
+Funkcje zakresu to zestaw pięciu funkcji z biblioteki standardowej Kotlina, których głównym celem jest **wykonanie bloku kodu w kontekście pewnego obiektu**. Tworzą one tymczasowy "zakres" (scope), w którym masz wygodny dostęp do tego obiektu.
+
+Choć na pierwszy rzut oka wyglądają podobnie, różnią się dwoma kluczowymi aspektami:
+
+1.  **Sposób odwołania do obiektu kontekstu:**
+*   **`this`:** Obiekt jest dostępny jako `this` (jak w metodzie klasy).
+*   **`it`:** Obiekt jest przekazywany jako argument lambdy (domyślnie `it`).
+
+2.  **Wartość zwracana:**
+*   **Obiekt kontekstu:** Funkcja zwraca obiekt, na którym została wywołana.
+*   **Wynik lambdy:** Funkcja zwraca wynik ostatniego wyrażenia w bloku lambdy.
+
+Te dwie różnice determinują, kiedy której funkcji użyć.
+
+---
+
+### Ściągawka: Tabela różnic
+
+| Funkcja | Obiekt kontekstu | Wartość zwracana | Typowy przypadek użycia |
+| :--- | :--- | :--- | :--- |
+| **`let`** | `it` | Wynik lambdy | Wykonanie operacji na obiekcie **nullable**; zmiana typu obiektu. |
+| **`run`** | `this` | Wynik lambdy | Konfiguracja obiektu **i** obliczenie wyniku; grupowanie operacji na jednym obiekcie. |
+| **`with`**| `this` | Wynik lambdy | Podobne do `run`, ale nie jest funkcją rozszerzającą (wywołanie `with(obj) { ... }`). |
+| **`apply`**| `this` | **Obiekt kontekstu**| Konfiguracja obiektu (np. wzorzec Builder); tworzenie łańcuchów wywołań. |
+| **`also`** | `it` | **Obiekt kontekstu**| Dodatkowe działania na obiekcie (np. logowanie, walidacja) bez zmieniania go. |
+
+---
+
+### Szczegółowe omówienie z przykładami
+
+#### 1. `let` (obiekt jako `it`, zwraca wynik lambdy)
+
+**Najczęstsze użycie: Bezpieczne operacje na obiektach `nullable`.**
+
+`let` wykonuje blok kodu tylko wtedy, gdy obiekt nie jest `null`. Wewnątrz bloku, obiekt jest dostępny jako `it` i jest inteligentnie zrzutowany na typ non-nullable.
+
+```kotlin
+val name: String? = "Kotlin"
+// val name: String? = null // Spróbuj odkomentować to i zobacz, co się stanie
+
+name?.let {
+    // Ten blok wykona się tylko, jeśli `name` nie jest nullem.
+    // `it` jest tutaj typu `String` (nie `String?`).
+    println("Imię ma ${it.length} liter.")
+    println("Imię wielkimi literami: ${it.uppercase()}")
+}
+// Jeśli `name` byłoby null, nic by się nie wydarzyło.
+
+// Można też transformować wynik
+val length: Int? = name?.let { it.length }
+```
+To jest idiomatyczna alternatywa dla `if (name != null) { ... }`.
+
+#### 2. `apply` (obiekt jako `this`, zwraca obiekt)
+
+**Najczęstsze użycie: Konfiguracja obiektu (jak wzorzec Builder).**
+
+`apply` jest idealne, gdy musisz ustawić wiele właściwości nowo utworzonego obiektu. Ponieważ zwraca sam obiekt, świetnie nadaje się do tworzenia łańcuchów.
+
+```kotlin
+// W Javie (Builder pattern):
+// TextView tv = new TextView(context);
+// tv.setText("Hello");
+// tv.setTextColor(Color.RED);
+// tv.setTextSize(22.0f);
+
+// W Kotlinie z `apply`:
+val textView = TextView(context).apply {
+    // Wewnątrz bloku, `this` odnosi się do `textView`.
+    // Możesz wywoływać metody bezpośrednio.
+    text = "Hello"
+    textColor = Color.RED
+    textSize = 22.0f
+    // Nie trzeba pisać `this.text`, `this.textColor` itd.
+}
+// `textView` to skonfigurowany obiekt, gotowy do użycia.
+```
+
+#### 3. `run` (obiekt jako `this`, zwraca wynik lambdy)
+
+**Najczęstsze użycie: Obliczenia w kontekście obiektu.**
+
+`run` łączy cechy `apply` (obiekt jako `this`) i `let` (zwraca wynik lambdy). Używasz go, gdy chcesz wykonać serię operacji na obiekcie i na końcu zwrócić jakiś konkretny wynik.
+
+```kotlin
+val user: User? = findUserById(1)
+
+val userInfo: String? = user?.run {
+    // `this` odnosi się do obiektu `user`
+    val lastLogin = getLastLogin(this.id) // `this` jest opcjonalne
+    "Użytkownik $name, ostatnie logowanie: $lastLogin" // To jest zwracane
+}
+
+println(userInfo)
+```
+`run` może być też używane bez obiektu kontekstu, do tworzenia lokalnego zakresu i grupowania kodu.
+
+#### 4. `also` (obiekt jako `it`, zwraca obiekt)
+
+**Najczęstsze użycie: Dodatkowe akcje "przy okazji" ("side effects").**
+
+`also` jest jak `apply`, ale obiekt jest dostępny jako `it`. Idealne, gdy chcesz coś zrobić z obiektem (np. zalogować go, dodać do listy), ale nie chcesz przerywać łańcucha wywołań. Nazwa "also" (`również`) dobrze to oddaje: "stwórz obiekt, a *również* zrób to".
+
+```kotlin
+val numbers = mutableListOf("one", "two", "three")
+
+// Przykład: logowanie dodawanego elementu
+numbers
+    .add("four")
+    .also { // `it` to `Boolean` (wynik `add`), mało przydatne
+        println("Dodano nowy element. Aktualna lista: $numbers")
+    }
+
+// Lepszy przykład z `apply` i `also`
+val newUser = User("Nowy").apply {
+    // Konfiguracja
+    age = 25
+}.also {
+    // `it` to nowo skonfigurowany obiekt User
+    println("Stworzono nowego użytkownika: $it")
+    userCache.add(it)
+}
+```
+
+#### 5. `with` (obiekt jako `this`, zwraca wynik lambdy)
+
+`with` jest bardzo podobne do `run`, ale nie jest funkcją rozszerzającą. Przekazujesz obiekt jako argument.
+
+```kotlin
+val user = User("Jan", 30)
+
+// Wywołanie jako funkcja, a nie metoda
+val description = with(user) {
+    // `this` odnosi się do `user`
+    "Opis: $name, wiek: $age" // To jest zwracane
+}
+println(description)
+```
+**Kiedy `with` a kiedy `run`?**
+*   Użyj `run` na obiekcie, który może być `null` (`user?.run { ... }`).
+*   Użyj `with`, gdy masz obiekt non-null i chcesz po prostu zgrupować operacje na nim dla czytelności.
+
+### Podsumowanie i praktyczna rada
+
+Na początku nie próbuj zapamiętać wszystkich pięciu na siłę. Skup się na trzech najczęstszych:
+
+1.  **`let`** -> gdy masz **`nullable`** i chcesz coś zrobić, jeśli nie jest `null`. (`if (x != null)`)
+2.  **`apply`** -> gdy **konfigurujesz** nowo utworzony obiekt. (Wzorzec Builder)
+3.  **`run`** -> gdy chcesz **obliczyć jakiś wynik** na podstawie obiektu. (Grupowanie operacji + zwrot wartości)
+
+`also` i `with` naturalnie znajdą swoje miejsce, gdy już poczujesz się komfortowo z tą trójką. Eksperymentuj i obserwuj, jak IntelliJ IDEA podpowiada Ci możliwe użycia tych funkcji – to świetny sposób na naukę.

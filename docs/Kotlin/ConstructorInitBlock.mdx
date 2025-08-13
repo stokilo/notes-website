@@ -1,0 +1,149 @@
+---
+sidebar_label: 'ConstructorInitBlock'
+---
+
+# Constructor Init Block
+
+
+Jasne, wchodzimy w obszar struktury klas. To, jak Kotlin podchodzi do konstruktorów, jest jednym z pierwszych "aha!" momentów dla programisty Javy, ponieważ drastycznie redukuje ilość powtarzalnego kodu.
+
+### 14. Klasy: konstruktor główny, bloki `init`
+
+Kotlin wprowadza formalne rozróżnienie na **jeden konstruktor główny** (primary constructor) i opcjonalne **konstruktory drugorzędne** (secondary constructors).
+
+---
+
+#### 1. Konstruktor główny (`primary constructor`)
+
+To jest główny, najbardziej zwięzły sposób deklarowania konstruktora i właściwości klasy jednocześnie. Jest on częścią **nagłówka klasy**.
+
+**Problem w Javie: Boilerplate**
+W Javie musisz osobno zadeklarować pola i osobno napisać konstruktor, który je inicjalizuje.
+
+```java
+public class Person {
+    private final String name;
+    private final int age;
+
+    public Person(String name, int age) {
+        // Powtarzalny kod inicjalizujący
+        this.name = name;
+        this.age = age;
+    }
+}
+```
+
+**Rozwiązanie w Kotlinie: Zwięzłość i jasność**
+W Kotlinie możesz to wszystko zrobić w jednej linii.
+
+```kotlin
+class Person(val name: String, val age: Int) {
+    // Ciało klasy jest tutaj
+}
+```
+
+**Co tu się stało? Analiza jednej linii:**
+`class Person(val name: String, val age: Int)`
+
+1.  **Deklaracja konstruktora:** Część w nawiasach `(...)` to konstruktor główny.
+2.  **Deklaracja i inicjalizacja właściwości:** Użycie słów kluczowych `val` (lub `var`) przed parametrami konstruktora to kluczowa magia Kotlina. Mówi ono kompilatorowi:
+*   "To nie jest tylko parametr konstruktora."
+*   "Stwórz publiczną, niemodyfikowalną (`val`) właściwość o nazwie `name` typu `String`."
+*   "Automatycznie zainicjuj tę właściwość wartością przekazaną do konstruktora."
+
+Ta jedna linia jest w pełni równoważna całej klasie Javy pokazanej wyżej. Pozbywamy się całego boilerplate'u z `this.name = name;`.
+
+---
+
+#### 2. Blok inicjalizujący (`init`)
+
+Konstruktor główny nie ma ciała (nie ma nawiasów klamrowych `{}`). Co więc zrobić, jeśli potrzebujesz wykonać jakąś bardziej skomplikowaną logikę podczas tworzenia obiektu, np. walidację, logowanie lub wywołanie innej metody?
+
+Do tego służy **blok `init`**. Jest on wykonywany zaraz po wywołaniu konstruktora głównego.
+
+**Przykład z walidacją:**
+```kotlin
+class Person(val name: String, val age: Int) {
+
+    // Blok `init` jest częścią procesu inicjalizacji obiektu
+    init {
+        // Możemy tu odwoływać się do właściwości z konstruktora głównego
+        require(age >= 0) { "Wiek nie może być ujemny!" }
+        println("Stworzono osobę o imieniu $name")
+    }
+
+    // Klasa może mieć wiele bloków `init`, wykonają się w kolejności deklaracji
+    init {
+        println("Druga część inicjalizacji zakończona dla $name.")
+    }
+}
+
+fun main() {
+    val person = Person("Anna", 30)
+    // val invalidPerson = Person("Ktoś", -5) // Rzuci IllegalArgumentException
+}
+```
+**Wynik dla `Person("Anna", 30)`:**
+```
+Stworzono osobę o imieniu Anna
+Druga część inicjalizacji zakończona dla Anna.
+```
+
+---
+
+#### 3. Konstruktory drugorzędne (`secondary constructors`)
+
+A co z przeciążaniem konstruktorów, tak jak w Javie? Kotlin również to umożliwia za pomocą konstruktorów drugorzędnych, deklarowanych w ciele klasy za pomocą słowa kluczowego `constructor`.
+
+**Jest jednak jedna, fundamentalna zasada:**
+> Każdy konstruktor drugorzędny **musi** (bezpośrednio lub pośrednio) wywołać **konstruktor główny**.
+
+Robimy to za pomocą słowa kluczowego `this(...)`. Gwarantuje to, że główna logika inicjalizacyjna jest zawsze wykonywana.
+
+**Przykład:** Chcemy dodać konstruktor, który przyjmuje tylko imię i ustawia domyślny wiek na 0.
+```kotlin
+class Person(val name: String, val age: Int) {
+
+    init {
+        println("Inicjalizator główny dla: $name, wiek: $age")
+    }
+
+    // Konstruktor drugorzędny
+    constructor(name: String) : this(name, 0) { // Delegacja do konstruktora głównego
+        // Ciało konstruktora drugorzędnego wykonuje się PO bloku `init`
+        println("Wywołano konstruktor drugorzędny dla $name")
+    }
+}
+
+fun main() {
+    println("--- Tworzenie przez konstruktor główny ---")
+    val p1 = Person("Jan", 42)
+
+    println("\n--- Tworzenie przez konstruktor drugorzędny ---")
+    val p2 = Person("Maria")
+}
+```
+**Wynik:**
+```
+--- Tworzenie przez konstruktor główny ---
+Inicjalizator główny dla: Jan, wiek: 42
+
+--- Tworzenie przez konstruktor drugorzędny ---
+Inicjalizator główny dla: Maria, wiek: 0
+Wywołano konstruktor drugorzędny dla Maria
+```
+**Pro-tip:** W Kotlinie często unika się konstruktorów drugorzędnych na rzecz **argumentów domyślnych** w konstruktorze głównym. Jest to bardziej zwięzłe i elastyczne.
+```kotlin
+// Lepszy, bardziej idiomatyczny sposób
+class Person(val name: String, val age: Int = 0)
+// To załatwia sprawę bez potrzeby pisania drugiego konstruktora!
+```
+
+### Podsumowanie dla programisty Javy
+
+| Koncepcja | Podejście w Javie | Podejście w Kotlinie | Kluczowa korzyść |
+| :--- | :--- | :--- | :--- |
+| **Główny sposób inicjalizacji**| Konstruktor w ciele klasy | **Konstruktor główny** w nagłówku klasy | Ogromna redukcja boilerplate'u |
+| **Logika inicjalizacyjna**| W ciele konstruktora | **Blok `init`** | Czyste oddzielenie deklaracji od logiki |
+| **Przeciążanie konstruktorów**| Wiele konstruktorów | **Konstruktory drugorzędne** (muszą delegować do głównego) | Gwarancja wykonania głównej logiki |
+| **Lepsza alternatywa dla przeciążania** | Wymaga osobnych metod | **Argumenty domyślne** | Większa zwięzłość i elastyczność |
