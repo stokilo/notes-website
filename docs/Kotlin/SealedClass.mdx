@@ -1,0 +1,118 @@
+---
+sidebar_label: 'SealedClass'
+---
+
+# Sealed Class
+
+Doskonale. Klasy zapieczętowane to jedna z najpotężniejszych funkcji Kotlina, która wnosi ogromną wartość do modelowania stanów i hierarchii, a także idealnie współpracuje z wyrażeniem `when`.
+
+### 17. Klasy zapieczętowane (`Sealed Classes`)
+
+Klasa zapieczętowana to specjalny rodzaj klasy abstrakcyjnej, która pozwala na **ścisłą kontrolę nad swoją hierarchią dziedziczenia**. Mówiąc prościej, wszystkie bezpośrednie podklasy klasy zapieczętowanej **muszą być zadeklarowane w tym samym pliku co sama klasa zapieczętowana**.
+
+To pozornie małe ograniczenie daje kompilatorowi supermoc: **zna on wszystkie możliwe typy, które mogą istnieć w tej hierarchii.**
+
+---
+
+#### Problem: Modelowanie ograniczonych hierarchii
+
+Wyobraź sobie, że modelujesz wynik operacji sieciowej. Może on być jednym z trzech stanów:
+1.  Sukces (z danymi)
+2.  Błąd (z komunikatem o błędzie)
+3.  Ładowanie (bez dodatkowych danych)
+
+**Podejście w Javie (lub w Kotlinie bez `sealed`):**
+Można użyć zwykłej klasy bazowej lub interfejsu.
+```java
+// W Javie
+public abstract class Result {}
+public final class Success extends Result { public final String data; /*...*/ }
+public final class Error extends Result { public final String message; /*...*/ }
+public final class Loading extends Result {}
+```
+Główny problem: **Nic nie powstrzyma innego programisty przed stworzeniem w zupełnie innym miejscu projektu `public class Unauthorized extends Result {}`**. Twoja logika, która obsługuje `Result`, nie będzie wiedziała o tym nowym typie, co może prowadzić do błędów. Nie masz kontroli nad tą hierarchią.
+
+---
+
+#### Rozwiązanie w Kotlinie: `sealed class`
+
+Użycie `sealed class` (lub `sealed interface`) daje kompilatorowi pełną wiedzę o wszystkich możliwych podtypach.
+
+```kotlin
+// Wszystkie te klasy muszą być w tym samym pliku!
+sealed class NetworkResult {
+    // Podklasy mogą być data class, co jest bardzo wygodne
+    data class Success(val data: String) : NetworkResult()
+
+    data class Error(val code: Int, val message: String) : NetworkResult()
+
+    // Może to być też object, jeśli nie przechowuje stanu
+    object Loading : NetworkResult()
+}
+```
+
+**Kluczowe cechy `sealed class`:**
+1.  **Ograniczona hierarchia:** Wszystkie podklasy muszą być w tym samym pliku (a od Kotlina 1.5, w tym samym module i pakiecie).
+2.  **Abstrakcyjność:** Klasy `sealed` są domyślnie `abstract` i nie można tworzyć ich instancji.
+3.  **Elastyczność podklas:** Podklasami mogą być `class`, `data class` lub `object`. Mogą one przechowywać różne dane, co jest idealne do modelowania różnych stanów.
+
+---
+
+#### Supermoc: Wyrażenie `when` staje się "wyczerpujące" (`exhaustive`)
+
+To jest najważniejsza korzyść. Gdy używasz `when` do sprawdzenia typu instancji klasy zapieczętowanej, kompilator **wie**, jakie są wszystkie możliwe przypadki. Dzięki temu może wymusić na Tobie obsłużenie każdego z nich.
+
+```kotlin
+fun handleResult(result: NetworkResult) {
+    // Kompilator wie, że NetworkResult może być tylko Success, Error lub Loading.
+    when (result) {
+        is NetworkResult.Success -> {
+            println("Sukces! Dane: ${result.data}")
+        }
+        is NetworkResult.Error -> {
+            println("Błąd ${result.code}: ${result.message}")
+        }
+        is NetworkResult.Loading -> {
+            println("Ładowanie...")
+        }
+        // NIE POTRZEBUJESZ GAŁĘZI `else`!
+    }
+}
+```
+
+**Co to oznacza w praktyce?**
+1.  **Brak `else`:** Nie musisz pisać gałęzi `else`, bo kompilator ma pewność, że wszystkie przypadki zostały obsłużone. Kod jest czystszy.
+2.  **Bezpieczeństwo przy refaktoryzacji:** To jest prawdziwa magia. Wyobraź sobie, że po jakimś czasie dodajesz nowy stan do swojej hierarchii:
+```kotlin
+sealed class NetworkResult {
+    // ... stare stany
+    object NotStarted : NetworkResult() // Nowy stan
+}
+```
+Gdy teraz spróbujesz skompilować kod, **kompilator Kotlina zgłosi błąd** w każdym miejscu, gdzie używasz `when` na `NetworkResult`, informując Cię: **"`when` expression must be exhaustive. Add necessary 'is NotStarted' branch."**.
+
+To jest niesamowicie potężne. Kompilator staje się Twoją siatką bezpieczeństwa, która **zmusza Cię do zaktualizowania logiki** i obsługi nowego przypadku. Eliminuje to całą klasę błędów polegających na zapomnieniu o obsłudze nowego stanu.
+
+---
+
+#### `sealed class` vs `enum`
+
+Możesz się zastanawiać, czym to się różni od `enum`.
+
+| Cecha | `enum` | `sealed class` |
+| :--- | :--- | :--- |
+| **Stan** | Każda stała `enum` jest **pojedynczą instancją**. Nie mogą mieć różnych stanów. | Każda podklasa `sealed` jest **pełnoprawnym typem**. Podklasy mogą przechowywać **różne dane**. |
+| **Przykład** | `enum class Day { MONDAY, TUESDAY }` (brak danych) | `Success(data: String)` vs `Error(message: String)` (różne dane) |
+| **Użycie** | Gdy masz stały, zamknięty zbiór **wartości**. | Gdy masz zamknięty zbiór **typów/stanów**, z których każdy może mieć **inną strukturę danych**. |
+
+W skrócie: `enum` to zbiór stałych, `sealed class` to zbiór typów.
+
+### Podsumowanie dla programisty Javy
+
+| Koncepcja | Podejście w Javie | Odpowiednik w Kotlinie | Kluczowa korzyść |
+| :--- | :--- | :--- | :--- |
+| **Zamknięta hierarchia** | Brak wbudowanego mechanizmu; konwencje, komentarze. | **`sealed class` / `sealed interface`** | **Kontrola nad hierarchią** na poziomie kompilatora. |
+| **Obsługa typów** | `if/else if` z `instanceof`, `switch` z `instanceof` (od Javy 17). | **Wyrażenie `when`** | **Wyczerpująca kontrola (`exhaustive`)** – kompilator pilnuje, byś obsłużył wszystkie przypadki. |
+| **Modelowanie stanów**| Klasy abstrakcyjne, interfejsy. | `sealed class` z `data class` i `object` jako podklasami. | Niezwykle elastyczne i bezpieczne modelowanie złożonych stanów. |
+
+Klasy zapieczętowane to jedno z najbardziej ekspresywnych narzędzi w Kotlinie do budowania bezpiecznych i łatwych w utrzymaniu systemów, zwłaszcza w architekturach opartych na przepływie stanów (MVI, Redux) i przy modelowaniu domenowym.

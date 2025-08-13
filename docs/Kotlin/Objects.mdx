@@ -1,0 +1,169 @@
+---
+sidebar_label: 'Objects'
+---
+
+# Objects
+
+Doskonale. Wchodzimy w temat, który jest jedną z fundamentalnych różnic filozoficznych między Javą a Kotlinem. Kotlin **nie ma słowa kluczowego `static`**. Zamiast tego, wprowadza bardziej spójne i potężne koncepcje oparte na obiektach.
+
+### 16. Obiekty: `object`, `companion object`
+
+---
+
+#### 1. `object` - Deklaracja Obiektu (Singleton)
+
+W Javie, aby stworzyć singleton (klasę, która ma tylko jedną instancję w całej aplikacji), musisz napisać sporo kodu: prywatny konstruktor, statyczne pole przechowujące instancję i statyczną metodę `getInstance()`.
+
+**Problem w Javie: Boilerplate dla Singletona**
+```java
+public final class Logger {
+    private static final Logger INSTANCE = new Logger();
+
+    private Logger() {}
+
+    public static Logger getInstance() {
+        return INSTANCE;
+    }
+
+    public void log(String message) {
+        System.out.println("LOG: " + message);
+    }
+}
+
+// Użycie:
+// Logger.getInstance().log("Aplikacja startuje.");
+```
+
+**Rozwiązanie w Kotlinie: `object`**
+W Kotlinie, słowo kluczowe `object` pozwala zadeklarować singleton w jednej linijce.
+
+```kotlin
+object Logger {
+    fun log(message: String) {
+        println("LOG: $message")
+    }
+}
+
+// Użycie:
+// Odwołujemy się do niego bezpośrednio przez nazwę.
+Logger.log("Aplikacja startuje.")
+```
+
+**Co to jest `object`?**
+*   To deklaracja, która **jednocześnie definiuje klasę i tworzy jej jedną, jedyną instancję**.
+*   Jest inicjalizowany **leniwie** (lazy), czyli przy pierwszym użyciu.
+*   Jest bezpieczny wątkowo.
+*   Może implementować interfejsy i dziedziczyć po klasach, tak jak normalna klasa.
+
+`object` jest idealnym rozwiązaniem dla singletonów, fabryk, klas konfiguracyjnych i wszędzie tam, gdzie potrzebujesz jednego, globalnego punktu dostępu.
+
+---
+
+#### 2. `companion object` - Zamiennik dla `static`
+
+To jest klucz do zrozumienia "statycznych" składowych w Kotlinie. Skoro nie ma słowa `static`, jak zdefiniować metody lub pola, które są związane z **klasą**, a nie z jej **instancją**?
+
+Odpowiedzią jest **`companion object` (obiekt towarzyszący)**.
+
+> `companion object` to specjalny `object` (singleton) zadeklarowany **wewnątrz** innej klasy. Jego składowe (właściwości, funkcje) mogą być wywoływane bezpośrednio przez nazwę klasy, tak jak statyczne składowe w Javie.
+
+**Problem w Javie: Metody i stałe statyczne**
+```java
+public class User {
+    public static final String DEFAULT_ROLE = "GUEST";
+    private String name;
+
+    public User(String name) {
+        this.name = name;
+    }
+
+    public static User createGuest() {
+        return new User("Guest User");
+    }
+}
+
+// Użycie:
+// String role = User.DEFAULT_ROLE;
+// User guest = User.createGuest();
+```
+
+**Rozwiązanie w Kotlinie: `companion object`**
+```kotlin
+class User private constructor(val name: String) { // Prywatny konstruktor
+
+    // Wszystko wewnątrz `companion object` jest "statyczne"
+    companion object {
+        const val DEFAULT_ROLE = "GUEST" // `const` dla stałych czasu kompilacji
+
+        // Metoda fabryczna
+        fun createGuest(): User {
+            return User("Guest User")
+        }
+
+        fun fromJson(json: String): User {
+            // ... logika deserializacji
+            return User("Z Jsona")
+        }
+    }
+}
+
+// Użycie wygląda identycznie jak w Javie!
+val role = User.DEFAULT_ROLE
+val guest = User.createGuest()
+val fromJson = User.fromJson("{...}")
+```
+
+**Dlaczego to jest lepsze niż `static`?**
+1.  **To prawdziwy obiekt:** `companion object` jest pełnoprawnym obiektem. Może mieć nazwę, implementować interfejsy i być przekazywany jako parametr.
+```kotlin
+interface Factory<T> { fun create(): T }
+
+class MyClass {
+    companion object MyFactory : Factory<MyClass> {
+        override fun create(): MyClass = MyClass()
+    }
+}
+
+// Możemy przypisać obiekt towarzyszący do zmiennej!
+val factory: Factory<MyClass> = MyClass.MyFactory
+    ```
+Tego nie da się zrobić ze statycznymi metodami w Javie.
+
+2.  **Organizacja kodu:** Wszystkie "statyczne" elementy są zgrupowane w jednym, jasno oznaczonym bloku, co poprawia czytelność.
+
+3.  **Dziedziczenie i rozszerzalność:** Można pisać funkcje rozszerzające dla `companion object`.
+
+**Jak to działa z Javą?**
+Domyślnie, aby wywołać składową `companion object` z Javy, trzeba użyć dodatkowego słowa `Companion`.
+```java
+// Domyślne wywołanie z Javy
+User guest = User.Companion.createGuest();
+```
+To jest niewygodne. Aby to naprawić i wygenerować prawdziwe metody statyczne dla JVM, używamy adnotacji **`@JvmStatic`**.
+```kotlin
+class User private constructor(val name: String) {
+    companion object {
+        @JvmStatic
+        fun createGuest(): User {
+            return User("Guest User")
+        }
+    }
+}
+```
+Teraz z Javy można to wywołać naturalnie:
+```java
+// Po dodaniu @JvmStatic
+User guest = User.createGuest();
+```
+
+### Podsumowanie dla programisty Javy
+
+| Koncepcja w Javie | Odpowiednik w Kotlinie | Kluczowa idea |
+| :--- | :--- | :--- | :--- |
+| **Singleton** | Ręczna implementacja | **`object`** (deklaracja singletonu) | Zwięzłość i bezpieczeństwo wbudowane w język |
+| **Pola i metody `static`** | Słowo kluczowe `static` | Składowe wewnątrz **`companion object`**| "Statyczne" elementy są częścią prawdziwego obiektu |
+| **Stała `public static final`**| `public static final String ...` | `const val ...` w `companion object` | `const` dla stałych czasu kompilacji |
+| **Interoperacyjność** | Działa naturalnie | Wymaga `@JvmStatic` dla lepszej współpracy | Zapewnienie bezproblemowej integracji z kodem Javy |
+
+Myślenie o "statycznych" elementach jako o częściach specjalnego, towarzyszącego obiektu jest kluczową zmianą paradygmatu, która po pewnym czasie staje się bardzo naturalna i potężna.
+

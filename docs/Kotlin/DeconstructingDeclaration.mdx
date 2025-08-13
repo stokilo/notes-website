@@ -1,0 +1,153 @@
+---
+sidebar_label: 'DeconstructingDeclaration'
+---
+
+# Deconstructing Declararation
+
+Jasne. Deklaracje destrukturyzujące to bardzo wygodny "lukier składniowy", który pozwala na bardziej eleganckie i zwięzłe rozpakowywanie obiektów do pojedynczych zmiennych.
+
+### 18. Deklaracje destrukturyzujące (`Destructuring Declarations`)
+
+Deklaracja destrukturyzująca to składnia, która pozwala na **rozbicie obiektu na wiele zmiennych** i przypisanie ich wartości w jednej operacji.
+
+---
+
+#### Gdzie to widziałeś w Javie?
+
+Choć Java nie ma ogólnego mechanizmu destrukturyzacji, znasz ten koncept z pętli `for-each` iterującej po mapie:
+
+```java
+Map<String, Integer> map = Map.of("Jan", 30, "Anna", 25);
+
+// Tak naprawdę nie da się tego zrobić bezpośrednio w Javie
+// To jest tylko przykład koncepcyjny
+// for ((String name, Integer age) : map.entrySet()) { ... }
+```
+Niestety, w Javie trzeba to robić bardziej rozwlekle:
+```java
+for (Map.Entry<String, Integer> entry : map.entrySet()) {
+    String name = entry.getKey();
+    int age = entry.getValue();
+    // ...
+}
+```
+
+---
+
+#### Jak to działa w Kotlinie? Magia `componentN()`
+
+Deklaracje destrukturyzujące w Kotlinie działają w oparciu o konwencję. Aby obiekt mógł być zdestrukturyzowany, jego klasa musi dostarczać funkcje `componentN()`:
+*   `component1()` zwraca pierwszą wartość.
+*   `component2()` zwraca drugą wartość.
+*   `component3()` zwraca trzecią wartość.
+*   ... i tak dalej.
+
+Każda z tych funkcji musi być oznaczona jako `operator`.
+
+**Składnia:**
+`val (zmienna1, zmienna2, ...) = obiekt`
+
+Kompilator tłumaczy to na:
+`val zmienna1 = obiekt.component1()`
+`val zmienna2 = obiekt.component2()`
+`...`
+
+---
+
+#### Gdzie to działa "za darmo"?
+
+Nie musisz pisać funkcji `componentN()` ręcznie w kilku popularnych przypadkach.
+
+**1. Klasy danych (`data class`)**
+
+To najczęstsze i najważniejsze zastosowanie. **Kompilator automatycznie generuje funkcje `componentN()` dla każdej właściwości zadeklarowanej w konstruktorze głównym `data class`**.
+
+```kotlin
+data class User(val name: String, val age: Int)
+
+val user = User("Jan Kowalski", 42)
+
+// Destrukturyzacja obiektu User
+val (name, age) = user
+
+// Powyższa linia jest równoważna:
+// val name = user.component1() // czyli user.name
+// val age = user.component2()  // czyli user.age
+
+println("$name ma $age lat.") // Wyświetli: Jan Kowalski ma 42 lat.
+```
+
+**2. Pary (`Pair`) i Trójki (`Triple`)**
+
+Klasy `Pair` i `Triple` z biblioteki standardowej mają wbudowane funkcje `componentN()`.
+
+```kotlin
+val myPair = Pair("Klucz", 123)
+val (key, value) = myPair
+
+println("$key -> $value") // Wyświetli: Klucz -> 123
+```
+
+**3. Pętle iterujące po mapie**
+
+Destrukturyzacja sprawia, że iterowanie po mapach jest niezwykle eleganckie.
+
+```kotlin
+val userAges = mapOf("Jan" to 30, "Anna" to 25)
+
+// Każdy wpis w mapie (Map.Entry) jest destrukturyzowany do klucza i wartości
+for ((name, age) in userAges) {
+    println("$name ma $age lat.")
+}
+```
+
+---
+
+#### Inne zastosowania
+
+**1. Ignorowanie niepotrzebnych wartości**
+
+Jeśli potrzebujesz tylko niektórych wartości z obiektu, możesz zignorować resztę za pomocą znaku podkreślenia `_`.
+
+```kotlin
+val (name, _, city) = getPersonDetails() // Ignorujemy drugą wartość (np. wiek)
+```
+
+**2. Zwracanie wielu wartości z funkcji**
+
+W Javie, aby zwrócić wiele wartości z funkcji, musisz stworzyć dedykowaną klasę-kontener. W Kotlinie, dzięki destrukturyzacji, jest to o wiele prostsze. Możesz zwrócić `Pair`, `Triple` lub `data class`.
+
+```kotlin
+// Funkcja zwracająca parę
+fun parseName(fullName: String): Pair<String, String> {
+    val parts = fullName.split(" ")
+    return Pair(parts[0], parts.getOrNull(1) ?: "")
+}
+
+// Eleganckie przypisanie wyników do zmiennych
+val (firstName, lastName) = parseName("Maria Nowak")
+```
+
+**3. Destrukturyzacja w lambdach**
+
+To również jest możliwe, np. przy pracy z listą par.
+
+```kotlin
+val coordinates = listOf(Pair(1, 2), Pair(3, 4), Pair(5, 6))
+
+coordinates.forEach { (x, y) ->
+    println("Punkt: x=$x, y=$y")
+}
+```
+
+### Podsumowanie dla programisty Javy
+
+| Zadanie | Podejście w Javie | Podejście w Kotlinie |
+| :--- | :--- | :--- |
+| **Rozpakowanie obiektu** | `String name = user.getName(); int age = user.getAge();` | `val (name, age) = user` (dla `data class`) |
+| **Iteracja po mapie** | `for (Map.Entry<K, V> entry : map.entrySet()) { ... }`| `for ((key, value) in map) { ... }` |
+| **Zwracanie wielu wartości**| Tworzenie dedykowanej klasy-kontenera | Zwrócenie `Pair`, `Triple` lub `data class` i destrukturyzacja wyniku |
+| **Podstawy mechanizmu**| Brak ogólnego mechanizmu | Konwencja oparta na funkcjach operatorowych `componentN()` |
+
+Deklaracje destrukturyzujące to mała, ale bardzo wygodna funkcja, która redukuje ilość kodu "klejącego" (glue code) i sprawia, że intencje programisty są bardziej czytelne. Najczęściej będziesz z niej korzystać nieświadomie przy pracy z `data class` i mapami.
+
