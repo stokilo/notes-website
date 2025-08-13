@@ -1,0 +1,89 @@
+---
+sidebar_label: 'ValVsVar'
+---
+
+# VAL vs VAR
+
+Jasne, przejdźmy do pierwszego i fundamentalnego tematu.
+
+### 1. Zmienność: `val` vs `var`
+
+Dla programisty Javy, najprostszym sposobem na zrozumienie `val` i `var` jest myślenie o nich przez pryzmat słowa kluczowego `final`.
+
+---
+
+#### `val` (od *value*) - Wartość tylko do odczytu
+
+`val` deklaruje zmienną, której **nie można ponownie przypisać**. Jest to bezpośredni odpowiednik słowa kluczowego `final` w Javie.
+
+**W Javie napisałbyś:**
+```java
+final String name = "Jan";
+// name = "Piotr"; // Błąd kompilacji: cannot assign a value to final variable 'name'
+```
+
+**W Kotlinie to samo osiągasz za pomocą `val`:**
+```kotlin
+val name: String = "Jan"
+// name = "Piotr" // BŁĄD: Val cannot be reassigned
+```
+
+**Kluczowe cechy `val`:**
+1.  **Tylko do odczytu (Read-only):** Po zainicjowaniu jej referencja nie może już zostać zmieniona.
+2.  **Musi być zainicjowana:** Każda zmienna `val` musi otrzymać wartość dokładnie raz.
+3.  **Nie oznacza niezmienności obiektu (Immutability):** To bardzo ważna pułapka dla początkujących! `val` oznacza, że **referencja** jest niezmienna, ale **obiekt**, na który wskazuje, może być modyfikowalny.
+
+**Przykład ilustrujący punkt 3:**
+```kotlin
+// Używamy modyfikowalnej listy (odpowiednik ArrayList)
+val numbers = mutableListOf(1, 2, 3)
+
+// Próba zmiany REFERENCJI kończy się błędem
+// numbers = mutableListOf(4, 5, 6) // BŁĄD KOMPILACJI
+
+// Ale możemy modyfikować OBIEKT, na który referencja wskazuje
+numbers.add(4) // To jest w porządku!
+
+println(numbers) // Wyświetli: [1, 2, 3, 4]
+```
+To zachowanie jest identyczne jak z `final List<Integer> numbers = new ArrayList<>();` w Javie.
+
+---
+
+#### `var` (od *variable*) - Zmienna modyfikowalna
+
+`var` deklaruje standardową, modyfikowalną zmienną. Możesz jej przypisywać nowe wartości (tego samego typu) tyle razy, ile chcesz. Jest to odpowiednik standardowej zmiennej w Javie (bez słowa `final`).
+
+**W Javie napisałbyś:**
+```java
+int age = 30;
+age = 31; // W porządku
+```
+
+**W Kotlinie to samo osiągasz za pomocą `var`:**
+```kotlin
+var age: Int = 30
+age = 31 // W porządku
+```
+
+---
+
+### Złota zasada i podsumowanie
+
+> **Zawsze preferuj `val` nad `var`**
+
+Jest to jedna z najważniejszych zasad pisania idiomatycznego kodu w Kotlinie.
+
+**Dlaczego?**
+1.  **Bezpieczeństwo i Przewidywalność:** Kod jest łatwiejszy do analizy, gdy wiesz, że dana wartość nie zmieni się niespodziewanie w innym miejscu programu. Zmniejsza to ryzyko błędów, zwłaszcza w środowiskach wielowątkowych.
+2.  **Mniej Stanu do Śledzenia:** Używanie wartości niezmiennych (immutability) upraszcza logikę, ponieważ nie musisz zarządzać zmieniającym się stanem.
+3.  **Zgodność z Programowaniem Funkcyjnym:** Kotlin mocno czerpie z paradygmatu funkcyjnego, który opiera się na niezmienności danych.
+
+**Praktyczna rada dla Ciebie:**
+Zawsze zaczynaj od deklaracji `val`. Zmień ją na `var` **tylko wtedy**, gdy jest to absolutnie konieczne (np. licznik w pętli, właściwość, której stan musi się zmieniać w cyklu życia obiektu). IntelliJ IDEA nawet podpowie Ci, jeśli używasz `var`, a mogłoby to być `val`.
+
+| Cecha | `val` | `var` | Analogia w Javie |
+| :--- | :--- | :--- | :--- |
+| **Zmienność** | Tylko do odczytu (read-only) | Modyfikowalna (mutable) | `final` |
+| **Ponowne przypisanie** | Zabronione | Dozwolone | Standardowa zmienna |
+| **Zalecenie** | **Preferowane** | Używać tylko w razie potrzeby | Zawsze używaj `final`, chyba że musisz |

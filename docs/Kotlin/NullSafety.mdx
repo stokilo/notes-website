@@ -1,0 +1,145 @@
+---
+sidebar_label: 'NullSafety'
+---
+
+# NullSafety
+
+Doskonale. Temat `Null Safety` to jedna z najważniejszych i najbardziej docenianych cech Kotlina, zwłaszcza z perspektywy programisty Javy. To fundamentalna zmiana, która przenosi problem `NullPointerException` z etapu działania aplikacji (runtime) na etap kompilacji (compile-time).
+
+### 2. Bezpieczeństwo `null` (`Null Safety`)
+
+W Javie każda referencja do obiektu może przyjąć wartość `null`. To Ty, jako programista, musisz pamiętać, aby wszędzie sprawdzać, czy coś nie jest `null` przed użyciem, co prowadzi do masy kodu w stylu `if (user != null) { ... }` i jest głównym źródłem `NullPointerException`.
+
+Kotlin rozwiązuje ten problem, wbudowując obsługę `null` bezpośrednio w system typów.
+
+---
+
+#### 1. Typy Nullable vs Non-Nullable
+
+W Kotlinie typy domyślnie **nie mogą** przechowywać wartości `null`.
+
+```kotlin
+var name: String = "Kotlin"
+// name = null // BŁĄD KOMPILACJI: Null can not be a value of a non-null type String
+```
+To jest ogromna zmiana. Kompilator od samego początku chroni Cię przed przypisaniem `null`.
+
+Jeśli chcesz, aby zmienna mogła przechowywać `null`, musisz jawnie to zadeklarować, dodając `?` na końcu typu.
+
+```kotlin
+var nullableName: String? = "Kotlin"
+nullableName = null // W porządku, typ jest "nullable"
+```
+
+**Konsekwencja:** Gdy kompilator widzi zmienną typu `String`, ma 100% pewność, że nie jest ona `null`. Gdy widzi `String?`, wie, że musi być ostrożny i wymusza na Tobie obsługę przypadku `null`.
+
+---
+
+#### 2. Operator bezpiecznego dostępu: `?.` (Safe Call Operator)
+
+To jest elegancki zamiennik dla bloku `if (x != null)`.
+
+**W Javie:**
+```java
+String name = user.getName(); // Może rzucić NPE, jeśli user jest null
+String street = null;
+if (user != null && user.getAddress() != null) {
+    street = user.getAddress().getStreet();
+}
+```
+
+**W Kotlinie za pomocą `?.`:**
+Operator `?.` mówi: "Jeśli obiekt po lewej nie jest `null`, wywołaj metodę po prawej. W przeciwnym razie, zwróć `null`."
+
+```kotlin
+val user: User? = findUserById(1) // user może być nullem
+
+// Wywołanie metody na potencjalnie nullowym obiekcie
+val name = user?.name // Typem `name` będzie `String?`
+
+// Można tworzyć całe łańcuchy bezpiecznych wywołań
+val street = user?.address?.street // Typem `street` będzie `String?`
+
+// Jeśli `user` jest null, `street` będzie null.
+// Jeśli `user.address` jest null, `street` też będzie null.
+// Nie ma ryzyka NPE!
+```
+
+---
+
+#### 3. Operator Elvisa: `?:` (Elvis Operator)
+
+Często chcemy zapewnić domyślną wartość, gdy coś jest `null`. Do tego służy operator Elvisa. Jego nazwa pochodzi od emotikony `?:`, która przypomina fryzurę i oczy Elvisa Presleya.
+
+Działa on tak: "Jeśli wyrażenie po lewej jest różne od `null`, użyj go. W przeciwnym razie, użyj wyrażenia po prawej."
+
+**W Javie (za pomocą operatora trójargumentowego):**
+```java
+String username = (user != null) ? user.getName() : "Gość";
+```
+
+**W Kotlinie za pomocą `?:`:**
+```kotlin
+val user: User? = findUserById(1)
+
+// Łączymy `?.` i `?:`
+val username: String = user?.name ?: "Gość"
+// Jeśli `user` jest null, `user?.name` zwraca null, a operator Elvisa zwraca "Gość"
+// Jeśli `user` nie jest null, `user?.name` zwraca jego nazwę.
+
+// `username` ma typ `String`, nie `String?`, bo zawsze ma jakąś wartość.
+```
+
+Można go też używać do wcześniejszego kończenia funkcji (np. rzucania wyjątku):
+```kotlin
+fun printShippingLabel(customer: Customer?) {
+    val address = customer?.address ?: throw IllegalArgumentException("Brak adresu!")
+    // Od tego momentu kompilator wie, że `address` nie jest null.
+    println(address.street)
+}
+```
+
+---
+
+#### 4. Operator asercji non-null: `!!` (Not-Null Assertion Operator)
+
+To jest "młotek" na `null`-e i furtka awaryjna. Mówi on do kompilatora: "Ufam Ci, że ta wartość **nigdy** nie będzie `null`. Potraktuj ją jako typ non-nullable".
+
+**Jeśli się pomylisz i wartość okaże się `null`, aplikacja rzuci `KotlinNullPointerException`.**
+
+```kotlin
+val nullableValue: String? = "Może być null"
+val mustBeString: String = nullableValue!! // "Wyciągam" String z String?
+
+println(mustBeString.length)
+```
+Jeśli `nullableValue` byłoby `null` w momencie wykonania linii z `!!`, program by się wywalił.
+
+**Kiedy używać `!!`?**
+**Bardzo rzadko.** Używaj go tylko wtedy, gdy masz 100% pewność, z logiki programu, że wartość nie może być `null` w danym miejscu (np. po wcześniejszym sprawdzeniu, albo podczas inicjalizacji w frameworku, który gwarantuje wstrzyknięcie zależności).
+
+**Zła praktyka:**
+```kotlin
+// UNIKAJ TEGO! To jest powrót do starych nawyków z Javy.
+fun process(user: User?) {
+    println(user!!.name)
+}
+```
+**Dobra praktyka:**
+```kotlin
+// Użyj bezpiecznych operatorów.
+fun process(user: User?) {
+    println(user?.name ?: "Użytkownik nieznany")
+}
+```
+
+### Podsumowanie dla programisty Javy:
+
+| Problem w Javie | Rozwiązanie w Kotlinie | Opis |
+| :--- | :--- | :--- |
+| Wszystko może być `null` | Typy `String` vs `String?` | Nullability jest częścią systemu typów. |
+| `if (x != null) { x.doSth(); }` | `x?.doSth()` | **Safe Call:** Wykonaj, jeśli nie `null`, inaczej zwróć `null`. |
+| `x != null ? x : defaultValue` | `x ?: defaultValue` | **Elvis Operator:** Daj mi wartość `x` lub domyślną. |
+| "Wiem, co robię, to nie jest `null`" | `x!!` | **Not-Null Assertion:** Rzuć `NPE`, jeśli się mylę. (Używać ostrożnie!) |
+
+Przejście na ten model myślenia jest jedną z największych korzyści przy przesiadce na Kotlina. Kod staje się bezpieczniejszy, krótszy i bardziej wyrazisty.
