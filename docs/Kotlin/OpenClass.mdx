@@ -1,0 +1,126 @@
+---
+sidebar_label: 'OpenClassField'
+---
+
+# Open class field
+
+Excellent question! This is a core concept in Kotlin and a key difference from languages like Java.
+
+### The Short Answer
+
+In Kotlin, the `open` keyword means **"open for extension"**. You use it on a class, function, or property to allow other classes to:
+
+*   **Inherit from** this class.
+*   **Override** this function or property.
+
+By default, all classes and their members (functions, properties) in Kotlin are **`final`**, which is the exact opposite of `open`. `final` means they *cannot* be inherited from or overridden.
+
+---
+
+### The Core Concept: `final` by Default
+
+Let's break down what this means. In Kotlin, the language designers made a deliberate choice to make everything non-inheritable unless you explicitly say otherwise.
+
+Imagine you have a simple class:
+
+```kotlin
+class Vehicle {
+    fun startEngine() {
+        println("Engine started.")
+    }
+}
+```
+
+If you try to create a `Car` class that inherits from `Vehicle`, you will get a compiler error:
+
+```kotlin
+// ERROR: This type is final, so it cannot be inherited from
+class Car : Vehicle() {
+    // ...
+}
+```
+
+The Kotlin compiler stops you because the `Vehicle` class was not explicitly marked as "open for extension." This is a safety feature to prevent unintended or fragile inheritance.
+
+### How `open` Solves the Problem
+
+To allow inheritance, you must mark the base class with the `open` keyword.
+
+```kotlin
+// This class is now "open for extension"
+open class Vehicle {
+    fun startEngine() {
+        println("Engine started.")
+    }
+}
+
+// WORKS! Now we can inherit from Vehicle.
+class Car : Vehicle() {
+    fun drive() {
+        println("Driving the car.")
+    }
+}
+```
+
+### `open` for Functions and Properties
+
+This "final by default" rule also applies to the members inside a class. Even if the class itself is `open`, its functions and properties are still `final` by default.
+
+If you want to allow a subclass to change the behavior of a function (i.e., override it), you must also mark the function with `open`.
+
+Let's expand our `Vehicle` example:
+
+```kotlin
+open class Vehicle(val name: String) {
+
+    // This function is open, so subclasses can override it.
+    open fun startEngine() {
+        println("Vehicle engine started.")
+    }
+
+    // This function is final (default), so subclasses CANNOT override it.
+    fun stopEngine() {
+        println("Engine stopped.")
+    }
+}
+
+class ElectricCar(name: String) : Vehicle(name) {
+
+    // We MUST use the `override` keyword here.
+    // This is only possible because startEngine() in Vehicle is `open`.
+    override fun startEngine() {
+        println("Electric car '$name' is silent... and ready to go!")
+    }
+
+    /*
+    // ERROR: 'stopEngine' in 'Vehicle' is final and cannot be overridden
+    override fun stopEngine() {
+        println("Powering down the electric system.")
+    }
+    */
+}
+
+fun main() {
+    val myTesla = ElectricCar("Model S")
+    myTesla.startEngine() // Prints: "Electric car 'Model S' is silent... and ready to go!"
+    myTesla.stopEngine()  // Prints: "Engine stopped." (calls the base class version)
+}
+```
+
+### Summary: Kotlin vs. Java
+
+This is a major philosophical difference from Java, where classes and methods are open by default.
+
+| Feature          | Kotlin Default                                | Java Default                                  |
+| ---------------- | --------------------------------------------- | --------------------------------------------- |
+| **Class**        | `final` (Cannot be inherited)                 | "Open" (Can be inherited)                     |
+| **Method/Function** | `final` (Cannot be overridden)                | "Open" (Can be overridden, is `virtual`)      |
+| **To Allow Inheritance**  | Add `open` to the class/function.             | Add `final` to the class/method to *prevent* it. |
+
+### Why Did Kotlin Make This Choice?
+
+This isn't just an arbitrary decision. It's based on the principle from Joshua Bloch's book *Effective Java*: **"Design and document for inheritance or else prohibit it."**
+
+1.  **Robustness (Preventing the "Fragile Base Class" Problem):** If a class wasn't designed to be a base class, changes to its internal implementation could accidentally break all the subclasses that inherit from it in unexpected ways. By forcing developers to use `open`, it makes them consciously think: "Am I designing this class to be safely extended?"
+2.  **Clearer API Contracts:** When you see an `open` class or function, you know the author intended for it to be extended or overridden. It's a clear signal about how the class is meant to be used.
+3.  **Encourages Composition over Inheritance:** This design gently pushes developers to consider composition (having an instance of another class) before reaching for inheritance, which is often a more flexible and robust design pattern.
