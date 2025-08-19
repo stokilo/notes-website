@@ -1,0 +1,120 @@
+---
+sidebar_label: 'JvmInline'
+---
+
+# JvmInline
+
+Oczywiście! Wyjaśnię `@JvmInline` (i powiązaną z nim koncepcję `value class`) w prosty i praktyczny sposób.
+
+### W czym problem? (Co `@JvmInline` rozwiązuje)
+
+Wyobraź sobie, że w Twoim kodzie masz ID użytkownika. Możesz je reprezentować jako zwykły `Int`:
+
+```kotlin
+fun findUser(id: Int) { /* ... */ }
+fun deleteProduct(id: Int) { /* ... */ }
+
+// I gdzieś w kodzie...
+val userId = 123
+val productId = 123
+
+deleteProduct(userId) // OOPS! Pomyłka! Kompilator tego nie zauważy.
+```
+To jest niebezpieczne. Możesz przez pomyłkę przekazać ID użytkownika do funkcji usuwającej produkt.
+
+Naturalnym rozwiązaniem jest stworzenie małej klasy-opakowania (wrapper class), tak jak to zrobiłeś w swoim kodzie:
+
+```kotlin
+class UserId(val id: Int)
+class ProductId(val id: Int)
+
+fun findUser(id: UserId) { /* ... */ }
+fun deleteProduct(id: ProductId) { /* ... */ }
+
+val userId = UserId(123)
+val productId = ProductId(123)
+
+// deleteProduct(userId) // BŁĄD KOMPILACJI! Super!
+```
+Problem rozwiązany! Mamy teraz bezpieczeństwo typów. Kompilator nas pilnuje.
+
+**ALE...** pojawił się nowy, ukryty problem: **wydajność**.
+
+Za każdym razem, gdy tworzysz `UserId(123)`, w pamięci (na stercie) alokowany jest nowy, pełnoprawny obiekt. Ma on swój narzut (nagłówek obiektu, wskaźnik). Jeśli masz listę miliona ID, tworzysz milion małych, niepotrzebnych obiektów. To obciąża pamięć i Garbage Collector (GC).
+
+Płacimy więc cenę wydajnościową za czystszy i bezpieczniejszy kod.
+
+### Czym jest `@JvmInline` i `value class`? (Magiczne rozwiązanie)
+
+`@JvmInline` w połączeniu ze słowem kluczowym `value class` to instrukcja dla kompilatora Kotlina, która mówi:
+
+> "Hej, kompilatorze! Traktuj tę klasę jak pełnoprawny, osobny typ **podczas pisania kodu i kompilacji**, aby dać mi bezpieczeństwo typów. Ale **podczas generowania kodu bajtowego (runtime)**, bądź sprytny i **pozbądź się tego obiektu-opakowania**, używając bezpośrednio wartości, którą on przechowuje."
+
+Innymi słowy, to jest "niewidzialny pojemnik" lub "etykieta", która istnieje tylko na etapie pisania kodu, a znika w trakcie działania programu.
+
+Spójrzmy na kod z użyciem `value class`:
+
+```kotlin
+@JvmInline // Ta adnotacja informuje o "magii"
+value class UserId(val id: Int)
+
+fun processId(userId: UserId) {
+    println("Processing ID: ${userId.id}")
+}
+
+// Użycie:
+val myId = UserId(123)
+processId(myId)
+```
+
+**Co się dzieje za kulisami?**
+
+1.  **Na etapie pisania kodu:** Masz pełne bezpieczeństwo. `UserId` to osobny typ, nie `Int`.
+2.  **Na etapie wykonania (runtime):** Kompilator optymalizuje ten kod tak, jakby był napisany w ten sposób:
+```java
+// To jest uproszczona reprezentacja tego, co JVM "widzi"
+public final class MainKt {
+   public static void processId(int userId) { // Zauważ: tu jest prymitywny `int`!
+      System.out.println("Processing ID: " + userId);
+   }
+
+   public static void main(String[] args) {
+      int myId = 123; // Nie ma obiektu `UserId`
+      processId(myId);
+   }
+}
+    ```
+
+Dzięki temu zyskujesz to, co najlepsze z obu światów:
+
+*   **Bezpieczeństwo typów i czytelność kodu** (jak przy zwykłej klasie).
+*   **Wydajność typów prostych** (jak przy używaniu `Int` bezpośrednio).
+
+Nazywa się to **"zero-cost abstraction"** – abstrakcja (nowy typ), która nic nie kosztuje pod względem wydajności.
+
+### Kluczowe zasady i ograniczenia `value class`
+
+Aby ta "magia" mogła zadziałać, klasa musi spełniać pewne warunki:
+
+1.  **Dokładnie jedna właściwość:** Musi mieć dokładnie jedną publiczną właściwość `val` w konstruktorze głównym (np. `val id: Int`).
+2.  **Brak dziedziczenia:** Nie może dziedziczyć po innej klasie (ale może implementować interfejsy).
+3.  **Finalność:** Jest zawsze `final`, nie można po niej dziedziczyć.
+
+### Podsumowanie w kontekście Twojego kodu DDD
+
+W Twoim kodzie `DistributorId`, `DistributorName`, `Street` itd. są idealnymi kandydatami na `value class`.
+
+```kotlin
+@JvmInline
+value class DistributorId(val id: Int)
+
+@JvmInline
+value class Street(val value: String)
+```
+
+Dzięki temu Twój model domeny jest:
+*   **Ekspresywny i bezpieczny:** Nie pomylisz `Street` z `BuildingNumber`.
+*   **Samo-walidujący się:** Logika `require` jest zamknięta w odpowiednim typie.
+*   **Niezwykle wydajny:** Nie tworzysz tysięcy niepotrzebnych obiektów `Street` czy `DistributorId` w pamięci. Kompilator spłaszcza je do zwykłych `String`ów i `Int`ów tam, gdzie to możliwe.
+
+Używanie `value class` z `@JvmInline` to jedna z najpotężniejszych technik w nowoczesnym Kotlinie do implementacji wzorców DDD, takich jak Value Object. **Kontynuuj dokładnie w ten sposób – to jest wzorcowe i najlepsze podejście.**
